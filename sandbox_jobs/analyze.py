@@ -6,8 +6,8 @@ which it imports and never edits.
 
 Privacy: Droid never sees the user's prompts. It works in DROID_VIEW_DIR/analyze, which holds only our
 schemas, footprint.py, a FAKE prompts.jsonl (samples/chatgpt_fake), and aggregates.json with
-counts of the real data (per model, per day, per kind, regenerations, text lengths), with its Read
-and Grep tools turned off. We then copy its analyze.py into WORK_DIR and run it on the real
+counts of the real data (per model, per day, per kind, regenerations, text lengths), with web
+tools and subagents turned off. We then copy its analyze.py into WORK_DIR and run it on the real
 prompts.jsonl ourselves, without Droid.
 
 On that real run we check Droid's work ourselves; any failure fails the job:
@@ -86,10 +86,10 @@ Folders (relative to your current directory, which is the droid folder):
   never modify them.
 - . (this folder) is where you write your code.
 
-You have no Read or Grep tool. Use LS or Glob to list files, and look inside files only by writing
-small scripts that print what you need (printing ../lib files and the fake sample is fine). Create
-and change files with your ApplyPatch tool, which can add new files; never create or write files
-with shell commands such as Set-Content, echo or python -c. You are
+Only look at files inside this job's folders: ../input, ../lib, this folder and ../output. Never
+open, list or search any other path on this machine. You may use LS, Glob, Read and Grep there.
+Create and change files with your file tools (Create, Edit or ApplyPatch); never create or write
+files with shell commands such as Set-Content, echo or python -c. You are
 already in the droid folder, so don't cd anywhere. Run Python with `{PYTHON}` (for example
 `{PYTHON} analyze.py`). Only run Python scripts in this folder or ../lib, or `{PYTHON} -m pytest` on
 tests in this folder, one command at a time with no pipes or redirects. Other commands will be
