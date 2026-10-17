@@ -3,7 +3,7 @@
     "id": "chatgpt",
     "name": "ChatGPT",
     "hosts": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
-    "icon": "chatgpt",
+    "icon": "openai-chatgpt",
     "defaultModel": "gpt-5",
     "smallModel": "gpt-4o-mini",
     "kind": "text"
@@ -12,7 +12,7 @@
     "id": "claude",
     "name": "Claude",
     "hosts": ["https://claude.ai/*"],
-    "icon": "claude",
+    "icon": "claude-ai",
     "defaultModel": "claude-opus",
     "smallModel": "claude-haiku",
     "kind": "text"
@@ -30,7 +30,7 @@
     "id": "perplexity",
     "name": "Perplexity",
     "hosts": ["https://www.perplexity.ai/*"],
-    "icon": "perplexity",
+    "icon": "perplexity-ai",
     "defaultModel": "sonar-pro",
     "smallModel": "sonar",
     "kind": "text"
@@ -39,7 +39,7 @@
     "id": "grok",
     "name": "Grok",
     "hosts": ["https://grok.com/*", "https://x.com/*"],
-    "icon": "grok",
+    "icon": "grok-xai",
     "defaultModel": "grok-3",
     "smallModel": "grok-mini",
     "kind": "text"
@@ -57,7 +57,7 @@
     "id": "dalle",
     "name": "DALL·E",
     "hosts": ["https://chatgpt.com/*"],
-    "icon": "dalle",
+    "icon": "dall-e-openai",
     "defaultModel": "dall-e-3",
     "smallModel": "dall-e-3",
     "kind": "image"
