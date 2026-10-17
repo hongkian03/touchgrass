@@ -43,6 +43,8 @@ export default {
       fontFamily: {
         sans: ["Geist", "ui-sans-serif", "system-ui", "sans-serif"],
         geist: ["Geist", "ui-sans-serif", "system-ui", "sans-serif"],
+        brand: ["Castoro", "ui-serif", "Georgia", "serif"],
+        castoro: ["Castoro", "ui-serif", "Georgia", "serif"],
       },
     },
   },
