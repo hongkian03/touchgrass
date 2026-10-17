@@ -37,7 +37,7 @@ export function FixtureApp() {
               modelLabel: modelRef.current,
             });
             unmountCoach();
-            setStatus("Yes — routed");
+            setStatus("Yes, routed");
           })();
         },
         onNo: () => {
