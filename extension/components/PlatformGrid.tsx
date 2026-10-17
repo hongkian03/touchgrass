@@ -79,8 +79,10 @@ export function PlatformGrid({
             aria-pressed={on}
             onClick={() => onToggle(p.id)}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-lg bg-transparent px-2 py-2 text-center font-sans text-foreground outline-none border",
-              on ? "border-black" : "border-transparent",
+              "flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center font-sans text-foreground outline-none transition-colors",
+              on
+                ? "bg-[#e7f6ff] ring-1 ring-[var(--yale-blue)]/25"
+                : "bg-[#f4f4f5]/80 hover:bg-[#eef1f4]",
             )}
           >
             {p.kind === "custom" && p.faviconHost ? (
