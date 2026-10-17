@@ -58,9 +58,10 @@ describe("content + background wiring", () => {
     );
     expect(src).toMatch(/allPlatformMatchPatterns/);
     expect(src).toMatch(/findComposer/);
-    expect(src).toMatch(/needAnotherPlatform/);
+    expect(src).toMatch(/puddle\/route-query/);
     expect(src).toMatch(/adapter-get/);
     expect(src).toMatch(/holdSend/);
+    expect(src).toMatch(/resolveActiveSite/);
   });
 
   it("background rebinds on permission and message", () => {
@@ -70,6 +71,7 @@ describe("content + background wiring", () => {
     );
     expect(src).toMatch(/rebindCoachScripts/);
     expect(src).toMatch(/puddle\/coach-rebind/);
+    expect(src).toMatch(/puddle\/route-query/);
     expect(src).toMatch(/adapter-repair/);
     expect(src).toMatch(/permissions\.onAdded/);
   });

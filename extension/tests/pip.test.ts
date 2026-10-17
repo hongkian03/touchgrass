@@ -86,7 +86,7 @@ describe("coach bubble + hide", () => {
     expect(content).toMatch(/DraftCoach/);
   });
 
-  it("hides for 10 minutes after lastCoachAt", () => {
+  it("hides after lastCoachAt cooldown", () => {
     const now = 1_700_000_000_000;
     expect(shouldShowCoach(0, now)).toBe(true);
     expect(shouldShowCoach(now - 1000, now)).toBe(false);
