@@ -1,0 +1,7 @@
+{
+  "version": "live-shadow-v1",
+  "status": "shadow",
+  "profile_fingerprint": "REPLACE_WITH_PROFILE_FINGERPRINT",
+  "threshold": 1.0,
+  "source_mode": "live"
+}

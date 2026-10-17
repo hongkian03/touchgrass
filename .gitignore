@@ -21,3 +21,14 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Private evaluation checkpoints, reports, pairing database and SQLite sidecars
+artifacts/
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# docs
+prompt-print-chalk-architecture.md
+prompt-print-coding-agent-handoff.md
