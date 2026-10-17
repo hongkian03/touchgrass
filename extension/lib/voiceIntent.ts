@@ -13,6 +13,7 @@ const WEATHER = /weather/i;
 export function parseVoiceIntent(
   text: string,
   platforms: Platform[],
+  enabledPlatforms: string[] = [],
 ): VoiceIntent {
   const t = text.trim();
   if (!t) return { kind: "unknown" };
@@ -23,20 +24,17 @@ export function parseVoiceIntent(
       model: "gpt-5",
       provider: "chatgpt",
       platforms,
+      enabledPlatforms,
     });
     const host = routeTargetHost(suggestion);
-    if (host === "chat.deepseek.com" || /deepseek/i.test(suggestion.targetUrl ?? "")) {
-      // never green-route DeepSeek
-      return {
-        kind: "weather",
-        suggestion: {
-          action: "open_paste",
-          targetUrl: "https://chat.mistral.ai/",
-          targetModel: "mistral-small",
-          reason: "Simple weather ask. A small model is enough",
-        },
-        reason: "Simple weather ask. A small model is enough",
-      };
+    if (
+      host === "chat.deepseek.com" ||
+      /deepseek/i.test(suggestion.targetUrl ?? "")
+    ) {
+      return { kind: "unknown" };
+    }
+    if (suggestion.action === "open_paste" && !suggestion.targetUrl) {
+      return { kind: "unknown" };
     }
     return {
       kind: "weather",
