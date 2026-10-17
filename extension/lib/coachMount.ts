@@ -2,6 +2,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createElement } from "react";
 import { CoachOverlay } from "../components/CoachOverlay";
 import { coachBottomPx } from "./coach";
+import type { CoachTargetDisplay } from "./coachTargetDisplay";
 
 const HOST_ID = "puddle-coach-host";
 
@@ -16,13 +17,13 @@ const SHADOW_CSS = `
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-6px) scale(1.04); }
   }
+  [role="img"] > svg { width: 100%; height: 100%; display: block; }
 `;
 
 export type CoachMountOpts = {
   message: string;
   composer?: Element | null;
-  onYes: () => void;
-  onNo: () => void;
+  target?: CoachTargetDisplay | null;
   /** false = light DOM (fixture). true = Shadow DOM (live pages). */
   shadow?: boolean;
 };
@@ -41,17 +42,18 @@ export function mountCoach(opts: CoachMountOpts): HTMLElement {
   host.id = HOST_ID;
   document.documentElement.appendChild(host);
 
-  const mountPoint = opts.shadow !== false
-    ? (() => {
-        const shadow = host.attachShadow({ mode: "open" });
-        const style = document.createElement("style");
-        style.textContent = SHADOW_CSS;
-        shadow.appendChild(style);
-        const inner = document.createElement("div");
-        shadow.appendChild(inner);
-        return inner;
-      })()
-    : host;
+  const mountPoint =
+    opts.shadow !== false
+      ? (() => {
+          const shadow = host.attachShadow({ mode: "open" });
+          const style = document.createElement("style");
+          style.textContent = SHADOW_CSS;
+          shadow.appendChild(style);
+          const inner = document.createElement("div");
+          shadow.appendChild(inner);
+          return inner;
+        })()
+      : host;
 
   const bottom = coachBottomPx(opts.composer ?? null);
   root = createRoot(mountPoint);
@@ -59,8 +61,7 @@ export function mountCoach(opts: CoachMountOpts): HTMLElement {
     createElement(CoachOverlay, {
       message: opts.message,
       bottom,
-      onYes: opts.onYes,
-      onNo: opts.onNo,
+      target: opts.target ?? null,
     }),
   );
   return host;

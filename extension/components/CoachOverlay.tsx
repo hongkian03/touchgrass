@@ -1,13 +1,14 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { PipSvg } from "./PipSvg";
+import { BrandIcon } from "./BrandIcon";
 import { COACH_BUBBLE_MAX, COACH_RIGHT } from "../lib/coach";
-import coachCopy from "../data/coach-copy.json";
+import type { CoachTargetDisplay } from "../lib/coachTargetDisplay";
 
 type Props = {
   message: string;
   bottom?: number;
-  onYes: () => void;
-  onNo: () => void;
+  /** Platform chip for open-paste redirect. */
+  target?: CoachTargetDisplay | null;
 };
 
 const shell: CSSProperties = {
@@ -34,55 +35,64 @@ const bubble: CSSProperties = {
   boxShadow: "0 8px 24px rgba(27, 73, 101, 0.18)",
 };
 
-const row: CSSProperties = {
+const chip: CSSProperties = {
   display: "flex",
-  gap: 8,
+  alignItems: "center",
+  gap: 10,
   marginTop: 10,
+  padding: "8px 10px",
+  borderRadius: 12,
+  background: "rgba(255, 255, 255, 0.65)",
 };
 
-const btn: CSSProperties = {
-  flex: 1,
-  border: "none",
-  borderRadius: 999,
-  padding: "8px 14px",
-  fontFamily: "inherit",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-};
+function TargetChip({ target }: { target: CoachTargetDisplay }): ReactNode {
+  let icon: ReactNode = null;
+  if (target.iconSlug) {
+    const slug = target.iconSlug;
+    if (slug === "gemini" || slug === "gemini-google" || slug === "google-gemini") {
+      const src =
+        typeof browser !== "undefined" && browser.runtime?.getURL
+          ? browser.runtime.getURL("/icons/gemini.svg")
+          : "/icons/gemini.svg";
+      icon = (
+        <img
+          src={src}
+          alt=""
+          width={28}
+          height={28}
+          style={{ width: 28, height: 28, display: "block", objectFit: "contain" }}
+        />
+      );
+    } else {
+      icon = <BrandIcon slug={slug} size={28} label={target.name} />;
+    }
+  } else if (target.faviconUrl) {
+    icon = (
+      <img
+        src={target.faviconUrl}
+        alt=""
+        width={28}
+        height={28}
+        style={{ width: 28, height: 28, borderRadius: 6, display: "block" }}
+      />
+    );
+  }
 
-/** Floating coach card — Shadow DOM or fixture page. */
-export function CoachOverlay({
-  message,
-  bottom = 16,
-  onYes,
-  onNo,
-}: Props) {
   return (
-    <div
-      data-testid="coach-overlay"
-      style={{ ...shell, bottom }}
-    >
+    <div data-testid="coach-redirect-chip" style={chip}>
+      {icon}
+      <span style={{ fontWeight: 600 }}>{target.name}</span>
+    </div>
+  );
+}
+
+/** Floating coach card. Auto-informs; no Yes/No. */
+export function CoachOverlay({ message, bottom = 16, target = null }: Props) {
+  return (
+    <div data-testid="coach-overlay" style={{ ...shell, bottom }}>
       <div data-testid="coach-bubble" style={bubble}>
         <p style={{ margin: 0 }}>{message}</p>
-        <div style={row}>
-          <button
-            type="button"
-            data-testid="coach-yes"
-            style={{ ...btn, background: "#5fa8d3", color: "#1b4965" }}
-            onClick={onYes}
-          >
-            {coachCopy.yes}
-          </button>
-          <button
-            type="button"
-            data-testid="coach-no"
-            style={{ ...btn, background: "#bee9e8", color: "#1b4965" }}
-            onClick={onNo}
-          >
-            {coachCopy.no}
-          </button>
-        </div>
+        {target ? <TargetChip target={target} /> : null}
       </div>
       <PipSvg size={72} talking />
     </div>
