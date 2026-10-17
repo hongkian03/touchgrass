@@ -257,12 +257,12 @@ export function PopupApp() {
 
           <section data-testid="more-insights" className="flex flex-col gap-2.5">
             <PuddleMeter
-              label="small-model asks"
+              label="small model"
               hint="Share of prompts a cheaper model could handle."
               value={smallPct}
               wash="#e8f6df"
               accent="#5cb85c"
-              glyph="leaf"
+              glyph="mini"
             />
             <PuddleMeter
               label="regenerates"
@@ -376,7 +376,7 @@ function PuddleMeter({
   value: number;
   wash: string;
   accent: string;
-  glyph: "leaf" | "spin";
+  glyph: "mini" | "spin";
 }) {
   const pct = Math.max(0, Math.min(100, value));
   const beads = 10;
@@ -415,27 +415,29 @@ function MeterGlyph({
   kind,
   color,
 }: {
-  kind: "leaf" | "spin";
+  kind: "mini" | "spin";
   color: string;
 }) {
-  if (kind === "leaf") {
+  if (kind === "mini") {
     return (
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <ellipse
-          className="ft-sway"
-          cx="12"
-          cy="13"
-          rx="7"
-          ry="9"
+        <rect
+          x="3"
+          y="8"
+          width="8"
+          height="8"
+          rx="2"
           fill={color}
-          opacity="0.9"
         />
-        <path
-          d="M12 6 C12 12 12 18 12 20"
+        <rect
+          x="13"
+          y="4"
+          width="8"
+          height="12"
+          rx="2"
           fill="none"
-          stroke="#1b4965"
-          strokeWidth="1.4"
-          strokeLinecap="round"
+          stroke={color}
+          strokeWidth="1.6"
           opacity="0.45"
         />
       </svg>
@@ -508,7 +510,7 @@ function PromptMix({
   return (
     <div>
       <div className="mb-1.5 text-xs font-medium text-foreground">
-        prompt mix
+        text, image, video
       </div>
       <div className="grid grid-cols-3 gap-2">
         {cols.map((c) => (
