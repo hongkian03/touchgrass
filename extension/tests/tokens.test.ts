@@ -52,6 +52,7 @@ describe("Pip = muskie Codex pet", () => {
     expect(pet.spritesheetPath).toBe("spritesheet.webp");
     expect(pip).toMatch(/muskie\/spritesheet\.webp/);
     expect(pip).toMatch(/muskie\/sticker-hello\.png/);
+    expect(pip).toMatch(/muskie\/sticker-gotit\.png/);
     const hexes = pip.match(/#[0-9a-fA-F]{3,8}/g) ?? [];
     expect(hexes).toEqual([]);
   });
