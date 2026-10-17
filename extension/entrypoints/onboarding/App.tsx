@@ -129,7 +129,7 @@ export function OnboardingApp() {
         }}
       >
         <div className="pip-peek pip-peek--panel" aria-hidden="true">
-          <Pip size={120} variant="sticker" tilt={4} />
+          <Pip size={96} variant="sticker" tilt={-6} />
         </div>
 
         <div className="relative z-10 pr-24">

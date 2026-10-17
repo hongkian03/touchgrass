@@ -84,32 +84,28 @@ body {
   display: block;
 }
 
-/* Still sticker — no bounce. Light shadow only. */
+/* Ahead-style die-cut: white rim + soft lift. Still. */
 .pip-sticker {
-  filter: drop-shadow(0 2px 6px rgba(27, 73, 101, 0.16));
+  filter: drop-shadow(0 6px 10px rgba(27, 73, 101, 0.18));
 }
 
-/* Peek from panel corner — sized for extension chrome */
+/* Peek off the card edge onto pale sky so the white rim reads */
 .pip-peek {
   position: absolute;
-  top: -2px;
-  right: -10px;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   display: flex;
-  flex-direction: column;
   align-items: flex-end;
-  gap: 0;
 }
 
 .pip-peek--panel {
-  top: 2px;
-  right: -8px;
+  top: 8px;
+  right: 4px;
 }
 
 .pip-peek--popup {
-  top: 2px;
-  right: -12px;
+  top: 6px;
+  right: 2px;
 }
 
 @keyframes pip-sprite {

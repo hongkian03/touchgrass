@@ -88,7 +88,7 @@ export function PopupApp() {
       style={shell}
     >
       <div className="pip-peek pip-peek--popup" aria-hidden="true">
-        <Pip size={80} variant="sticker" tilt={4} />
+        <Pip size={84} variant="sticker" tilt={-6} />
       </div>
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-stretch gap-3 pr-16">
         <h1
