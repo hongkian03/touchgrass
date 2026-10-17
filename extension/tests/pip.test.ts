@@ -53,8 +53,8 @@ describe("PipSvg token-only fills", () => {
 });
 
 describe("coach bubble + hide", () => {
-  it("bubble max is 280", () => {
-    expect(COACH_BUBBLE_MAX).toBe(280);
+  it("bubble max is 240", () => {
+    expect(COACH_BUBBLE_MAX).toBe(240);
     const overlay = readFileSync(
       resolve(__dirname, "../components/CoachOverlay.tsx"),
       "utf8",
@@ -62,14 +62,26 @@ describe("coach bubble + hide", () => {
     expect(overlay).toMatch(/COACH_BUBBLE_MAX|maxWidth:\s*COACH_BUBBLE_MAX/);
   });
 
-  it("overlay has no Yes/No buttons", () => {
+  it("overlay is top-right toast with chip, no pet, no Yes/No", () => {
     const overlay = readFileSync(
       resolve(__dirname, "../components/CoachOverlay.tsx"),
       "utf8",
     );
     expect(overlay).not.toMatch(/coach-yes/);
     expect(overlay).not.toMatch(/coach-no/);
+    expect(overlay).not.toMatch(/PipSvg/);
     expect(overlay).toMatch(/coach-redirect-chip/);
+    expect(overlay).toMatch(/COACH_TOP/);
+    expect(overlay).toMatch(/COACH_RIGHT/);
+  });
+
+  it("content watches typing with debounce", () => {
+    const content = readFileSync(
+      resolve(__dirname, "../entrypoints/content.ts"),
+      "utf8",
+    );
+    expect(content).toMatch(/COACH_TYPE_DEBOUNCE_MS/);
+    expect(content).toMatch(/addEventListener\(["']input["']/);
   });
 
   it("hides for 10 minutes after lastCoachAt", () => {
@@ -79,8 +91,7 @@ describe("coach bubble + hide", () => {
     expect(shouldShowCoach(now - COACH_HIDE_MS - 1, now)).toBe(true);
   });
 
-  it("lifts overlay when composer would intersect", () => {
-    // jsdom may lack layout. function with null stays default
+  it("coachBottomPx with null stays default", () => {
     expect(coachBottomPx(null)).toBe(16);
   });
 });
