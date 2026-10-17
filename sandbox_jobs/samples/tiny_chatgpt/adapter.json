@@ -1,0 +1,10 @@
+{
+  "site": "chatgpt",
+  "version": 1,
+  "selectors": {
+    "prompt_box": "#prompt-textarea",
+    "send_button": "button[data-testid='send-button']",
+    "model_name": "button[data-testid='model-switcher-dropdown-button'] span",
+    "response": "[data-message-author-role='assistant'] .markdown"
+  }
+}

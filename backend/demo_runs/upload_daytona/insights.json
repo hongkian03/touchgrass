@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-10-16T22:32:14+00:00",
+  "period": {
+    "start": "2026-09-22T14:04:14+00:00",
+    "end": "2026-10-16T22:32:14+00:00"
+  },
+  "totals": {
+    "exchanges": 12,
+    "energy_wh": {
+      "low": 2.238738,
+      "high": 8.95495
+    },
+    "water_ml": {
+      "low": 4.477475,
+      "high": 17.9099
+    },
+    "co2_g": {
+      "low": 0.895495,
+      "high": 3.58198
+    }
+  },
+  "tips": [
+    {
+      "id": "repeated_questions",
+      "title": "3 of 12 exchanges retyped a question you had already asked (2 repeated question(s), one sent 3 times): about 0.089 to 0.354 Wh was spent re-answering them",
+      "pattern": "repeated_questions",
+      "evidence": {
+        "counts": {
+          "total_exchanges": 12,
+          "repeated_question_groups": 2,
+          "repeat_exchanges": 3,
+          "largest_repeat_group": 3
+        },
+        "examples": [
+          "How do I center a div in CSS on my ZEBRAQUARTZ page?",
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.088575,
+          "high": 0.3543
+        }
+      },
+      "how_to_fix": "Keep the first answer of each repeated question in a saved snippet or note, and edit or continue that same thread instead of sending the question again."
+    },
+    {
+      "id": "regenerate_loops",
+      "title": "1 answers were retried (1 flagged regenerated, 1 questions resent within 30 minutes), burning about 0.007 to 0.027 Wh",
+      "pattern": "regenerate_loops",
+      "evidence": {
+        "counts": {
+          "total_exchanges": 12,
+          "regenerated_exchanges": 1,
+          "same_question_retries": 1,
+          "retry_exchanges": 1
+        },
+        "examples": [
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.006825,
+          "high": 0.0273
+        }
+      },
+      "how_to_fix": "Before regenerating, tell the model what was wrong with the previous answer and ask for a targeted edit, so one reply replaces a retry."
+    },
+    {
+      "id": "model_choice",
+      "title": "1 of 2 short asks (50%) ran on gpt-4o, where gpt-4o-mini would use 83 to 83% less energy: about 0.003 to 0.014 Wh recoverable",
+      "pattern": "other",
+      "evidence": {
+        "counts": {
+          "total_exchanges": 12,
+          "short_text_exchanges": 2,
+          "short_asks_on_heaviest_model": 1,
+          "share_of_short_asks_pct": 50
+        },
+        "examples": [
+          "And only keep the even ones?"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.003438,
+          "high": 0.01375
+        }
+      },
+      "how_to_fix": "Route simple lookups, rewrites and short questions to gpt-4o-mini and keep gpt-4o for the hard problems that actually need it."
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+run,success,attempts,first_try,exchanges,regenerations,images,duration,credits,input
+1,True,2,False,8,1,1,115.98,19319.0,conversations.json
+2,True,1,True,8,1,1,100.49,15337.0,conversations.json
+3,True,2,False,8,1,1,124.29,24969.0,conversations.json
