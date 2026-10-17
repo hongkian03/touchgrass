@@ -107,7 +107,11 @@ export function DashboardApp() {
   };
 
   const runVoiceText = async (text: string) => {
-    const intent = parseVoiceIntent(text, platforms);
+    const intent = parseVoiceIntent(
+      text,
+      platforms,
+      state.enabledPlatforms,
+    );
     if (intent.kind === "recap") {
       setVoiceNote("Opening weekly recap");
       goRecap();
@@ -115,8 +119,8 @@ export function DashboardApp() {
     }
     if (intent.kind === "weather") {
       setVoiceNote(intent.reason);
-      const url = intent.suggestion.targetUrl ?? "https://chat.mistral.ai/";
-      if (/deepseek/i.test(url)) return;
+      const url = intent.suggestion.targetUrl;
+      if (!url || /deepseek/i.test(url)) return;
       await browser.tabs.create({ url });
       return;
     }
