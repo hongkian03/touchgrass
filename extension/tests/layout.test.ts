@@ -15,8 +15,8 @@ describe("layout constants (issue #4)", () => {
     expect(POPUP_WIDTH_TOLERANCE).toBe(4);
   });
 
-  it("onboarding column max is 420", () => {
-    expect(ONBOARDING_MAX_WIDTH).toBe(420);
+  it("onboarding column max is 460", () => {
+    expect(ONBOARDING_MAX_WIDTH).toBe(460);
   });
 
   it("popup App uses POPUP_WIDTH / POPUP_HEIGHT", () => {
@@ -35,6 +35,6 @@ describe("layout constants (issue #4)", () => {
       "utf8",
     );
     expect(src).toMatch(/ONBOARDING_MAX_WIDTH/);
-    expect(src).not.toMatch(/maxWidth:\s*420\b/);
+    expect(src).not.toMatch(/maxWidth:\s*460\b/);
   });
 });
