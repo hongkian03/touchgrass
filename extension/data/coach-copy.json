@@ -1,0 +1,8 @@
+{
+  "oversized": "That looks like a small-model job. Switch before you burn credits?",
+  "regenerate": "You already asked this. Another regen costs water and watts.",
+  "image": "This image costs about as much as dozens of text prompts. Still go?",
+  "video": "One video ≈ hundreds of text prompts. Sure?",
+  "yes": "Yes",
+  "no": "No"
+}
