@@ -12,6 +12,10 @@ Droid-written parsers. On a hit we run the cached parser.py and our validator, a
 it passes. After a successful Droid run, parser.py (not the tests, which may hold sample text) is
 saved to PARSER_CACHE/<fingerprint>/.
 
+Daytona hybrid (REDACTED_INPUT=1): WORK_DIR/input already holds the redacted copy, made inside the
+sandbox, so it is copied into Droid's view as-is and "the real export" here is that same copy.
+The parser isn't cached: it is only cached once it has passed on the real export in the sandbox.
+
 Usage:
   py sandbox_jobs/ingest.py                         # the one export already in WORK_DIR/input
   py sandbox_jobs/ingest.py --input FILE            # copy FILE into a clean WORK_DIR/input first
@@ -60,6 +64,8 @@ CACHED_PARSER_TIMEOUT = 300
 # The command Droid uses to run Python: py on Windows laptops (python is often the Store stub),
 # python3 inside the Linux sandbox.
 PYTHON = os.environ.get("DROID_PYTHON", "py" if os.name == "nt" else "python3")
+# The backend's half of the Daytona hybrid: the input is already redacted (see the docstring).
+REDACTED_INPUT = os.environ.get("REDACTED_INPUT") == "1"
 
 
 class IngestSummary(BaseModel):
@@ -164,8 +170,12 @@ def build_droid_view(export):
     ensure_work_dirs(VIEW)
     for name in ("input", "lib", "droid", "output"):
         clear(VIEW / name)
-    stats = redact_file(export, VIEW / "input" / f"export{export.suffix.lower()}")
     copy_lib(VIEW, ("schema.json", "validate_prompts.py"))
+    if REDACTED_INPUT:
+        shutil.copy2(export, VIEW / "input" / f"export{export.suffix.lower()}")
+        print("Droid view: the redacted copy made in the sandbox")
+        return None
+    stats = redact_file(export, VIEW / "input" / f"export{export.suffix.lower()}")
     print(f"redacted copy for Droid: replaced {stats['replaced']} strings, kept {stats['kept']} "
           f"(fields kept: {len(stats['kept_fields'])})")
     return stats
@@ -272,7 +282,7 @@ async def ingest_once(no_cache=False):
     if result["success"]:
         result.update(normalize_and_count(prompts))
         parser = WORK_DIR / "droid" / "parser.py"
-        if parser.is_file():
+        if parser.is_file() and not REDACTED_INPUT:
             (PARSER_CACHE / fp).mkdir(parents=True, exist_ok=True)
             shutil.copy2(parser, PARSER_CACHE / fp / "parser.py")
             print(f"cached parser: {PARSER_CACHE / fp / 'parser.py'}")
