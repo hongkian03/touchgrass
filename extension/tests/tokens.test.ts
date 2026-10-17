@@ -30,24 +30,50 @@ describe("Puddle CSS tokens", () => {
     expect(css).toMatch(/--yale-blue:\s*#1b4965\b/i);
   });
 
-  it("registers Castoro via local @font-face, not a google fonts URL", () => {
-    expect(css).toMatch(/font-family:\s*["']Castoro["']/);
-    expect(css).toMatch(/Castoro-Regular\.woff2/);
+  it("registers Geist via local @font-face, not a google fonts URL", () => {
+    expect(css).toMatch(/font-family:\s*["']Geist["']/);
+    expect(css).toMatch(/Geist-Regular\.woff2/);
     expect(css).not.toMatch(/fonts\.googleapis\.com/);
   });
 });
 
-describe("Pip token-only SVG", () => {
+describe("Pip = muskie Codex pet", () => {
   const pip = readFileSync(resolve(__dirname, "../components/Pip.tsx"), "utf8");
+  const pet = JSON.parse(
+    readFileSync(
+      resolve(__dirname, "../public/pets/muskie/pet.json"),
+      "utf8",
+    ),
+  ) as { id: string; spritesheetPath: string };
+  const css = readFileSync(resolve(__dirname, "../assets/puddle.css"), "utf8");
 
-  it("uses only CSS var token fills, no hard-coded off-palette hex", () => {
+  it("points at muskie sticker + spritesheet, no off-palette SVG hex", () => {
+    expect(pet.id).toBe("muskie");
+    expect(pet.spritesheetPath).toBe("spritesheet.webp");
+    expect(pip).toMatch(/muskie\/spritesheet\.webp/);
+    expect(pip).toMatch(/muskie\/sticker-hello\.png/);
     const hexes = pip.match(/#[0-9a-fA-F]{3,8}/g) ?? [];
     expect(hexes).toEqual([]);
-    expect(pip).toMatch(/var\(--pacific-blue\)/);
-    expect(pip).toMatch(/var\(--frozen-water\)/);
-    expect(pip).toMatch(/var\(--yale-blue\)/);
-    expect(pip).toMatch(/var\(--fresh-sky\)/);
-    expect(pip).toMatch(/var\(--pale-sky\)/);
+  });
+
+  it("uses white surface for extension chrome", () => {
+    expect(css).toMatch(/--surface:\s*#ffffff\b/i);
+    expect(css).toMatch(/background:\s*#ffffff/);
+  });
+});
+
+describe("onboarding chrome", () => {
+  const onboard = readFileSync(
+    resolve(__dirname, "../entrypoints/onboarding/App.tsx"),
+    "utf8",
+  );
+
+  it("shows Ahead-style Pip sticker above Puddle title", () => {
+    expect(onboard).toMatch(/puddle-title/);
+    expect(onboard).toMatch(/<Pip/);
+    expect(onboard).toMatch(/variant=["']sticker["']/);
+    expect(onboard).toMatch(/from ["'].*ui\/button["']/);
+    expect(onboard).toMatch(/from ["'].*ui\/input["']/);
   });
 });
 
@@ -64,13 +90,13 @@ describe("Puddle branding strings", () => {
   it("manifest name in wxt.config is Puddle", () => {
     const cfg = readFileSync(resolve(__dirname, "../wxt.config.ts"), "utf8");
     expect(cfg).toMatch(/name:\s*["']Puddle["']/);
-    expect(cfg).toMatch(/host_permissions:\s*\[\s*\]/);
+    expect(cfg).toMatch(/api\.groq\.com/);
     expect(cfg).toMatch(/["']storage["']/);
     expect(cfg).toMatch(/["']tabs["']/);
     expect(cfg).toMatch(/["']scripting["']/);
   });
 
-  it("built manifest keeps host_permissions empty", () => {
+  it("built manifest only allows Groq API host until onboarding", () => {
     const raw = readFileSync(
       resolve(__dirname, "../.output/chrome-mv3/manifest.json"),
       "utf8",
@@ -84,6 +110,6 @@ describe("Puddle branding strings", () => {
     expect(manifest.permissions).toEqual(
       expect.arrayContaining(["storage", "tabs", "scripting"]),
     );
-    expect(manifest.host_permissions ?? []).toEqual([]);
+    expect(manifest.host_permissions ?? []).toEqual(["https://api.groq.com/*"]);
   });
 });
