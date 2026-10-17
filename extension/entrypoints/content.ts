@@ -1,9 +1,16 @@
 import coachCopy from "../data/coach-copy.json";
 import { shouldShowCoach } from "../lib/coach";
 import { mountCoach, unmountCoach } from "../lib/coachMount";
-import { runCoachYes } from "../lib/coachYes";
+import {
+  applyCoachSwitch,
+  openCoachPaste,
+  planCoachAuto,
+} from "../lib/coachYes";
 import { classify } from "../lib/classify";
 import { readState, writeState } from "../lib/storage";
+
+const REDIRECT_MS = 1600;
+const SWITCH_HOLD_MS = 1800;
 
 function findComposer(): HTMLTextAreaElement | HTMLElement | null {
   return (
@@ -15,6 +22,12 @@ function findComposer(): HTMLTextAreaElement | HTMLElement | null {
 function draftFrom(el: HTMLTextAreaElement | HTMLElement): string {
   if (el instanceof HTMLTextAreaElement) return el.value;
   return el.textContent ?? "";
+}
+
+function findModelLabel(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    "#model-label, [data-testid='model-switcher'], [data-testid='model-selector']",
+  );
 }
 
 export default defineContentScript({
@@ -37,25 +50,45 @@ async function boot() {
   if (!draft) return;
   if (classify(draft, "text") !== "small_ok") return;
 
+  const plan = planCoachAuto({
+    draft,
+    model: "gpt-5",
+    provider: "chatgpt",
+    modelLabel: findModelLabel(),
+  });
+
+  if (plan.kind === "switched" && findModelLabel()) {
+    applyCoachSwitch(findModelLabel()!, plan.model);
+    mountCoach({
+      shadow: true,
+      message: coachCopy.switched.replace("{model}", plan.model),
+      composer,
+    });
+    await writeState({ lastCoachAt: Date.now() });
+    window.setTimeout(() => unmountCoach(), SWITCH_HOLD_MS);
+    return;
+  }
+
+  if (plan.kind !== "redirect") return;
+
   mountCoach({
     shadow: true,
-    message: coachCopy.oversized,
+    message: coachCopy.redirecting.replace("{name}", plan.target.name),
     composer,
-    onYes: () => {
-      void (async () => {
-        await runCoachYes({
+    target: plan.target,
+  });
+
+  window.setTimeout(() => {
+    void (async () => {
+      try {
+        await openCoachPaste({
+          url: plan.url,
           draft: draftFrom(composer),
-          model: "gpt-5",
-          provider: "chatgpt",
         });
-        unmountCoach();
-      })();
-    },
-    onNo: () => {
-      void (async () => {
+      } finally {
         await writeState({ lastCoachAt: Date.now() });
         unmountCoach();
-      })();
-    },
-  });
+      }
+    })();
+  }, REDIRECT_MS);
 }
