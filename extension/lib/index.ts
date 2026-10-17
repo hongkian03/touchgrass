@@ -19,6 +19,8 @@ export type { ResolveResult } from "./hosts";
 export {
   COACH_BUBBLE_MAX,
   COACH_HIDE_MS,
+  COACH_TOP,
+  COACH_TYPE_DEBOUNCE_MS,
   coachBottomPx,
   coachNeverDeepSeek,
   shouldShowCoach,
