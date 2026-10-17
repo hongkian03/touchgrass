@@ -30,9 +30,12 @@ describe("Puddle CSS tokens", () => {
     expect(css).toMatch(/--yale-blue:\s*#1b4965\b/i);
   });
 
-  it("registers Geist via local @font-face, not a google fonts URL", () => {
+  it("registers Castoro + Geist via local @font-face, not google fonts", () => {
+    expect(css).toMatch(/font-family:\s*["']Castoro["']/);
+    expect(css).toMatch(/Castoro-Regular\.woff2/);
     expect(css).toMatch(/font-family:\s*["']Geist["']/);
     expect(css).toMatch(/Geist-Regular\.woff2/);
+    expect(css).toMatch(/\[data-testid=["']puddle-title["']\]/);
     expect(css).not.toMatch(/fonts\.googleapis\.com/);
   });
 });
@@ -97,7 +100,7 @@ describe("Puddle branding strings", () => {
     expect(cfg).toMatch(/["']scripting["']/);
   });
 
-  it("built manifest only allows Groq API host until onboarding", () => {
+  it("built manifest: Groq active; AI sites optional until onboarding", () => {
     const raw = readFileSync(
       resolve(__dirname, "../.output/chrome-mv3/manifest.json"),
       "utf8",
@@ -106,11 +109,19 @@ describe("Puddle branding strings", () => {
       name: string;
       permissions: string[];
       host_permissions?: string[];
+      optional_host_permissions?: string[];
     };
     expect(manifest.name).toBe("Puddle");
     expect(manifest.permissions).toEqual(
       expect.arrayContaining(["storage", "tabs", "scripting"]),
     );
     expect(manifest.host_permissions ?? []).toEqual(["https://api.groq.com/*"]);
+    expect(manifest.optional_host_permissions ?? []).toEqual(
+      expect.arrayContaining([
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://chat.mistral.ai/*",
+      ]),
+    );
   });
 });
