@@ -74,7 +74,6 @@ export function FixtureApp() {
         mountCoach({
           shadow: false,
           message: coachCopy.switched.replace("{model}", plan.model),
-          composer: composerRef.current,
         });
         await writeState({ lastCoachAt: Date.now() });
         timer = window.setTimeout(() => {
@@ -94,7 +93,6 @@ export function FixtureApp() {
       mountCoach({
         shadow: false,
         message: coachCopy.redirecting.replace("{name}", plan.target.name),
-        composer: composerRef.current,
         target: plan.target,
       });
 
