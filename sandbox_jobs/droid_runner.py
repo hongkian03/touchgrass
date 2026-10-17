@@ -102,6 +102,11 @@ class JobResult:
     error: str | None = None
     transcript_path: Path | None = None
 
+    @property
+    def tampered(self):
+        """A protected folder changed during the job. Always a failure, whatever else passed."""
+        return bool(self.error and self.error.startswith("protected folder changed"))
+
 
 def ensure_work_dirs(root=None):
     for name in SUBDIRS:

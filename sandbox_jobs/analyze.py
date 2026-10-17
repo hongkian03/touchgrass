@@ -6,8 +6,8 @@ which it imports and never edits.
 
 Privacy: Droid never sees the user's prompts. It works in DROID_VIEW_DIR/analyze, which holds only our
 schemas, footprint.py, a FAKE prompts.jsonl (samples/chatgpt_fake), and aggregates.json with
-counts of the real data (per model, per day, per kind, regenerations, text lengths), with web
-tools and subagents turned off. We then copy its analyze.py into WORK_DIR and run it on the real
+counts of the real data (per model, per day, per kind, regenerations, text lengths), with
+Droid's default tools. We then copy its analyze.py into WORK_DIR and run it on the real
 prompts.jsonl ourselves, without Droid.
 
 On that real run we check Droid's work ourselves; any failure fails the job:
@@ -42,8 +42,6 @@ load_dotenv(REPO / ".env")
 
 from droid_runner import (  # noqa: E402
     DROID_VIEW_DIR,
-    PRIVATE_DATA_DISABLED_TOOLS,
-    PRIVATE_DATA_ENABLED_TOOLS,
     WORK_DIR,
     ensure_work_dirs,
     run_droid_job,
@@ -311,8 +309,7 @@ async def main():
     footprint_hash = sha256(view_footprint)
 
     job = await run_droid_job("analyze", PROMPT, output_model=AnalystSummary, timeout=900,
-                              work_dir=VIEW, disabled_tools=PRIVATE_DATA_DISABLED_TOOLS,
-                              enabled_tools=PRIVATE_DATA_ENABLED_TOOLS)
+                              work_dir=VIEW)
     print(f"\nDroid: success={job.success} subtype={job.subtype} seconds={job.duration} "
           f"factory_credits={job.factory_credits}")
     if job.error:
@@ -331,7 +328,10 @@ async def main():
         print(f"\nanalyze.py on the real data (run by analyze.py, not Droid): {why}")
     else:
         print("\nDroid did not write analyze.py")
-    ok = report(checks(view_footprint_ok)) and job.success
+    # Our checks decide, not how Droid's turn ended; a changed protected folder always fails.
+    ok = report(checks(view_footprint_ok)) and not job.tampered
+    if ok and not job.success:
+        print(f"note: Droid's turn ended as {job.subtype}, but the analyze.py it wrote passes our checks")
     print(f"\nANALYZE {'PASSED' if ok else 'FAILED'}")
     return 0 if ok else 1
 

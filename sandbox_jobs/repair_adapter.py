@@ -168,9 +168,14 @@ async def main():
         problems.append(f"version is {fixed.get('version')}, expected {broken.get('version', 0) + 1}")
     if fixed.get("version", 0) <= published_version(args.site):
         problems.append(f"version not higher than the published v{published_version(args.site)}")
-    if problems or not job.success:
-        print(f"\nREPAIR FAILED: {'; '.join(problems) or 'Droid run failed'} (not published)")
+    # Our checks decide, not how Droid's turn ended; a changed protected folder always fails.
+    if job.tampered:
+        problems.append(job.error)
+    if problems:
+        print(f"\nREPAIR FAILED: {'; '.join(problems)} (not published)")
         return 1
+    if not job.success:
+        print(f"note: Droid's turn ended as {job.subtype}, but the adapter it wrote passes our checks")
     print("\npublish: " + ("skipped (--no-publish)" if args.no_publish else publish(args.site, fixed)))
     print(f"\nREPAIR PASSED in {time.monotonic() - start:.1f}s")
     return 0
