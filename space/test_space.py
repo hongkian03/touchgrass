@@ -3,7 +3,7 @@
     py space/test_space.py        (or: py -m pytest space/test_space.py)
 
 1. A synthetic GIBS cache (capabilities, colormap, PNGs with known greys) checks the layer choice,
-   the radiance mapping, the skip past a date with missing pixels, and the growth math.
+   the radiance mapping, skipping nights with missing pixels, averaging the rest, and the growth math.
 2. The real space/cache/, if it has been built (py space/nasa_lights.py): results load offline and
    rebuilding them from the cached images gives the same numbers.
 3. GET /space/insight: your_share is null without insights and an estimate with them; every other
@@ -66,13 +66,13 @@ def png(grey, size, missing_share=0.0):
 
 
 def synthetic_cache(root):
-    """Layer dates 2012-01-01..2012-01-03 and 2020-06-01..2020-06-02. Greys 7 (0.05), 13 (0.15),
-    255 (saturated, 38.2). Early 2012-01-01 is half missing, so 2012-01-02 is used."""
+    """June–August of 2012 and 2020 are full years in the layer range. Greys 7 (0.05), 13 (0.15),
+    255 (saturated, 38.2). 2012-06-01 is half missing, so only 2012-06-02 and 2012-06-03 are averaged."""
     root.mkdir(parents=True, exist_ok=True)
     (root / "capabilities.xml").write_text(f"""<?xml version="1.0"?>
 <WMS_Capabilities xmlns="http://www.opengis.net/wms" version="1.3.0"><Capability><Layer>
  <Layer><Name>VIIRS_SNPP_DayNightBand</Name><Dimension name="time">2012-03-01/2026-01-01/P1D</Dimension></Layer>
- <Layer><Name>{LAYER}</Name><Dimension name="time">2012-01-01/2012-01-03/P1D,2020-06-01/2020-06-02/P1D</Dimension></Layer>
+ <Layer><Name>{LAYER}</Name><Dimension name="time">2012-06-01/2012-06-03/P1D,2020-06-01/2020-08-31/P1D</Dimension></Layer>
  <Layer><Name>Something_Else</Name><Dimension name="time">2000-01-01/2001-01-01/P1D</Dimension></Layer>
 </Layer></Capability></WMS_Capabilities>""", encoding="utf-8")
     (root / "colormap_VIIRS_DayNightBand_At_Sensor_Radiance.xml").write_text("""<?xml version="1.0"?>
@@ -84,15 +84,16 @@ def synthetic_cache(root):
   <ColorMapEntry rgb="255,255,255" transparent="false" value="[38.2,999999.0)"/>
  </Entries></ColorMap>
 </ColorMaps>""", encoding="utf-8")
-    greys = {"2012-01-01": (7, 0.5), "2012-01-02": (7, 0.0), "2020-06-02": (13, 0.0)}
+    greys = {"2012-06-01": (7, 0.5), "2012-06-02": (7, 0.0), "2012-06-03": (7, 0.0),
+             "2020-06-01": (13, 0.0), "2020-06-02": (13, 0.0)}
     for region in nasa_lights.REGIONS:
         for box_id, box in region["boxes"].items():
-            url = nasa_lights.image_url(LAYER, "2012-01-01", box)
+            url = nasa_lights.image_url(LAYER, "2012-06-01", box)
             w = int(url.split("WIDTH=")[1].split("&")[0])
             h = int(url.split("HEIGHT=")[1].split("&")[0])
-            for date, (grey, missing) in greys.items():
-                grey = 255 if region["id"] == "phoenix" and date == "2020-06-02" else grey
-                (root / f"{LAYER}_{date}_{box_id}.png").write_bytes(png(grey, (w, h), missing))
+            for day, (grey, missing) in greys.items():
+                grey = 255 if region["id"] == "phoenix" and day.startswith("2020-") else grey
+                (root / f"{LAYER}_{day}_{box_id}.png").write_bytes(png(grey, (w, h), missing))
 
 
 def test_synthetic_cache():
@@ -104,12 +105,15 @@ def test_synthetic_cache():
             assert (tmp / "results.json").is_file()
             again = nasa_lights.load_or_build(offline=True)
         assert results["layer"] == LAYER, results["layer"]
-        assert results["layer_dates"] == {"first": "2012-01-01", "last": "2020-06-02"}
+        assert results["layer_dates"] == {"first": "2012-06-01", "last": "2020-08-31"}
+        assert results["season"] == {"months": [6, 7, 8], "first_year": 2012, "last_year": 2020}
         by_id = {r["id"]: r for r in results["regions"]}
         assert set(by_id) == {"northern_virginia", "phoenix", "oregon"}
         va = by_id["northern_virginia"]
-        assert va["earliest"]["date"] == "2012-01-02", "should skip the half-missing 2012-01-01"
-        assert va["latest"]["date"] == "2020-06-02"
+        assert va["earliest"]["date"] == "2012-06/2012-08"
+        assert va["earliest"]["nights"] == 2, "should skip the half-missing 2012-06-01"
+        assert va["earliest"]["dates"] == ["2012-06-02", "2012-06-03"]
+        assert va["latest"]["date"] == "2020-06/2020-08" and va["latest"]["nights"] == 2
         assert va["earliest"]["brightness"] == 0.05 and va["latest"]["brightness"] == 0.15
         assert va["growth_pct"] == 200.0, va["growth_pct"]
         assert by_id["phoenix"]["latest"]["brightness"] == 38.2
@@ -153,8 +157,9 @@ def test_real_cache():
             assert a["growth_pct"] == b["growth_pct"], (a["id"], a["growth_pct"], b["growth_pct"])
             assert a["earliest"]["date"] == b["earliest"]["date"] and a["latest"]["date"] == b["latest"]["date"]
         for r in cached["regions"]:
-            print(f"  {r['id']}: {r['earliest']['date']} {r['earliest']['brightness']} -> "
-                  f"{r['latest']['date']} {r['latest']['brightness']} ({r['growth_pct']:+}%)")
+            print(f"  {r['id']}: {r['earliest']['date']} ({r['earliest']['nights']} nights) "
+                  f"{r['earliest']['brightness']} -> {r['latest']['date']} "
+                  f"({r['latest']['nights']} nights) {r['latest']['brightness']} ({r['growth_pct']:+}%)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -191,7 +196,7 @@ def test_endpoint():
         assert share["line"].startswith("Estimate:")
         for r in body["regions"]:
             for d in ("earliest", "latest"):
-                assert r[d]["date"] and r[d]["brightness"] is not None and r[d]["images"]
+                assert r[d]["date"] and r[d]["brightness"] is not None and r[d]["images"] and r[d]["nights"] >= 1
             assert "growth_pct" in r and r["name"]
     finally:
         main.store.latest_succeeded, main.executor.insights_path = saved
