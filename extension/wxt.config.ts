@@ -16,7 +16,7 @@ export default defineConfig({
   manifest: {
     name: "Touchgrass",
     description: "Track AI usage. Coach before you waste a prompt.",
-    permissions: ["storage", "tabs", "scripting"],
+    permissions: ["storage", "tabs", "scripting", "alarms"],
     // Active at install: Groq + local PromptPrint API. AI sites opted in at onboarding.
     host_permissions: [
       "https://api.groq.com/*",

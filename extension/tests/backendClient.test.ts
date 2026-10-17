@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_BACKEND_BASE,
   fetchHealth,
+  mapTipsToCards,
   resolveBaseUrl,
 } from "../lib/backendClient";
 
@@ -52,5 +53,27 @@ describe("fetchHealth", () => {
     const result = await fetchHealth("http://127.0.0.1:8000", fetchImpl);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/Failed to fetch/);
+  });
+});
+
+describe("mapTipsToCards", () => {
+  it("maps backend tip titles into display cards", () => {
+    const cards = mapTipsToCards([
+      {
+        id: "media-spike",
+        title: "Your 1 image = most of your energy",
+        how_to_fix: "Use text when you can",
+      },
+      { id: "regen", how_to_fix: "Stop regenerating" },
+      { id: "x", pattern: "pattern-only" },
+      { id: "extra", title: "ignored fourth" },
+    ]);
+    expect(cards).toHaveLength(3);
+    expect(cards[0]).toEqual({
+      id: "media-spike",
+      text: "Your 1 image = most of your energy",
+    });
+    expect(cards[1].text).toBe("Stop regenerating");
+    expect(cards[2].text).toBe("pattern-only");
   });
 });
