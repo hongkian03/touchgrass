@@ -79,11 +79,27 @@ describe("voice intents", () => {
   });
 
   it("weather path host is not DeepSeek", () => {
-    const intent = parseVoiceIntent("what's today's weather", platforms);
+    const intent = parseVoiceIntent("what's today's weather", platforms, [
+      "chatgpt",
+      "gemini",
+    ]);
     expect(intent.kind).toBe("weather");
     if (intent.kind === "weather") {
       expect(routeTargetHost(intent.suggestion)).not.toBe("chat.deepseek.com");
       expect(intent.suggestion.targetUrl ?? "").not.toMatch(/deepseek/i);
+    }
+  });
+
+  it("weather with gemini enabled can open gemini when already on small", () => {
+    // parseVoiceIntent always plans as chatgpt+gpt-5 → switch_model first
+    const intent = parseVoiceIntent("what's today's weather", platforms, [
+      "chatgpt",
+      "gemini",
+    ]);
+    expect(intent.kind).toBe("weather");
+    if (intent.kind === "weather") {
+      expect(intent.suggestion.action).toBe("switch_model");
+      expect(intent.suggestion.targetModel).toBe("gpt-4o-mini");
     }
   });
 });
