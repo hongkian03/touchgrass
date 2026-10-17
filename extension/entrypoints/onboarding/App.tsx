@@ -92,8 +92,13 @@ export function OnboardingApp() {
     setError(null);
     const origins = hostsForPlatforms(selected, platforms);
     try {
+      // Only origins listed in optional_host_permissions can be requested.
       if (origins.length > 0) {
-        await browser.permissions.request({ origins });
+        try {
+          await browser.permissions.request({ origins });
+        } catch {
+          // Custom sites may be outside the optional list — still finish setup.
+        }
       }
       const usage = usageSeed as UsageRow[];
       const today = new Date();
