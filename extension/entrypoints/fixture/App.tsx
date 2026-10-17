@@ -2,10 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import coachCopy from "../../data/coach-copy.json";
 import { shouldShowCoach } from "../../lib/coach";
 import { mountCoach, unmountCoach } from "../../lib/coachMount";
-import { runCoachYes } from "../../lib/coachYes";
+import {
+  applyCoachSwitch,
+  openCoachPaste,
+  planCoachAuto,
+} from "../../lib/coachYes";
+import { classify } from "../../lib/classify";
 import { readState, writeState } from "../../lib/storage";
 
 const DEFAULT_DRAFT = "what's the weather in Boston";
+const REDIRECT_MS = 1600;
+const SWITCH_HOLD_MS = 1800;
 
 export function FixtureApp() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -15,45 +22,73 @@ export function FixtureApp() {
 
   useEffect(() => {
     let alive = true;
+    let timer: number | undefined;
     void (async () => {
       const state = await readState();
       if (!alive) return;
       if (!shouldShowCoach(state.lastCoachAt)) {
-        setStatus("Pip hidden (No within last 10 min)");
+        setStatus("Coach quiet (recently ran)");
         return;
       }
-      setStatus("Pip coaching");
+      const text = (composerRef.current?.value ?? draft).trim();
+      if (!text || classify(text, "text") !== "small_ok") {
+        setStatus("No coach for this draft");
+        return;
+      }
+
+      const plan = planCoachAuto({
+        draft: text,
+        model: modelRef.current?.textContent?.trim() || "GPT-5",
+        provider: "chatgpt",
+        modelLabel: modelRef.current,
+      });
+
+      if (plan.kind === "switched" && modelRef.current) {
+        applyCoachSwitch(modelRef.current, plan.model);
+        setStatus(`Switched to ${plan.model}`);
+        mountCoach({
+          shadow: false,
+          message: coachCopy.switched.replace("{model}", plan.model),
+          composer: composerRef.current,
+        });
+        await writeState({ lastCoachAt: Date.now() });
+        timer = window.setTimeout(() => {
+          if (alive) unmountCoach();
+        }, SWITCH_HOLD_MS);
+        return;
+      }
+
+      if (plan.kind !== "redirect") return;
+
+      setStatus(`Redirecting to ${plan.target.name}`);
       mountCoach({
         shadow: false,
-        message: coachCopy.oversized,
+        message: coachCopy.redirecting.replace("{name}", plan.target.name),
         composer: composerRef.current,
-        onYes: () => {
-          void (async () => {
-            const model = modelRef.current?.textContent?.trim() || "GPT-5";
-            await runCoachYes({
-              draft: composerRef.current?.value ?? draft,
-              model,
-              provider: "chatgpt",
-              modelLabel: modelRef.current,
-            });
-            unmountCoach();
-            setStatus("Yes, routed");
-          })();
-        },
-        onNo: () => {
-          void (async () => {
-            await writeState({ lastCoachAt: Date.now() });
-            unmountCoach();
-            setStatus("Pip hidden (No within last 10 min)");
-          })();
-        },
+        target: plan.target,
       });
+
+      timer = window.setTimeout(() => {
+        void (async () => {
+          try {
+            await openCoachPaste({
+              url: plan.url,
+              draft: composerRef.current?.value ?? draft,
+            });
+            if (alive) setStatus(`Opened ${plan.target.name}`);
+          } finally {
+            await writeState({ lastCoachAt: Date.now() });
+            if (alive) unmountCoach();
+          }
+        })();
+      }, REDIRECT_MS);
     })();
     return () => {
       alive = false;
+      if (timer) window.clearTimeout(timer);
       unmountCoach();
     };
-    // mount once on load — draft edits don't remount coach
+    // mount once on load. draft edits don't remount coach
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
