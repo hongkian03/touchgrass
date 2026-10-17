@@ -49,15 +49,28 @@ export function CountUp({
 type ScoreProps = {
   value: number;
   durationMs?: number;
+  className?: string;
 };
 
-export function ScoreCountUp({ value, durationMs = 700 }: ScoreProps) {
+export function ScoreCountUp({
+  value,
+  durationMs = 700,
+  className = "font-sans text-[1.95rem] font-semibold leading-none text-foreground tabular-nums",
+}: ScoreProps) {
+  const [pop, setPop] = useState(false);
+
+  useEffect(() => {
+    setPop(false);
+    const t = window.setTimeout(() => setPop(true), durationMs);
+    return () => window.clearTimeout(t);
+  }, [value, durationMs]);
+
   return (
     <CountUp
       value={value}
       durationMs={durationMs}
       data-testid="score"
-      className="font-sans text-[3.25rem] leading-none text-foreground tabular-nums"
+      className={[className, pop ? "ui-score-pop" : ""].filter(Boolean).join(" ")}
     />
   );
 }

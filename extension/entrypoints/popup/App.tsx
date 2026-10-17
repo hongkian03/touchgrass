@@ -1,10 +1,16 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   Co2Cloud,
   EnergyBolt,
   TreeGrove,
   WaterDrop,
 } from "../../components/FootprintCartoons";
+import { Pip } from "../../components/Pip";
 import { CountUp, ScoreCountUp } from "../../components/ScoreCountUp";
 import { StreakFlame } from "../../components/StreakFlame";
 import { Button } from "../../components/ui/button";
@@ -67,10 +73,14 @@ export function PopupApp() {
           return;
         }
         const today = new Date();
+        const usage =
+          s.usage.length > 0 ? s.usage : (usageSeed as UsageRow[]);
         setState({
           ...s,
-          score: score(s.usage, today, platforms),
-          streak: computeStreak(s.usage, today, platforms),
+          onboarded: true,
+          usage,
+          score: score(usage, today, platforms),
+          streak: computeStreak(usage, today, platforms),
         });
         setReady(true);
       } catch {
@@ -110,7 +120,6 @@ export function PopupApp() {
     },
   };
   const { totals, trees } = byPeriod[period];
-  const tip = insights[0]?.text ?? coachCopy.oversized;
   const windowDays = period === "day" ? 1 : period === "week" ? 7 : 30;
   const inRange = new Set(lastNDays(today, windowDays));
   const slice = state.usage.filter((r) =>
@@ -123,9 +132,11 @@ export function PopupApp() {
   const regen = slice.filter((r) => r.regenerated).length;
   const images = slice.filter((r) => r.kind === "image").length;
   const videos = slice.filter((r) => r.kind === "video").length;
-  const texts = slice.filter((r) => r.kind === "text").length;
   const smallPct = Math.round((small / n) * 100);
-  const regenPct = Math.round((regen / n) * 100);
+  const tip =
+    slice.length === 0
+      ? (insights[0]?.text ?? coachCopy.oversized)
+      : `${smallPct}% of your prompts were simple questions a small model could answer.`;
 
   const shell = {
     width: POPUP_WIDTH,
@@ -155,23 +166,7 @@ export function PopupApp() {
     >
       {screen === "home" ? (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <ScoreCountUp value={state.score} />
-              <p className="m-0 mt-1 text-xs text-muted-foreground">score</p>
-            </div>
-            <div className="flex items-center gap-1.5" data-testid="streak">
-              <StreakFlame size={28} />
-              <div className="leading-tight">
-                <div className="text-lg font-semibold tabular-nums">
-                  {state.streak}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  day streak
-                </div>
-              </div>
-            </div>
-          </div>
+          <ScoreHero score={state.score} streak={state.streak} />
 
           <PeriodSwitch period={period} onChange={setPeriod} />
           <PeriodMeta period={period} days={totals.days} />
@@ -225,9 +220,9 @@ export function PopupApp() {
 
           <p
             data-testid="coach-line"
-            className="m-0 line-clamp-2 text-sm leading-snug text-muted-foreground"
+            className="m-0 text-sm leading-snug text-foreground"
           >
-            {tip}
+            <CoachTipText text={tip} />
           </p>
           <SplitButton
             testId="view-more"
@@ -255,102 +250,206 @@ export function PopupApp() {
           <PeriodSwitch period={period} onChange={setPeriod} />
           <PeriodMeta period={period} days={totals.days} />
 
-          <section data-testid="more-insights" className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2">
-              <CartoonTick
-                label="small model"
-                hint="Share of prompts a cheaper model could handle."
-                value={smallPct}
-                decimals={0}
-                suffix="%"
-                testId="tick-small"
-                wash="#e8f6df"
-              >
-                <MiniModel size={56} />
-              </CartoonTick>
-              <CartoonTick
-                label="regenerates"
-                hint="How often you hit regenerate on the same answer."
-                value={regenPct}
-                decimals={0}
-                suffix="%"
-                testId="tick-regen"
-                wash="#fff8dc"
-              >
-                <RegenSpin size={56} />
-              </CartoonTick>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <CartoonTick
-                label="text"
-                hint="Text prompts in this range."
-                value={texts}
-                decimals={0}
-                suffix=""
-                testId="tick-text"
-                wash="#e7f6ff"
-              >
-                <MixBubble size={56} />
-              </CartoonTick>
-              <CartoonTick
-                label="image"
-                hint="Image jobs in this range."
-                value={images}
-                decimals={0}
-                suffix=""
-                testId="tick-image"
-                wash="#fff8dc"
-              >
-                <MixFrame size={56} />
-              </CartoonTick>
-              <CartoonTick
-                label="video"
-                hint="Video jobs in this range."
-                value={videos}
-                decimals={0}
-                suffix=""
-                testId="tick-video"
-                wash="#eef1f4"
-              >
-                <MixClapper size={56} />
-              </CartoonTick>
-            </div>
-          </section>
-
-          <ul className="m-0 list-none space-y-2 p-0 text-sm leading-snug text-muted-foreground">
-            {insights.map((i) => (
-              <li
-                key={i.id}
-                data-testid={`insight-${i.id}`}
-                className="rounded-xl bg-[#f4f4f5] px-3 py-2"
-              >
-                {i.text}
-              </li>
-            ))}
-            {regen > 0 ? (
-              <li className="rounded-xl bg-[#fff8dc] px-3 py-2">
-                You regenerated {regen}{" "}
-                {regen === 1 ? "answer" : "answers"} in this range.
-              </li>
-            ) : null}
+          <ul
+            data-testid="more-insights"
+            className="m-0 flex list-none flex-col gap-2 p-0"
+          >
+            {insights.map((i, noteIdx) => {
+              if (i.id === "small-enough") {
+                return (
+                  <CoachNoteCard
+                    key={i.id}
+                    index={noteIdx}
+                    testId={`insight-${i.id}`}
+                    badge={`${smallPct}%`}
+                    wash="#e8f6df"
+                    accent="#5cb85c"
+                    icon={<MiniModel size={36} />}
+                    text="of your prompts were simple questions a small model could answer."
+                  />
+                );
+              }
+              if (i.id === "regenerates") {
+                return (
+                  <CoachNoteCard
+                    key={i.id}
+                    index={noteIdx}
+                    testId={`insight-${i.id}`}
+                    badge={`${regen}×`}
+                    wash="#fff8dc"
+                    accent="#f5c400"
+                    icon={<RegenSpin size={36} />}
+                    text={
+                      regen === 0
+                        ? "No regenerates in this range."
+                        : regen === 1
+                          ? "answer regenerated in this range."
+                          : "answers regenerated in this range."
+                    }
+                  />
+                );
+              }
+              if (i.id === "video-vs-text") {
+                return (
+                  <CoachNoteCard
+                    key={i.id}
+                    index={noteIdx}
+                    testId={`insight-${i.id}`}
+                    badge={videos > 0 ? `${videos}×` : "100×"}
+                    wash="#eef1f4"
+                    accent="#8e99a4"
+                    icon={<MixClapper size={36} />}
+                    text={
+                      videos === 0
+                        ? "One AI video uses about as much energy as hundreds of text prompts."
+                        : videos === 1
+                          ? "video job in this range. One clip uses about as much energy as hundreds of text prompts."
+                          : "video jobs in this range. One clip uses about as much energy as hundreds of text prompts."
+                    }
+                  />
+                );
+              }
+              return (
+                <CoachNoteCard
+                  key={i.id}
+                  index={noteIdx}
+                  testId={`insight-${i.id}`}
+                  badge="tip"
+                  wash="#f4f4f5"
+                  accent="#1b4965"
+                  icon={<MixBubble size={36} />}
+                  text={i.text}
+                />
+              );
+            })}
             {images > 0 ? (
-              <li className="rounded-xl bg-[#e7f6ff] px-3 py-2">
-                {images === 1
-                  ? "1 image job. Those cost more than text."
-                  : `${images} image jobs. Those cost more than text.`}
-              </li>
-            ) : null}
-            {videos > 0 ? (
-              <li className="rounded-xl bg-[#eef1f4] px-3 py-2">
-                {videos === 1
-                  ? "1 video job. One clip is about hundreds of text prompts."
-                  : `${videos} video jobs. One clip is about hundreds of text prompts.`}
-              </li>
+              <CoachNoteCard
+                key="image-jobs"
+                index={insights.length}
+                badge={String(images)}
+                wash="#e7f6ff"
+                accent="#2ba4e0"
+                icon={<MixFrame size={36} />}
+                text={
+                  images === 1
+                    ? "image job. Those cost more than text."
+                    : "image jobs. Those cost more than text."
+                }
+              />
             ) : null}
           </ul>
         </>
       )}
     </main>
+  );
+}
+
+function ScoreHero({ score: val, streak }: { score: number; streak: number }) {
+  const clamped = Math.max(0, Math.min(100, val));
+  const turf =
+    clamped >= 70 ? "#5cb85c" : clamped >= 45 ? "#7ec850" : "#b8a868";
+  const blade =
+    clamped >= 70 ? "#3d8b40" : clamped >= 45 ? "#5cb85c" : "#8d8453";
+  const bladeLight =
+    clamped >= 70 ? "#8fd18f" : clamped >= 45 ? "#a7df7c" : "#cfc48a";
+  const wash =
+    clamped >= 70 ? "#e8f6df" : clamped >= 45 ? "#f1f9e8" : "#f5f4ea";
+
+  const blades = [18, 38, 60, 84, 108, 134, 158, 184, 210, 236, 262, 288, 306];
+
+  return (
+    <div
+      className="relative flex items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2"
+      style={{ background: wash }}
+    >
+      <svg
+        viewBox="0 0 320 40"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-7 w-full"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M0 34 Q80 26 160 33 T320 31 L320 40 L0 40 Z"
+          fill={bladeLight}
+          opacity="0.65"
+        />
+        <path
+          d="M0 36 Q95 30 190 35 T320 34 L320 40 L0 40 Z"
+          fill={turf}
+          opacity="0.45"
+        />
+        {blades.map((x, idx) => {
+          const h = 11 + ((idx * 5) % 9);
+          const lean = idx % 2 === 0 ? -4 : 5;
+          return (
+            <g
+              key={x}
+              transform={`translate(${x} 38)`}
+              className="ft-grass"
+              style={{ animationDelay: `${(idx % 5) * 160}ms` }}
+            >
+              <path
+                d={`M0 0 Q${lean} ${-h * 0.55} ${lean * 0.6} ${-h}`}
+                fill="none"
+                stroke={idx % 3 === 0 ? blade : turf}
+                strokeWidth="2.4"
+                strokeLinecap="round"
+              />
+            </g>
+          );
+        })}
+        {clamped >= 70 ? (
+          <>
+            <circle className="ft-leaf" cx="72" cy="26" r="2.2" fill="#f5c400" />
+            <circle
+              className="ft-leaf ft-spark--late"
+              cx="202"
+              cy="25"
+              r="2"
+              fill="#ffffff"
+            />
+          </>
+        ) : null}
+      </svg>
+
+      <div className="relative flex items-center gap-2.5">
+        <Pip
+          size={60}
+          variant="sticker"
+          pose={clamped >= 70 ? "gotit" : "hello"}
+          tilt={-5}
+        />
+        <div className="leading-none">
+          <div className="flex items-baseline gap-1.5">
+            <ScoreCountUp
+              value={val}
+              className="font-sans text-[2.5rem] font-semibold leading-none text-foreground tabular-nums"
+            />
+            <span className="text-xs font-medium text-muted-foreground">
+              / 100
+            </span>
+          </div>
+          <p className="m-0 mt-1 text-xs font-medium text-foreground">
+            {clamped >= 70
+              ? "lush touchgrass score"
+              : clamped >= 45
+                ? "fresh touchgrass score"
+                : "dry lawn — touch grass"}
+          </p>
+        </div>
+      </div>
+
+      <div
+        className="relative flex items-center gap-1.5 rounded-xl bg-white/90 px-2.5 py-1.5 shadow-sm"
+        data-testid="streak"
+      >
+        <StreakFlame size={28} />
+        <div className="leading-tight">
+          <div className="text-base font-semibold tabular-nums">{streak}</div>
+          <div className="text-[10px] text-muted-foreground">day streak</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -361,13 +460,22 @@ function PeriodSwitch({
   period: Period;
   onChange: (p: Period) => void;
 }) {
+  const idx = Math.max(
+    0,
+    PERIODS.findIndex((p) => p.id === period),
+  );
   return (
     <div
       data-testid="period-switch"
-      className="flex rounded-full bg-[#f4f4f5] p-1"
+      className="relative flex rounded-full bg-[#f4f4f5] p-1"
       role="tablist"
       aria-label="Range"
     >
+      <span
+        aria-hidden="true"
+        className="ui-period-thumb pointer-events-none absolute inset-y-1 start-1 w-[calc((100%-0.5rem)/3)] rounded-full bg-white shadow-sm"
+        style={{ transform: `translateX(calc(${idx} * 100%))` }}
+      />
       {PERIODS.map((p) => {
         const on = period === p.id;
         return (
@@ -378,10 +486,8 @@ function PeriodSwitch({
             aria-selected={on}
             data-testid={p.testId}
             className={[
-              "h-8 flex-1 rounded-full text-sm font-medium transition-colors",
-              on
-                ? "bg-white text-foreground shadow-sm"
-                : "bg-transparent text-muted-foreground",
+              "relative z-10 h-8 flex-1 rounded-full text-sm font-medium transition-colors",
+              on ? "text-foreground" : "bg-transparent text-muted-foreground",
             ].join(" ")}
             onClick={() => onChange(p.id)}
           >
@@ -402,6 +508,61 @@ function PeriodMeta({ period, days }: { period: Period; days: number }) {
           ? `${days} days this week`
           : `${days} days this month`}
     </p>
+  );
+}
+
+function CoachTipText({ text }: { text: string }) {
+  const m = text.match(/^(\d+%|\d+\s*times)\b/i);
+  if (!m) return <>{text}</>;
+  const lead = m[1];
+  const rest = text.slice(lead.length);
+  return (
+    <>
+      <span className="font-semibold text-foreground">{lead}</span>
+      {rest}
+    </>
+  );
+}
+
+function CoachNoteCard({
+  testId,
+  badge,
+  wash,
+  accent,
+  icon,
+  text,
+  index = 0,
+}: {
+  testId?: string;
+  badge: string;
+  wash: string;
+  accent: string;
+  icon: ReactNode;
+  text: string;
+  index?: number;
+}) {
+  return (
+    <li
+      data-testid={testId}
+      className="ui-note-enter flex list-none items-start gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2"
+      style={{ ["--i" as string]: index } as CSSProperties}
+    >
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: wash }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <span
+          className="mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground"
+          style={{ background: wash, color: accent === "#f5c400" ? "#8a5a00" : accent }}
+        >
+          {badge}
+        </span>
+        <p className="m-0 text-xs leading-snug text-foreground">{text}</p>
+      </div>
+    </li>
   );
 }
 
@@ -542,8 +703,8 @@ function SplitButton({
       variant={variant}
       data-testid={testId}
       className={[
-        "relative overflow-hidden",
-        flip ? "ps-12" : "pe-12",
+        "ui-btn-press relative overflow-hidden",
+        flip ? "ui-btn-press--flip ps-12" : "pe-12",
         className,
       ]
         .filter(Boolean)
@@ -553,7 +714,7 @@ function SplitButton({
       {children}
       <span
         className={[
-          "pointer-events-none absolute inset-y-0 flex w-9 items-center justify-center bg-primary-foreground/15",
+          "ui-btn-chevron pointer-events-none absolute inset-y-0 flex w-9 items-center justify-center bg-primary-foreground/15",
           flip ? "start-0" : "end-0",
         ].join(" ")}
       >
