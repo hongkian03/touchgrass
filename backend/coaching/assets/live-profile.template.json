@@ -1,0 +1,35 @@
+{
+  "profile_id": "text_pair_v1",
+  "version": "text-pair-v1",
+  "validity": "provisional",
+  "site": "chatgpt",
+  "large_model_id": "",
+  "small_model_id": "",
+  "jev_model_id": "",
+  "expected_jev_resolved_model": null,
+  "website_aliases": [],
+  "website_target_label": "",
+  "switch_supported": false,
+  "website_equivalence_verified": false,
+  "small_capabilities": "Replace with evidence-based capability description before live use.",
+  "small_generation": {
+    "max_tokens": 1024,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "large_generation": {
+    "max_tokens": 1024,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "judge_generation": {
+    "max_tokens": 2048,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "rubric_hash": "9c245ed1ab4c9f33c6b7ad3c69906a5d2421d0510596f7dc30c400f5218ccd77",
+  "calibration_revision": null
+}

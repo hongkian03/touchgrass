@@ -37,8 +37,18 @@ Droid runs inside a per-user Daytona sandbox via the Python Droid SDK. Each job 
 - **What Droid does:** takes the failing page snapshot, rewrites that site's adapter, and tests it against the snapshot until it extracts the prompt correctly. The extension hot-loads the new adapter.
 - **Code:** [`sandbox_jobs/repair_adapter.py`](sandbox_jobs/repair_adapter.py)
 
-## Setup
+## Coaching backend setup
 
-TODO
+The Chalk/Jev workstream now runs locally in explicit mock/shadow mode without credentials:
 
-Copy `.env.example` to `.env` and fill in the keys.
+```sh
+uv sync
+uv run python -m scripts.chalk_doctor
+uv run uvicorn backend.main:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Issue a one-use local pairing code with `uv run python -m scripts.pair_extension`. The API's interactive contract is at `http://127.0.0.1:8000/docs`.
+
+See [the runnable mock and evaluation commands](docs/chalk-runbook.md), [later Chalk account setup](docs/chalk-setup.md), and [extension/dashboard/ingest contracts](docs/coaching-integration.md). Configuration is documented in `.env.example`; use `uv run --env-file .env ...` to load a local file explicitly.
+
+The original product components above are planned teammate work. This implementation supplies the coaching backend/evaluation modules and a tested draft-lifecycle helper; it does not implement the DOM adapter, React dashboard, footprint coefficients, voice recap, or Droid/Daytona jobs. No real Chalk evaluation or measured energy saving is claimed.

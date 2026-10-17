@@ -1,1 +1,6 @@
-# TODO: Eval 1: is the coaching safe? Small vs big model, LLM judge, classifier accuracy and harmful-mistake rate
+"""Compatibility entry point: python -m evals.run_eval1 --help."""
+
+from evals.run_local import main
+
+if __name__ == "__main__":
+    main()

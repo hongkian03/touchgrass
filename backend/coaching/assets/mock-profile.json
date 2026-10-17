@@ -1,0 +1,37 @@
+{
+  "profile_id": "synthetic-pair",
+  "version": "mock-v1",
+  "validity": "mock",
+  "site": "chatgpt",
+  "large_model_id": "mock/large",
+  "small_model_id": "mock/small",
+  "jev_model_id": "mock/jev",
+  "expected_jev_resolved_model": null,
+  "website_aliases": [
+    "Mock Large"
+  ],
+  "website_target_label": "Mock Small",
+  "switch_supported": true,
+  "website_equivalence_verified": false,
+  "small_capabilities": "Synthetic fixtures only; no measured model capabilities.",
+  "small_generation": {
+    "max_tokens": 1024,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "large_generation": {
+    "max_tokens": 1024,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "judge_generation": {
+    "max_tokens": 2048,
+    "token_limit_parameter": "max_tokens",
+    "temperature": 0.0,
+    "seed": null
+  },
+  "rubric_hash": "9c245ed1ab4c9f33c6b7ad3c69906a5d2421d0510596f7dc30c400f5218ccd77",
+  "calibration_revision": null
+}
