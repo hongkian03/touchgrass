@@ -1,0 +1,807 @@
+[
+  {
+    "title": "List comprehension basics",
+    "create_time": 1790085854.0,
+    "update_time": 1790085935.0,
+    "mapping": {
+      "ed2c6e38-2be4-59a8-ae46-83c362469d83": {
+        "id": "ed2c6e38-2be4-59a8-ae46-83c362469d83",
+        "message": null,
+        "parent": null,
+        "children": [
+          "07ee7803-055d-593b-b050-afff407ae9be"
+        ]
+      },
+      "07ee7803-055d-593b-b050-afff407ae9be": {
+        "id": "07ee7803-055d-593b-b050-afff407ae9be",
+        "message": {
+          "id": "07ee7803-055d-593b-b050-afff407ae9be",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "ed2c6e38-2be4-59a8-ae46-83c362469d83",
+        "children": [
+          "8b98cd6a-4849-57ab-b5a1-bdf076813e6c"
+        ]
+      },
+      "8b98cd6a-4849-57ab-b5a1-bdf076813e6c": {
+        "id": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+        "message": {
+          "id": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085854.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How do I square every number in a Python list?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "07ee7803-055d-593b-b050-afff407ae9be",
+        "children": [
+          "b6392921-d474-5e8f-9713-ed9c068e2599"
+        ]
+      },
+      "b6392921-d474-5e8f-9713-ed9c068e2599": {
+        "id": "b6392921-d474-5e8f-9713-ed9c068e2599",
+        "message": {
+          "id": "b6392921-d474-5e8f-9713-ed9c068e2599",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085861.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Use a list comprehension: `squares = [x * x for x in nums]`."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+        "children": [
+          "1b5554aa-b123-561c-98f4-f1acbc208861"
+        ]
+      },
+      "1b5554aa-b123-561c-98f4-f1acbc208861": {
+        "id": "1b5554aa-b123-561c-98f4-f1acbc208861",
+        "message": {
+          "id": "1b5554aa-b123-561c-98f4-f1acbc208861",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085928.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "And only keep the even ones?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "b6392921-d474-5e8f-9713-ed9c068e2599",
+        "children": [
+          "a45608b7-dc51-5649-9dc5-26a993ead40d"
+        ]
+      },
+      "a45608b7-dc51-5649-9dc5-26a993ead40d": {
+        "id": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+        "message": {
+          "id": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085935.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Add a condition: `[x * x for x in nums if x % 2 == 0]`."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "1b5554aa-b123-561c-98f4-f1acbc208861",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+    "plugin_ids": null,
+    "conversation_id": "e0e3ac91-619c-5ee3-8502-65ff3a78a821",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "e0e3ac91-619c-5ee3-8502-65ff3a78a821"
+  },
+  {
+    "title": "Polite follow-up email",
+    "create_time": 1790329334.0,
+    "update_time": 1790329348.0,
+    "mapping": {
+      "5f1de20a-561d-515a-9461-92d94dd9786d": {
+        "id": "5f1de20a-561d-515a-9461-92d94dd9786d",
+        "message": null,
+        "parent": null,
+        "children": [
+          "aa35ac3d-7dc3-53cb-8895-0b12295c94c1"
+        ]
+      },
+      "aa35ac3d-7dc3-53cb-8895-0b12295c94c1": {
+        "id": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+        "message": {
+          "id": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "5f1de20a-561d-515a-9461-92d94dd9786d",
+        "children": [
+          "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3"
+        ]
+      },
+      "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3": {
+        "id": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "message": {
+          "id": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329334.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+        "children": [
+          "e871dd27-190c-5429-9763-e7e0e0aad13d",
+          "9bef6258-589c-5cbe-9a67-23c0a70fb5c3"
+        ]
+      },
+      "e871dd27-190c-5429-9763-e7e0e0aad13d": {
+        "id": "e871dd27-190c-5429-9763-e7e0e0aad13d",
+        "message": {
+          "id": "e871dd27-190c-5429-9763-e7e0e0aad13d",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329341.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Could you send me the report by Friday? Thanks so much!"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "children": []
+      },
+      "9bef6258-589c-5cbe-9a67-23c0a70fb5c3": {
+        "id": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+        "message": {
+          "id": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329348.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Hi! Whenever you get a chance, would you mind sending the report over by Friday? Thank you!"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+    "plugin_ids": null,
+    "conversation_id": "25f38b8b-87c1-5b81-a313-1be137fcae8f",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "25f38b8b-87c1-5b81-a313-1be137fcae8f"
+  },
+  {
+    "title": "Bakery logo idea",
+    "create_time": 1790791994.0,
+    "update_time": 1790792015.0,
+    "mapping": {
+      "6e1e5c91-b140-5d21-870f-28da38a15a0a": {
+        "id": "6e1e5c91-b140-5d21-870f-28da38a15a0a",
+        "message": null,
+        "parent": null,
+        "children": [
+          "02ab8f31-4918-58a8-a56a-60e0c7e19518"
+        ]
+      },
+      "02ab8f31-4918-58a8-a56a-60e0c7e19518": {
+        "id": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+        "message": {
+          "id": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "6e1e5c91-b140-5d21-870f-28da38a15a0a",
+        "children": [
+          "311be3c9-88cf-54c4-8432-f398e83fec25"
+        ]
+      },
+      "311be3c9-88cf-54c4-8432-f398e83fec25": {
+        "id": "311be3c9-88cf-54c4-8432-f398e83fec25",
+        "message": {
+          "id": "311be3c9-88cf-54c4-8432-f398e83fec25",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790791994.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Make a simple logo for a bakery called Crumb & Co, flat style, warm colors."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+        "children": [
+          "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e"
+        ]
+      },
+      "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e": {
+        "id": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+        "message": {
+          "id": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790792001.0,
+          "update_time": null,
+          "content": {
+            "content_type": "code",
+            "language": "json",
+            "text": "{\"prompt\": \"Flat vector logo for a bakery named 'Crumb & Co', warm orange and brown palette, minimal croissant icon\", \"size\": \"1024x1024\", \"n\": 1}"
+          },
+          "status": "finished_successfully",
+          "end_turn": false,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "dalle.text2im",
+          "channel": null
+        },
+        "parent": "311be3c9-88cf-54c4-8432-f398e83fec25",
+        "children": [
+          "14634783-f694-5a49-8bae-1d3aa53a9b33"
+        ]
+      },
+      "14634783-f694-5a49-8bae-1d3aa53a9b33": {
+        "id": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+        "message": {
+          "id": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+          "author": {
+            "role": "tool",
+            "name": "dalle.text2im",
+            "metadata": {}
+          },
+          "create_time": 1790792008.0,
+          "update_time": null,
+          "content": {
+            "content_type": "multimodal_text",
+            "parts": [
+              {
+                "content_type": "image_asset_pointer",
+                "asset_pointer": "file-service://file-0f5a3c0b-85c0-5af0-bc1b-",
+                "size_bytes": 412337,
+                "width": 1024,
+                "height": 1024,
+                "fovea": 512,
+                "metadata": {
+                  "dalle": {
+                    "gen_id": "9d029b8f-4f5a-50",
+                    "prompt": "Flat vector logo for a bakery named 'Crumb & Co', warm orange and brown palette, minimal croissant icon",
+                    "seed": 1180234467
+                  }
+                }
+              }
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+        "children": [
+          "5010746e-0c76-58ef-91e5-ffd44bf92900"
+        ]
+      },
+      "5010746e-0c76-58ef-91e5-ffd44bf92900": {
+        "id": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+        "message": {
+          "id": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790792015.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Here's a flat-style logo for Crumb & Co with a minimal croissant icon."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+    "plugin_ids": null,
+    "conversation_id": "2a5d8378-55fb-594e-8135-a67a959c1e58",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "2a5d8378-55fb-594e-8135-a67a959c1e58"
+  },
+  {
+    "title": "SQL left join",
+    "create_time": 1791113294.0,
+    "update_time": 1791113301.0,
+    "mapping": {
+      "c416550a-b704-5c98-9eca-1faf5df0e0a5": {
+        "id": "c416550a-b704-5c98-9eca-1faf5df0e0a5",
+        "message": null,
+        "parent": null,
+        "children": [
+          "3d47d6be-6c4c-5863-b4fd-687439c6feb7"
+        ]
+      },
+      "3d47d6be-6c4c-5863-b4fd-687439c6feb7": {
+        "id": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+        "message": {
+          "id": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "c416550a-b704-5c98-9eca-1faf5df0e0a5",
+        "children": [
+          "08f3c951-ecb2-5322-bf0b-03f57dc51dff"
+        ]
+      },
+      "08f3c951-ecb2-5322-bf0b-03f57dc51dff": {
+        "id": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+        "message": {
+          "id": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791113294.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "What's the difference between INNER JOIN and LEFT JOIN?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+        "children": [
+          "a46951a1-c55b-538a-a0ca-6f5c2ac567ea"
+        ]
+      },
+      "a46951a1-c55b-538a-a0ca-6f5c2ac567ea": {
+        "id": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+        "message": {
+          "id": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791113301.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "INNER JOIN keeps only rows that match in both tables; LEFT JOIN keeps every row from the left table and fills NULLs where there is no match."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "o3",
+            "default_model_slug": "o3"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+    "plugin_ids": null,
+    "conversation_id": "63afed86-d777-5978-af3e-4561f4ee6d09",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "o3",
+    "id": "63afed86-d777-5978-af3e-4561f4ee6d09"
+  },
+  {
+    "title": "Weekend in Boston",
+    "create_time": 1791662774.0,
+    "update_time": 1791662855.0,
+    "mapping": {
+      "b6b323f7-ffb5-53dc-a79e-da8ead74869a": {
+        "id": "b6b323f7-ffb5-53dc-a79e-da8ead74869a",
+        "message": null,
+        "parent": null,
+        "children": [
+          "8899c8bd-7389-5d3e-8fd3-3ac018937b3e"
+        ]
+      },
+      "8899c8bd-7389-5d3e-8fd3-3ac018937b3e": {
+        "id": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+        "message": {
+          "id": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "b6b323f7-ffb5-53dc-a79e-da8ead74869a",
+        "children": [
+          "98384d83-302d-5c05-9f4e-b5df5a006f78"
+        ]
+      },
+      "98384d83-302d-5c05-9f4e-b5df5a006f78": {
+        "id": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+        "message": {
+          "id": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662774.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Plan a one-day walking itinerary in Boston for a rainy Saturday."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+        "children": [
+          "163a891d-4de9-5775-8b34-62cb3feb5c32"
+        ]
+      },
+      "163a891d-4de9-5775-8b34-62cb3feb5c32": {
+        "id": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+        "message": {
+          "id": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662781.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Morning: Boston Public Library and Copley Square. Midday: Quincy Market for lunch. Afternoon: Museum of Fine Arts. Evening: dinner in the North End."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o-mini",
+            "default_model_slug": "gpt-4o-mini"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+        "children": [
+          "ecd10ac9-0b20-5688-aab1-faff6a0852d8"
+        ]
+      },
+      "ecd10ac9-0b20-5688-aab1-faff6a0852d8": {
+        "id": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+        "message": {
+          "id": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662848.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Swap the museum for something free."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+        "children": [
+          "c8df1100-db3b-5056-96a0-f9c7a6978a3b"
+        ]
+      },
+      "c8df1100-db3b-5056-96a0-f9c7a6978a3b": {
+        "id": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+        "message": {
+          "id": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662855.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Try the Boston Athenaeum's free first floor or the Massachusetts State House tour, both free and indoors."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o-mini",
+            "default_model_slug": "gpt-4o-mini"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+    "plugin_ids": null,
+    "conversation_id": "3dd1b4f6-47e6-5902-a8c8-b4b1466bbb12",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o-mini",
+    "id": "3dd1b4f6-47e6-5902-a8c8-b4b1466bbb12"
+  }
+]
