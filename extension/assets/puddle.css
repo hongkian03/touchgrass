@@ -112,7 +112,7 @@ body {
   filter: drop-shadow(0 6px 10px rgba(27, 73, 101, 0.18));
 }
 
-/* Peek off the card edge onto pale sky so the white rim reads */
+/* Peek off the card edge; drop-shadow keeps the white rim readable */
 .pip-peek {
   position: absolute;
   z-index: 3;
@@ -122,8 +122,8 @@ body {
 }
 
 .pip-peek--panel {
-  top: 8px;
-  right: 4px;
+  top: 4px;
+  right: -6px;
 }
 
 .pip-peek--popup {
