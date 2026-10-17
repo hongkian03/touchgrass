@@ -355,6 +355,25 @@ export async function pairCoachingSession(
   return { session_token: body.session_token };
 }
 
+/** Mint a coaching session without a pasted code (demo auto-start). */
+export async function autoPairCoachingSession(): Promise<{
+  session_token: string;
+}> {
+  const cfg = await readBackendConfig();
+  if (cfg.coachingSessionToken) {
+    return { session_token: cfg.coachingSessionToken };
+  }
+  const res = await fetch(`${cfg.baseUrl}/coaching/auto-pair`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`auto_pair_http_${res.status}`);
+  const body = (await res.json()) as { session_token?: string };
+  if (!body.session_token) throw new Error("auto_pair_missing_token");
+  await writeBackendConfig({ coachingSessionToken: body.session_token });
+  return { session_token: body.session_token };
+}
+
 export async function coachingClassify(
   draft: Record<string, unknown>,
   signal?: AbortSignal,
@@ -379,6 +398,34 @@ export async function coachingEmitEvent(
   });
   if (!res.ok) throw new Error(`events_http_${res.status}`);
   return (await res.json()) as { status?: string };
+}
+
+export type CoachingInsights = {
+  decisions: number;
+  suggest_small: number;
+  switched: number;
+  sent_anyway: number;
+  tips: Array<{ id: string; title: string }>;
+};
+
+export async function getCoachingInsights(): Promise<CoachingInsights> {
+  const res = await backendFetch("/coaching/insights");
+  if (!res.ok) throw new Error(`coaching_insights_http_${res.status}`);
+  const body = (await res.json()) as Partial<CoachingInsights>;
+  return {
+    decisions: Number(body.decisions ?? 0),
+    suggest_small: Number(body.suggest_small ?? 0),
+    switched: Number(body.switched ?? 0),
+    sent_anyway: Number(body.sent_anyway ?? 0),
+    tips: Array.isArray(body.tips)
+      ? body.tips
+          .filter(
+            (t): t is { id: string; title: string } =>
+              Boolean(t && typeof t.id === "string" && typeof t.title === "string"),
+          )
+          .map((t) => ({ id: t.id, title: t.title }))
+      : [],
+  };
 }
 
 export type EvalsSummary =

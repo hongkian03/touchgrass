@@ -1,9 +1,11 @@
 import {
+  autoPairCoachingSession,
   backendHealth,
   coachingClassify,
   coachingEmitEvent,
   fetchAdapter,
   fetchEvalsSummary,
+  getCoachingInsights,
   getInsightsLatest,
   getJob,
   mapTipsToCards,
@@ -61,11 +63,21 @@ async function syncAdapters(): Promise<Record<string, SiteAdapterPayload>> {
   }
 }
 
+async function ensureCoachingSession(): Promise<void> {
+  try {
+    await autoPairCoachingSession();
+    console.log("[Touchgrass] coaching session ready");
+  } catch (e) {
+    console.warn("[Touchgrass] auto-pair failed", e);
+  }
+}
+
 export default defineBackground(() => {
   console.log("[Touchgrass] background ready");
 
   void rebindFromState();
   void syncAdapters();
+  void ensureCoachingSession();
 
   try {
     void browser.alarms.clear(ADAPTER_ALARM);
@@ -85,6 +97,7 @@ export default defineBackground(() => {
     }
     void rebindFromState();
     void syncAdapters();
+    void ensureCoachingSession();
   });
 
   browser.permissions.onAdded.addListener(() => {
@@ -188,6 +201,18 @@ export default defineBackground(() => {
             sendResponse({
               ok: true,
               response: await coachingClassify(draft),
+            });
+            return;
+          }
+          if (op === "coaching-insights") {
+            const insights = await getCoachingInsights();
+            sendResponse({
+              ok: true,
+              ...insights,
+              cards: insights.tips.map((t) => ({
+                id: t.id,
+                text: t.title,
+              })),
             });
             return;
           }
@@ -305,6 +330,8 @@ async function rebindFromState(): Promise<void> {
   try {
     const state = await readState();
     await rebindCoachScripts(state.enabledPlatforms);
+    // Clear cooldown so a fresh inject can coach immediately
+    await browser.storage.local.set({ lastCoachAt: 0 });
   } catch (e) {
     console.warn("[Touchgrass] coach rebind failed", e);
   }
