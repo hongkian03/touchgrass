@@ -52,8 +52,10 @@ describe("dashboard layout (#6)", () => {
     expect(app).toMatch(/upload-pipeline/);
     expect(app).toMatch(/backend-status/);
     expect(app).toMatch(/evals-summary/);
-    expect(app).toMatch(/pair-code/);
     expect(app).toMatch(/Offline \/ demo data/);
+    expect(app).not.toMatch(/pair-code/);
+    expect(app).not.toMatch(/Chalk coaching/);
+    expect(app).not.toMatch(/Factory · Daytona/);
   });
 });
 

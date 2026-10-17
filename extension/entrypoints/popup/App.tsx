@@ -19,6 +19,7 @@ import footprintData from "../../data/footprint.json";
 import insights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
 import usageSeed from "../../data/usage-seed.json";
+import { bgBackend } from "../../lib/backendBridge";
 import { classify } from "../../lib/classify";
 import { POPUP_HEIGHT, POPUP_WIDTH } from "../../lib/layout";
 import {
@@ -40,6 +41,7 @@ const models = (footprintData as { models: Record<string, FootprintModel> })
 
 type Period = "day" | "week" | "month";
 type Screen = "home" | "insights";
+type InsightCard = { id: string; text: string };
 
 const PERIODS: Array<{ id: Period; label: string; testId: string }> = [
   { id: "day", label: "D", testId: "period-day" },
@@ -52,6 +54,7 @@ export function PopupApp() {
   const [ready, setReady] = useState(false);
   const [period, setPeriod] = useState<Period>("day");
   const [screen, setScreen] = useState<Screen>("home");
+  const [chalkTips, setChalkTips] = useState<InsightCard[]>([]);
 
   useEffect(() => {
     document.documentElement.style.overflow = "hidden";
@@ -94,6 +97,22 @@ export function PopupApp() {
           streak: computeStreak(usage, today, platforms),
         });
         setReady(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await bgBackend<{
+          ok?: boolean;
+          cards?: InsightCard[];
+        }>("coaching-insights");
+        if (res?.ok && Array.isArray(res.cards) && res.cards.length) {
+          setChalkTips(res.cards);
+        }
+      } catch {
+        // local usage cards only
       }
     })();
   }, []);
@@ -224,13 +243,15 @@ export function PopupApp() {
           >
             <CoachTipText text={tip} />
           </p>
-          <SplitButton
-            testId="view-more"
-            className="mt-auto ml-auto"
-            onClick={() => setScreen("insights")}
-          >
-            View more
-          </SplitButton>
+
+          <div className="mt-auto flex flex-wrap items-center justify-end gap-2">
+            <SplitButton
+              testId="view-more"
+              onClick={() => setScreen("insights")}
+            >
+              View more
+            </SplitButton>
+          </div>
         </>
       ) : (
         <>
@@ -254,12 +275,25 @@ export function PopupApp() {
             data-testid="more-insights"
             className="m-0 flex list-none flex-col gap-2 p-0"
           >
+            {chalkTips.map((tipCard, noteIdx) => (
+              <CoachNoteCard
+                key={tipCard.id}
+                index={noteIdx}
+                testId={`insight-${tipCard.id}`}
+                badge="chalk"
+                wash="#e7f6ff"
+                accent="#2ba4e0"
+                icon={<MixBubble size={36} />}
+                text={tipCard.text}
+              />
+            ))}
             {insights.map((i, noteIdx) => {
+              const index = chalkTips.length + noteIdx;
               if (i.id === "small-enough") {
                 return (
                   <CoachNoteCard
                     key={i.id}
-                    index={noteIdx}
+                    index={index}
                     testId={`insight-${i.id}`}
                     badge={`${smallPct}%`}
                     wash="#e8f6df"
@@ -273,7 +307,7 @@ export function PopupApp() {
                 return (
                   <CoachNoteCard
                     key={i.id}
-                    index={noteIdx}
+                    index={index}
                     testId={`insight-${i.id}`}
                     badge={`${regen}×`}
                     wash="#fff8dc"
@@ -293,7 +327,7 @@ export function PopupApp() {
                 return (
                   <CoachNoteCard
                     key={i.id}
-                    index={noteIdx}
+                    index={index}
                     testId={`insight-${i.id}`}
                     badge={videos > 0 ? `${videos}×` : "100×"}
                     wash="#eef1f4"
@@ -312,7 +346,7 @@ export function PopupApp() {
               return (
                 <CoachNoteCard
                   key={i.id}
-                  index={noteIdx}
+                  index={index}
                   testId={`insight-${i.id}`}
                   badge="tip"
                   wash="#f4f4f5"
@@ -325,7 +359,7 @@ export function PopupApp() {
             {images > 0 ? (
               <CoachNoteCard
                 key="image-jobs"
-                index={insights.length}
+                index={chalkTips.length + insights.length}
                 badge={String(images)}
                 wash="#e7f6ff"
                 accent="#2ba4e0"
@@ -434,7 +468,7 @@ function ScoreHero({ score: val, streak }: { score: number; streak: number }) {
               ? "lush touchgrass score"
               : clamped >= 45
                 ? "fresh touchgrass score"
-                : "dry lawn — touch grass"}
+                : "dry lawn. touch grass"}
           </p>
         </div>
       </div>
