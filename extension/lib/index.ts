@@ -26,6 +26,12 @@ export {
   shouldShowCoach,
 } from "./coach";
 export {
+  allPlatformMatchPatterns,
+  injectPatternsForEnabled,
+  rebindCoachScripts,
+} from "./coachInject";
+export { draftFrom, findComposer } from "./findComposer";
+export {
   applyCoachSwitch,
   buildCoachSuggestion,
   openCoachPaste,

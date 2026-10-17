@@ -126,7 +126,7 @@ describe("fixture + Try Pip wiring", () => {
       resolve(__dirname, "../entrypoints/dashboard/App.tsx"),
       "utf8",
     );
-    expect(dash).toMatch(/Try Pip/);
+    expect(dash).toMatch(/Coach test harness/);
     expect(dash).toMatch(/fixture\.html/);
   });
 });

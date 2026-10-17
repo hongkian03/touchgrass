@@ -218,7 +218,7 @@ export function DashboardApp() {
                 })
               }
             >
-              Try Pip
+              Coach test harness
             </Button>
             <Button type="button" data-testid="open-recap" onClick={goRecap}>
               Week
