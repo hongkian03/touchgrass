@@ -42,13 +42,18 @@ describe("dashboard layout (#6)", () => {
     expect(app).toMatch(/DASHBOARD_COLUMN_WIDTH/);
   });
 
-  it("shows three insights from insights.json", () => {
+  it("shows up to three insight cards (seed or live)", () => {
     expect(insights).toHaveLength(3);
     const app = readFileSync(
       resolve(__dirname, "../entrypoints/dashboard/App.tsx"),
       "utf8",
     );
-    expect(app).toMatch(/insights\.slice\(0,\s*3\)/);
+    expect(app).toMatch(/insightCards\.slice\(0,\s*3\)/);
+    expect(app).toMatch(/upload-pipeline/);
+    expect(app).toMatch(/backend-status/);
+    expect(app).toMatch(/evals-summary/);
+    expect(app).toMatch(/pair-code/);
+    expect(app).toMatch(/Offline \/ demo data/);
   });
 });
 
