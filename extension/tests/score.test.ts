@@ -32,6 +32,33 @@ const platforms: Platform[] = [
     smallModel: "claude-haiku",
     kind: "text",
   },
+  {
+    id: "gemini",
+    name: "Gemini",
+    hosts: ["https://gemini.google.com/*"],
+    icon: "gemini",
+    defaultModel: "gemini-pro",
+    smallModel: "gemini-flash",
+    kind: "text",
+  },
+  {
+    id: "perplexity",
+    name: "Perplexity",
+    hosts: ["https://www.perplexity.ai/*"],
+    icon: "perplexity",
+    defaultModel: "sonar-pro",
+    smallModel: "sonar",
+    kind: "text",
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    hosts: ["https://chat.deepseek.com/*"],
+    icon: "deepseek",
+    defaultModel: "deepseek-chat",
+    smallModel: "deepseek-chat",
+    kind: "text",
+  },
 ];
 
 const today = new Date(2026, 9, 17, 15, 0, 0);
@@ -153,27 +180,76 @@ describe("C7 routing never DeepSeek as green", () => {
       model: "gpt-5",
       provider: "chatgpt",
       platforms,
+      enabledPlatforms: ["chatgpt", "gemini"],
     });
     const host = routeTargetHost(suggestion);
-    // switch_model has no URL — host empty is fine; if open_paste, not DeepSeek
     expect(host).not.toBe("chat.deepseek.com");
     if (suggestion.targetUrl) {
       expect(suggestion.targetUrl).not.toMatch(/deepseek/i);
     }
-    // For chatgpt frontier + small_ok we expect same-site switch, not DeepSeek
     expect(suggestion.action).toBe("switch_model");
     expect(suggestion.targetModel).toBe("gpt-4o-mini");
   });
 
-  it("small_ok with unknown provider falls back to Mistral, not DeepSeek", () => {
+  it("small_ok unknown provider + empty enabled does not invent Mistral or DeepSeek", () => {
     const suggestion = route({
       promptClass: "small_ok",
       model: "mystery-xl",
       provider: "unknown",
       platforms,
+      enabledPlatforms: [],
     });
-    expect(routeTargetHost(suggestion)).toBe("chat.mistral.ai");
-    expect(suggestion.targetUrl).not.toMatch(/deepseek/i);
+    expect(suggestion.action).toBe("switch_model");
+    expect(routeTargetHost(suggestion)).not.toBe("chat.mistral.ai");
+    expect(suggestion.targetUrl ?? "").not.toMatch(/deepseek/i);
+  });
+
+  it("ChatGPT already on small + gemini enabled → open gemini", () => {
+    const suggestion = route({
+      promptClass: "small_ok",
+      model: "gpt-4o-mini",
+      provider: "chatgpt",
+      platforms,
+      enabledPlatforms: ["chatgpt", "gemini"],
+    });
+    expect(suggestion.action).toBe("open_paste");
+    expect(routeTargetHost(suggestion)).toBe("gemini.google.com");
+  });
+
+  it("Claude already on haiku + perplexity enabled → open perplexity", () => {
+    const suggestion = route({
+      promptClass: "small_ok",
+      model: "claude-haiku",
+      provider: "claude",
+      platforms,
+      enabledPlatforms: ["claude", "perplexity"],
+    });
+    expect(suggestion.action).toBe("open_paste");
+    expect(routeTargetHost(suggestion)).toMatch(/perplexity\.ai/);
+  });
+
+  it("only chatgpt enabled and already on small → no DeepSeek / no Mistral", () => {
+    const suggestion = route({
+      promptClass: "small_ok",
+      model: "gpt-4o-mini",
+      provider: "chatgpt",
+      platforms,
+      enabledPlatforms: ["chatgpt"],
+    });
+    expect(suggestion.action).toBe("switch_model");
+    expect(suggestion.targetUrl ?? "").not.toMatch(/mistral|deepseek/i);
+  });
+
+  it("deepseek-only alternate is skipped", () => {
+    const suggestion = route({
+      promptClass: "small_ok",
+      model: "gpt-4o-mini",
+      provider: "chatgpt",
+      platforms,
+      enabledPlatforms: ["chatgpt", "deepseek"],
+    });
+    expect(suggestion.targetUrl ?? "").not.toMatch(/deepseek/i);
+    expect(routeTargetHost(suggestion)).not.toBe("chat.deepseek.com");
   });
 });
 
