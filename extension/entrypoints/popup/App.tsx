@@ -1,6 +1,7 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Pip } from "../../components/Pip";
 import { ScoreCountUp } from "../../components/ScoreCountUp";
+import { Button } from "../../components/ui/button";
 import coachCopy from "../../data/coach-copy.json";
 import footprintData from "../../data/footprint.json";
 import insights from "../../data/insights.json";
@@ -16,22 +17,6 @@ import type { Platform, UsageRow } from "../../lib/types";
 const platforms = platformsData as Platform[];
 const models = (footprintData as { models: Record<string, FootprintModel> })
   .models;
-
-function shellStyle(): CSSProperties {
-  return {
-    width: POPUP_WIDTH,
-    height: POPUP_HEIGHT,
-    boxSizing: "border-box",
-    background: "var(--pale-sky)",
-    color: "var(--yale-blue)",
-    padding: "20px 18px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 12,
-    fontFamily: "Castoro, serif",
-  };
-}
 
 export function PopupApp() {
   const [state, setState] = useState<PuddleState>(DEFAULT_STATE);
@@ -56,7 +41,6 @@ export function PopupApp() {
         });
         setReady(true);
       } catch {
-        // Local preview (http) has no extension APIs — show seed demo.
         const usage = usageSeed as UsageRow[];
         const today = new Date();
         setState({
@@ -82,76 +66,72 @@ export function PopupApp() {
       });
   };
 
+  const shell = {
+    width: POPUP_WIDTH,
+    height: POPUP_HEIGHT,
+  } as const;
+
   if (!ready) {
-    return <div data-testid="popup" style={shellStyle()} />;
+    return (
+      <div
+        data-testid="popup"
+        className="box-border flex flex-col items-center gap-3 bg-white p-5 font-sans text-foreground"
+        style={shell}
+      />
+    );
   }
 
   return (
-    <main data-testid="popup" style={shellStyle()}>
-      <Pip size={72} />
-      <h1
-        data-testid="puddle-title"
-        style={{ margin: 0, fontSize: "1.5rem", fontWeight: 400 }}
-      >
-        Puddle
-      </h1>
-      <ScoreCountUp value={state.score} />
-      <p style={{ margin: 0, opacity: 0.8 }} data-testid="streak">
-        {state.streak} day streak
-      </p>
-      <p
-        data-testid="coach-line"
-        style={{
-          margin: "4px 0 0",
-          textAlign: "center",
-          fontSize: "0.95rem",
-          lineHeight: 1.35,
-          maxWidth: 300,
-        }}
-      >
-        {tip}
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          marginTop: 8,
-          fontSize: "0.8rem",
-        }}
-      >
-        <Tick label="energy" value={`${totals.Wh.toFixed(1)} Wh`} />
-        <Tick label="water" value={`${totals.water_L.toFixed(2)} L`} />
-        <Tick label="CO₂" value={`${totals.co2_g.toFixed(1)} g`} />
+    <main
+      data-testid="popup"
+      className="relative box-border flex flex-col items-stretch gap-3 overflow-hidden bg-white p-5 font-sans text-foreground"
+      style={shell}
+    >
+      <div className="pip-peek pip-peek--popup" aria-hidden="true">
+        <Pip size={80} variant="sticker" tilt={4} />
       </div>
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-stretch gap-3 pr-16">
+        <h1
+          data-testid="puddle-title"
+          className="m-0 max-w-[180px] text-2xl font-semibold tracking-tight"
+        >
+          Puddle
+        </h1>
+        <ScoreCountUp value={state.score} />
+        <p className="m-0 text-sm text-muted-foreground" data-testid="streak">
+          {state.streak} day streak
+        </p>
+        <p
+          data-testid="coach-line"
+          className="mt-1 max-w-[220px] text-sm leading-snug"
+        >
+          {tip}
+        </p>
 
-      <button
-        type="button"
-        data-testid="week"
-        onClick={openWeek}
-        style={{
-          marginTop: "auto",
-          padding: "10px 32px",
-          borderRadius: 999,
-          border: "none",
-          background: "var(--fresh-sky)",
-          color: "var(--yale-blue)",
-          fontFamily: "Castoro, serif",
-          fontSize: "1rem",
-          cursor: "pointer",
-        }}
-      >
-        Week
-      </button>
+        <div className="mt-2 flex gap-4 text-xs">
+          <Tick label="energy" value={`${totals.Wh.toFixed(1)} Wh`} />
+          <Tick label="water" value={`${totals.water_L.toFixed(2)} L`} />
+          <Tick label="CO₂" value={`${totals.co2_g.toFixed(1)} g`} />
+        </div>
+
+        <Button
+          type="button"
+          data-testid="week"
+          className="mt-auto min-w-[140px] self-start"
+          onClick={openWeek}
+        >
+          Week
+        </Button>
+      </div>
     </main>
   );
 }
 
 function Tick({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ opacity: 0.65 }}>{label}</div>
-      <div style={{ fontVariantNumeric: "tabular-nums" }}>{value}</div>
+    <div className="text-center">
+      <div className="text-muted-foreground">{label}</div>
+      <div className="tabular-nums">{value}</div>
     </div>
   );
 }

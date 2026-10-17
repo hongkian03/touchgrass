@@ -1,18 +1,75 @@
+import {
+  faviconForHost,
+  hostnameFromCustomId,
+  isCustomPlatformId,
+} from "../lib/hosts";
 import type { Platform } from "../lib/types";
+import { cn } from "../lib/utils";
+import { BrandIcon } from "./BrandIcon";
+
+export type GridItem = {
+  id: string;
+  name: string;
+  kind: "known" | "custom";
+  icon?: string;
+  faviconHost?: string;
+};
+
+/** Merge seed platforms + custom:host ids into one grid list. */
+export function buildPlatformGridItems(
+  platforms: Platform[],
+  customIds: string[],
+): GridItem[] {
+  const known: GridItem[] = platforms.map((p) => ({
+    id: p.id,
+    name: p.name,
+    kind: "known",
+    icon: p.icon,
+  }));
+  const customs: GridItem[] = customIds.filter(isCustomPlatformId).map((id) => {
+    const host = hostnameFromCustomId(id) ?? id.replace(/^custom:/, "");
+    return {
+      id,
+      name: host,
+      kind: "custom" as const,
+      faviconHost: host,
+    };
+  });
+  return [...known, ...customs];
+}
 
 type Props = {
   platforms: Platform[];
   selected: string[];
   onToggle: (id: string) => void;
+  query?: string;
+  customIds?: string[];
 };
 
-export function PlatformGrid({ platforms, selected, onToggle }: Props) {
+export function PlatformGrid({
+  platforms,
+  selected,
+  onToggle,
+  query = "",
+  customIds = [],
+}: Props) {
+  const q = query.trim().toLowerCase();
+  const items = buildPlatformGridItems(platforms, customIds);
+  const visible = q
+    ? items.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
+          (p.faviconHost?.toLowerCase().includes(q) ?? false),
+      )
+    : items;
+
   return (
     <div
-      className="grid gap-2"
+      className="grid w-full gap-2"
       style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
     >
-      {platforms.map((p) => {
+      {visible.map((p) => {
         const on = selected.includes(p.id);
         return (
           <button
@@ -21,28 +78,26 @@ export function PlatformGrid({ platforms, selected, onToggle }: Props) {
             data-testid={`platform-${p.id}`}
             aria-pressed={on}
             onClick={() => onToggle(p.id)}
-            className="flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-center"
-            style={{
-              background: on ? "var(--fresh-sky)" : "var(--frozen-water)",
-              color: "var(--yale-blue)",
-              border: on
-                ? "2px solid var(--yale-blue)"
-                : "2px solid transparent",
-              fontFamily: "Castoro, serif",
-              cursor: "pointer",
-            }}
+            className={cn(
+              "flex flex-col items-center gap-1.5 rounded-lg bg-transparent px-2 py-2 text-center font-sans text-foreground outline-none border",
+              on ? "border-black" : "border-transparent",
+            )}
           >
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm"
-              style={{
-                background: "var(--pale-sky)",
-                color: "var(--yale-blue)",
-                fontWeight: 600,
-              }}
-            >
-              {p.name.slice(0, 2)}
+            {p.kind === "custom" && p.faviconHost ? (
+              <img
+                src={faviconForHost(p.faviconHost)}
+                alt=""
+                width={36}
+                height={36}
+                className="rounded-md"
+                style={{ width: 36, height: 36, objectFit: "contain" }}
+              />
+            ) : (
+              <BrandIcon slug={p.icon ?? ""} size={36} label={p.name} />
+            )}
+            <span className="max-w-full truncate text-xs leading-tight">
+              {p.name}
             </span>
-            <span className="text-xs leading-tight">{p.name}</span>
           </button>
         );
       })}

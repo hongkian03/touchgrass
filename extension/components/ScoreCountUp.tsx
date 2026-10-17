@@ -25,13 +25,7 @@ export function ScoreCountUp({ value, durationMs = 700 }: Props) {
   return (
     <span
       data-testid="score"
-      style={{
-        fontFamily: "Castoro, serif",
-        fontVariantNumeric: "tabular-nums",
-        fontSize: "3.25rem",
-        lineHeight: 1,
-        color: "var(--yale-blue)",
-      }}
+      className="font-sans text-[3.25rem] leading-none text-foreground tabular-nums"
     >
       {shown}
     </span>
