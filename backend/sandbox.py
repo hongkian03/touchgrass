@@ -63,6 +63,10 @@ HYBRID_AUTO_STOP_MINUTES = 30
 HYBRID_TTL_MINUTES = 60
 KEEPALIVE_SECONDS = 60
 
+# Repairs (D6): the raw page goes in, only the cleaned page comes out.
+CLEANER_SRC = JOBS_SRC / "samples" / "clean_snapshot.py"
+CLEAN_TIMEOUT = 120
+
 
 def jobs_tarball(extra=None):
     """sandbox_jobs/ as an in-memory tar.gz, without samples/ or caches, plus extra {arcname: path}."""
@@ -386,6 +390,87 @@ async def run_hybrid_jobs(export_bytes, filename, job_id, droid_step, on_log=Non
         finally:
             if keeper is not None:
                 keeper.cancel()
+            if sandbox is not None:
+                t = time.perf_counter()
+                await daytona.delete(sandbox)
+                result["deleted_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                mark("delete", t)
+                log("sandbox_deleted", sandbox_id=sandbox.id)
+    return result
+
+
+async def clean_snapshot_in_sandbox(snapshot_html, job_id, on_log=None) -> dict:
+    """D6 hybrid: clean a raw page snapshot in a short-lived sandbox; only the cleaned page comes back.
+
+    The raw snapshot can hold the account's email, sidebar chat titles and data in <script> tags, so it
+    is uploaded straight from memory and never written to the backend's disk. clean_snapshot.py exits
+    1 if an email or conversation link is left after cleaning; then nothing is downloaded.
+    Returns {ok, cleaned (str or None), cleaner (its counts report), sandbox_id, timings, audit, error}.
+    """
+    emit = on_log or (lambda entry: None)
+    timings, audit = {}, {"uploaded": [], "downloaded": []}
+    result = {"job_id": job_id, "ok": False, "cleaned": None, "sandbox_id": None, "timings": timings,
+              "audit": audit}
+    raw_path, clean_path = f"{WORK_DIR}/input/raw_snapshot.html", f"{WORK_DIR}/output/snapshot.html"
+
+    def log(event, **fields):
+        emit({"source": "backend", "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+              "event": event, **fields})
+
+    def mark(step, start):
+        timings[step] = round(time.perf_counter() - start, 2)
+        log("step_done", step=step, seconds=timings[step])
+
+    async with AsyncDaytona() as daytona:
+        sandbox = None
+        try:
+            t = time.perf_counter()
+            sandbox = await daytona.create(CreateSandboxFromSnapshotParams(
+                language="python", labels={**LABELS, "job_id": job_id},
+                ephemeral=True, auto_stop_interval=AUTO_STOP_MINUTES, ttl_minutes=TTL_MINUTES,
+            ))
+            result["sandbox_id"] = sandbox.id
+            result["created_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            log("sandbox_created", sandbox_id=sandbox.id)
+            mark("create", t)
+
+            t = time.perf_counter()
+            code, out = await sh(sandbox, f"mkdir -p {WORK_DIR}/input {WORK_DIR}/output {JOBS_DIR} && "
+                                          "python3 -m pip install --quiet --disable-pip-version-check beautifulsoup4")
+            if code != 0:
+                raise RuntimeError(f"pip install failed (exit {code}): {out.strip()[-500:]}")
+            mark("install", t)
+
+            t = time.perf_counter()
+            cleaner = CLEANER_SRC.read_bytes()
+            await sandbox.fs.upload_file(cleaner, f"{JOBS_DIR}/clean_snapshot.py")
+            audit["uploaded"].append({"name": "clean_snapshot.py", "bytes": len(cleaner)})
+            raw = snapshot_html.encode("utf-8")
+            snapshot_html = None  # drop our reference; the raw page now lives only in the sandbox
+            await sandbox.fs.upload_file(raw, raw_path)
+            audit["uploaded"].append({"name": "input/raw_snapshot.html", "bytes": len(raw)})
+            raw = None
+            mark("upload", t)
+
+            # Its output is counts and sizes only (what was removed, what's left), so it's kept.
+            t = time.perf_counter()
+            code, out = await sh(sandbox, f"python3 {JOBS_DIR}/clean_snapshot.py {raw_path} {clean_path}",
+                                 timeout=CLEAN_TIMEOUT)
+            result["cleaner"] = {"exit_code": code, "report": out.strip().splitlines()[-3:]}
+            mark("clean", t)
+            if code != 0:
+                raise RuntimeError("snapshot still has an email or conversation link after cleaning")
+
+            t = time.perf_counter()
+            cleaned = await sandbox.fs.download_file(clean_path)
+            audit["downloaded"].append({"name": "output/snapshot.html", "bytes": len(cleaned)})
+            result["cleaned"] = cleaned.decode("utf-8")
+            mark("download", t)
+            result["ok"] = True
+        except Exception as e:
+            result["error"] = f"{type(e).__name__}: {e}"[:MAX_LOG_LINE]
+            log("failed", error=result["error"])
+        finally:
             if sandbox is not None:
                 t = time.perf_counter()
                 await daytona.delete(sandbox)

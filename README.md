@@ -74,7 +74,8 @@ Droid can't reach Factory from inside a Daytona sandbox, so in Daytona mode Droi
 - **Tested on a real ChatGPT page** ([`samples/chatgpt_page/`](sandbox_jobs/samples/chatgpt_page/)), saved from a Temporary Chat and cleaned with [`samples/clean_snapshot.py`](sandbox_jobs/samples/clean_snapshot.py). The cleaning removes scripts, styles, images, metadata, the sidebar, conversation links, id attributes and email addresses; it took the page from 799,847 to 41,486 characters, and the visible text left is only interface labels and the test chat. The raw capture stays gitignored. The working adapter passed; `break_adapter.py` broke `prompt_box` and `send_button`, and the checker failed on exactly those two. Droid repaired both on the first try, leaving the other two unchanged, in 71 s and 4,881 factory_credits. Our checker passed and the adapter was published as v2.
 - **The model name isn't on the page:** in this capture the model picker reads "Thinking effort Medium", and the model's name (ChatGPT 6) doesn't appear anywhere in the page's HTML. So `expected.json` sets `model` to `null`, and the model check only requires non-empty text. Capturing the model name will need another source, such as the picker's open menu.
 - **Timed 3 times** (CLI, `--no-publish`, same broken adapter and page): 86.0 s, 60.3 s and 76.0 s wall clock; 4,868, 4,987 and 4,961 factory_credits. Droid fixed both selectors and our checker passed each time. Through the backend, two more repairs took 34 s and 47 s (12,738 and 10,880 credits). **That's over the demo's 30-second slot**, so the demo should either give the live repair about 90 seconds or use the replay (see [Demo fallbacks](#demo-fallbacks)).
-- **Planned:** running the repair inside a short-lived Daytona sandbox (D6), and agreeing the selector key names with the extension owner (the extension's `chatgpt.json` is still a placeholder).
+- **In Daytona mode:** the raw page snapshot is cleaned inside a short-lived sandbox, and only the cleaned page comes back for Droid (see [Where Daytona works](#where-daytona-works)).
+- **Planned:** agreeing the selector key names with the extension owner (the extension's `chatgpt.json` is still a placeholder).
 
 ### Backend triggers
 
@@ -88,7 +89,7 @@ Droid can't reach Factory from inside a Daytona sandbox, so in Daytona mode Droi
 | `GET /insights/latest` | The latest successful analysis's `insights.json` |
 | `POST /adapter-failure` | `{site, failed_keys, adapter_version, snapshot_html}`, plus optional `adapter`, `expected_prompt` and `has_responses`. Starts a repair. A report for an adapter older than the published one is ignored, and a report while a repair for that site is queued or running returns that job's id instead of starting another (tested with two simultaneous reports) |
 
-- **Jobs sit behind an executor interface** ([`backend/executor.py`](backend/executor.py)): `JobExecutor` with `run_ingest_and_analyze` and `run_repair`. `LocalExecutor` runs the `sandbox_jobs` scripts in a fresh `work/jobs/<job_id>/` per job. `EXECUTOR` picks one (default `local`); a `DaytonaExecutor` is planned.
+- **Jobs sit behind an executor interface** ([`backend/executor.py`](backend/executor.py)): `JobExecutor` with `run_ingest_and_analyze` and `run_repair`. `LocalExecutor` runs the `sandbox_jobs` scripts in a fresh `work/jobs/<job_id>/` per job. `EXECUTOR` picks one: `local` (default) or `daytona`, the hybrid `DaytonaExecutor` (see [Where Daytona works](#where-daytona-works)).
 - **Job records** are kept in SQLite ([`backend/jobs.py`](backend/jobs.py), `backend/jobs.sqlite`, gitignored).
 - **One Droid job at a time,** using an asyncio lock; others wait as `queued`. Jobs run in a worker thread, so requests are still answered while Droid works (`GET /jobs` took 0.01 s during a run).
 - **Privacy in local mode:** when an upload job finishes, its export and its extracted `prompts.jsonl` are deleted. A repair's raw page snapshot goes through `clean_snapshot.py` before Droid sees it, and is then deleted. The job scripts' console output isn't kept, since it can include insight titles about the user's data.
@@ -164,6 +165,16 @@ The job summary records the sandbox id, per-step timings, and an audit of every 
 
 **What this does and doesn't prove.** The user's real chat text never touches the backend's disk; the planted-marker test checks that (`PRIVACY_MODE=daytona`, see [Privacy](#privacy)). It does **not** keep Droid's code off the backend: Droid and its test runs work here, on redacted data. In the sandbox, the untrusted code Droid wrote runs on the real data, which is the part the sandbox is for. The redacted copy does leave the sandbox, and it reveals structure, lengths, timestamps and short token fields such as model names (see the limits under [Privacy](#privacy)). The `insights.json` that comes back quotes up to 3 example prompts (80 characters each), because that's the product.
 
+### The hybrid repair flow (`EXECUTOR=daytona`)
+
+The same split as uploads. The page snapshot the extension sends with `POST /adapter-failure` is a raw capture, which can hold the account's email, sidebar chat titles and data in `<script>` tags. In local mode the backend writes it to disk briefly to clean it; in Daytona mode it never touches the backend's disk. `DaytonaExecutor.run_repair` calls `clean_snapshot_in_sandbox` in [`backend/sandbox.py`](backend/sandbox.py):
+
+1. **Clean in the sandbox.** The raw snapshot is uploaded from memory into a fresh sandbox along with [`clean_snapshot.py`](sandbox_jobs/samples/clean_snapshot.py), which runs there. If an email or conversation link is left after cleaning, the job fails and nothing is downloaded. Otherwise **only the cleaned page comes back**, plus the cleaner's report (counts and sizes only).
+2. **Delete.** The sandbox is deleted in `finally`, before Droid starts.
+3. **Droid on the backend, cleaned page only.** From here it's the local repair: [`repair_adapter.py`](sandbox_jobs/repair_adapter.py) has Droid fix the adapter from the cleaned page, then runs **our** [`check_adapter.py`](sandbox_jobs/lib/check_adapter.py) on the backend. It publishes only if the checker passes, the keys are unchanged, and the version is one higher than the broken one and above what's published.
+
+**Tested** with the raw saved ChatGPT capture (800 KB, gitignored, with one email-like string) and the published v2 adapter broken by [`break_adapter.py`](sandbox_jobs/samples/break_adapter.py) (`prompt_box` and `send_button`). The sandbox cleaned the page to 41,486 characters, with 0 email-like strings and 0 conversation links left, and only that page was downloaded. Droid fixed both selectors in 62.5 s and 5,610 factory_credits, our checker passed, and v3 was published (then reset to v2 in the repo). Sandbox timings: create 0.86 s, `pip install beautifulsoup4` 0.65 s, upload 0.20 s, clean 0.26 s, download 0.08 s, delete 0.05 s: about 2 s of sandbox life in a 69 s job. Afterwards, no email-like string and no raw snapshot was in any file in the job's backend folders. The failure path (cleaning leaves an email, so nothing is published) wasn't exercised. Not done from the D6 plan: running Droid itself in the sandbox (blocked, as above) and the warm-sandbox option, which matters less here since the sandbox's part takes about 2 s.
+
 ### Shared by every sandbox
 
 - **One fresh sandbox per job,** created from Daytona's default image.
@@ -173,7 +184,6 @@ The job summary records the sandbox id, per-step timings, and an audit of every 
 - **Sandboxes are deleted after each job,** in a `finally` block, including after errors and timeouts (10-minute limit for the in-sandbox run). As a backstop, each sandbox is ephemeral and has auto-stop and a time limit: 15 idle minutes and 20 minutes for the stand-in flow, 30 and 60 for the hybrid, whose sandbox waits while Droid works (the backend pings it every minute so it doesn't auto-stop). Each is labeled `app=promptprint` plus its `job_id`, and [`backend/cleanup_sandboxes.py`](backend/cleanup_sandboxes.py) deletes any labeled sandbox older than 60 minutes, never touching anything else.
 - **Live logs:** in-sandbox scripts run as a Daytona session command, and each log line streams to the backend as it's printed.
 - **Dependencies are pip-installed at the start of each run** in a default sandbox. [`sandbox_jobs/build_snapshot.py`](sandbox_jobs/build_snapshot.py) is ready for a prebuilt snapshot, but our tier refuses snapshot creation (403).
-- **Repairs in short-lived sandboxes, verified by the backend:** planned (Daytona milestone D6). In Daytona mode, repairs still run on the backend as in local mode.
 
 ### The stand-in flow (`run_user_jobs`)
 
