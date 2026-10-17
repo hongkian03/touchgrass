@@ -277,7 +277,7 @@ The same split as uploads. The page snapshot the extension sends with `POST /ada
 
 Before the hybrid, [`run_user_jobs`](backend/sandbox.py) ran hand-written stand-in jobs entirely inside the sandbox, to build the plumbing (upload, validation, log streaming, cleanup) without Droid. It's still there, tested with [`backend/try_sandbox_flow.py`](backend/try_sandbox_flow.py). Measured on the fake sample: sandbox creation about 0.8–0.9 s, and the whole run, from create to delete, 2.6–4.1 s.
 
-## Setup
+## Coaching backend setup
 
 Requires Python 3.12+. On Windows, use `py` if `python` opens the Microsoft Store.
 
@@ -305,3 +305,16 @@ py backend/cleanup_sandboxes.py --dry-run     # list leftover sandboxes (drop --
 py sandbox_jobs/lib/validate_prompts.py sandbox_jobs/samples/chatgpt_fake/prompts_example.jsonl
 py sandbox_jobs/lib/check_adapter.py --adapter sandbox_jobs/samples/tiny_chatgpt/adapter.json --snapshot sandbox_jobs/samples/tiny_chatgpt/snapshot.html
 ```
+The Chalk/Jev workstream now runs locally in explicit mock/shadow mode without credentials:
+
+```sh
+uv sync
+uv run python -m scripts.chalk_doctor
+uv run uvicorn backend.main:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Issue a one-use local pairing code with `uv run python -m scripts.pair_extension`. The API's interactive contract is at `http://127.0.0.1:8000/docs`.
+
+See [the runnable mock and evaluation commands](docs/chalk-runbook.md), [later Chalk account setup](docs/chalk-setup.md), and [extension/dashboard/ingest contracts](docs/coaching-integration.md). Configuration is documented in `.env.example`; use `uv run --env-file .env ...` to load a local file explicitly.
+
+The original product components above are planned teammate work. This implementation supplies the coaching backend/evaluation modules and a tested draft-lifecycle helper; it does not implement the DOM adapter, React dashboard, footprint coefficients, voice recap, or Droid/Daytona jobs. No real Chalk evaluation or measured energy saving is claimed.
