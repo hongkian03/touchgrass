@@ -3,7 +3,10 @@
 Only touches sandboxes labeled app=promptprint (every sandbox backend/sandbox.py creates has
 that label), and only ones older than --max-age-minutes. Run it before the demo.
 
-Usage: py backend/cleanup_sandboxes.py [--max-age-minutes 15] [--dry-run]
+Usage: py backend/cleanup_sandboxes.py [--max-age-minutes 60] [--dry-run]
+
+The default is 60 minutes because a hybrid sandbox (D4) stays up while Droid works on the backend,
+which can take 15 minutes or more; its own TTL is 60.
 """
 
 import argparse
@@ -36,7 +39,7 @@ def created_at(sandbox):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--max-age-minutes", type=float, default=15)
+    ap.add_argument("--max-age-minutes", type=float, default=60)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 

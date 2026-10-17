@@ -7,19 +7,24 @@ Routes:
   GET  /insights/latest        the latest successful analysis's insights.json
   POST /adapter-failure        {site, failed_keys, adapter_version, snapshot_html, ...} -> {job_id}
 
-One Droid job runs at a time (an asyncio lock); the rest wait as "queued". Jobs run in a worker
-thread so requests keep being served while Droid works. Run: py -m uvicorn backend.main:app
+One Droid job runs at a time in local mode, up to 3 in Daytona mode (EXECUTOR=daytona, one sandbox
+each); the rest wait as "queued". Jobs run in a worker thread so requests keep being served while
+Droid works. In Daytona mode /upload reads the body into memory itself (multipart or raw with
+?filename=, 50 MB cap), since UploadFile spools large files to disk. Run: py -m uvicorn backend.main:app
 """
 
 import asyncio
+import email.policy
 import json
+from email.parser import BytesParser
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, Request
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from backend.executor import REPO, get_executor
+from backend.executor import REPO, DaytonaExecutor, get_executor
 from backend.jobs import DONE, JobStore
 
 ADAPTERS_DIR = REPO / "backend" / "adapters"
@@ -28,7 +33,10 @@ LOG_POLL_SECONDS = 0.5
 app = FastAPI(title="PromptPrint")
 store = JobStore()
 executor = get_executor()
-droid_lock = asyncio.Lock()
+DAYTONA = isinstance(executor, DaytonaExecutor)
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+# Local mode: one job at a time. Daytona mode: each job has its own sandbox, so up to 3 at once.
+droid_lock = asyncio.Semaphore(3 if DAYTONA else 1)
 tasks = set()  # keep references so background jobs aren't garbage-collected
 
 
@@ -65,13 +73,42 @@ def start(job_id, fn, *args, **kwargs):
     task.add_done_callback(tasks.discard)
 
 
+async def read_body_in_memory(request):
+    """The raw body, read into memory with a size cap. UploadFile spools files over 1 MB to a temp
+    file on disk, which would break "the export never touches our disk" in Daytona mode."""
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_UPLOAD_BYTES:
+            raise HTTPException(413, f"export over {MAX_UPLOAD_BYTES // (1024 * 1024)} MB")
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("multipart/form-data"):
+        return body, request.query_params.get("filename") or "export"
+    # Same multipart form as local mode, parsed in memory.
+    message = BytesParser(policy=email.policy.HTTP).parsebytes(
+        f"Content-Type: {content_type}\r\n\r\n".encode() + body)
+    for part in message.iter_parts():
+        if part.get_param("name", header="content-disposition") == "file":
+            return part.get_payload(decode=True) or b"", part.get_filename() or "export"
+    raise HTTPException(400, "no 'file' field in the form")
+
+
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)):
-    data = await file.read()
+async def upload(request: Request):
+    if DAYTONA:
+        data, filename = await read_body_in_memory(request)
+    else:
+        form = await request.form()
+        file = form.get("file")
+        if not isinstance(file, StarletteUploadFile):
+            raise HTTPException(400, "no 'file' field in the form")
+        data, filename = await file.read(), file.filename
     if not data:
         raise HTTPException(400, "empty file")
     job_id = store.create("ingest")
-    start(job_id, executor.run_ingest_and_analyze, data, file.filename or "export", job_id)
+    start(job_id, executor.run_ingest_and_analyze, data, filename or "export", job_id)
     return {"job_id": job_id}
 
 

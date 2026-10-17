@@ -17,6 +17,12 @@ line is passed to on_log as it arrives. run_jobs.py prints only events and count
 Leak protection (D7): every sandbox is labeled app=promptprint plus its job_id, is ephemeral
 (deleted as soon as it stops), auto-stops when idle, and has a wall-clock TTL, so even a crashed
 backend can't leave one running. backend/cleanup_sandboxes.py sweeps anything left over.
+
+Hybrid (D4, run_hybrid_jobs): our tier blocks Factory's domains, so Droid can't run in the sandbox.
+The export goes into the sandbox, which makes the redacted copy (lib/redact.py) and sends back only
+that. Droid works on the backend with the redacted copy (the caller's droid_step). The parser.py
+and analyze.py it wrote go back into the sandbox, run there on the real export with our validator
+and checks (run_real.py), and only insights.json and summary.json come out.
 """
 
 import asyncio
@@ -33,6 +39,7 @@ from daytona import AsyncDaytona, CreateSandboxFromSnapshotParams, SessionExecut
 
 REPO = Path(__file__).resolve().parents[1]
 JOBS_SRC = REPO / "sandbox_jobs"
+FOOTPRINT_SRC = REPO / "backend" / "footprint.py"
 
 SANDBOX_HOME = "/home/daytona"  # default sandbox user, found in D0
 WORK_DIR = f"{SANDBOX_HOME}/work"
@@ -50,9 +57,15 @@ EXEC_TIMEOUT = 600
 JOB_TIMEOUT = 600  # overall limit for run_jobs.py
 MAX_LOG_LINE = 200
 
+# Hybrid: the sandbox waits while Droid works on the backend, which can take 15 minutes or more.
+HYBRID_DOWNLOADS = ["output/insights.json", "output/summary.json"]
+HYBRID_AUTO_STOP_MINUTES = 30
+HYBRID_TTL_MINUTES = 60
+KEEPALIVE_SECONDS = 60
 
-def jobs_tarball():
-    """sandbox_jobs/ as an in-memory tar.gz, without samples/ or caches."""
+
+def jobs_tarball(extra=None):
+    """sandbox_jobs/ as an in-memory tar.gz, without samples/ or caches, plus extra {arcname: path}."""
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for path in sorted(JOBS_SRC.rglob("*")):
@@ -60,12 +73,32 @@ def jobs_tarball():
             if not path.is_file() or rel.parts[0] == "samples" or "__pycache__" in rel.parts or path.suffix == ".pyc":
                 continue
             tar.add(path, arcname=rel.as_posix())
+        for arcname, path in (extra or {}).items():
+            tar.add(path, arcname=arcname)
     return buf.getvalue()
 
 
 async def sh(sandbox, command, timeout=EXEC_TIMEOUT):
     resp = await sandbox.process.exec(f"sh -c {shlex.quote(command)}", timeout=timeout)
     return resp.exit_code, resp.result
+
+
+async def install_deps(sandbox):
+    code, out = await sh(sandbox, (
+        f"mkdir -p {WORK_DIR}/input {WORK_DIR}/output {WORK_DIR}/logs {JOBS_DIR}"
+        f" && python3 -m pip install --quiet --disable-pip-version-check {' '.join(DEPS)}"
+    ))
+    if code != 0:
+        raise RuntimeError(f"pip install failed (exit {code}): {out.strip()[-500:]}")
+
+
+async def upload_code(sandbox, tarball):
+    """Upload and extract the job code into JOBS_DIR. Returns the audit entry."""
+    await sandbox.fs.upload_file(tarball, f"{SANDBOX_HOME}/jobs.tar.gz")
+    code, out = await sh(sandbox, f"tar -xzf {SANDBOX_HOME}/jobs.tar.gz -C {JOBS_DIR} && rm {SANDBOX_HOME}/jobs.tar.gz")
+    if code != 0:
+        raise RuntimeError(f"extract failed (exit {code}): {out.strip()}")
+    return {"name": "jobs.tar.gz", "bytes": len(tarball)}
 
 
 class LineStream:
@@ -164,21 +197,11 @@ async def run_user_jobs(export_bytes, filename, job_id, on_log=None, job_timeout
             mark("create", t)
 
             t = time.perf_counter()
-            code, out = await sh(sandbox, (
-                f"mkdir -p {WORK_DIR}/input {WORK_DIR}/output {WORK_DIR}/logs {JOBS_DIR}"
-                f" && python3 -m pip install --quiet --disable-pip-version-check {' '.join(DEPS)}"
-            ))
-            if code != 0:
-                raise RuntimeError(f"pip install failed (exit {code}): {out.strip()[-500:]}")
+            await install_deps(sandbox)
             mark("install", t)
 
             t = time.perf_counter()
-            tarball = jobs_tarball()
-            await sandbox.fs.upload_file(tarball, f"{SANDBOX_HOME}/jobs.tar.gz")
-            code, out = await sh(sandbox, f"tar -xzf {SANDBOX_HOME}/jobs.tar.gz -C {JOBS_DIR} && rm {SANDBOX_HOME}/jobs.tar.gz")
-            if code != 0:
-                raise RuntimeError(f"extract failed (exit {code}): {out.strip()}")
-            audit["uploaded"].append({"name": "jobs.tar.gz", "bytes": len(tarball)})
+            audit["uploaded"].append(await upload_code(sandbox, jobs_tarball()))
             mark("upload_code", t)
 
             t = time.perf_counter()
@@ -227,6 +250,142 @@ async def run_user_jobs(export_bytes, filename, job_id, on_log=None, job_timeout
             result["error"] = f"{type(e).__name__}: {e}"
             log("failed", error=result["error"][:MAX_LOG_LINE])
         finally:
+            if sandbox is not None:
+                t = time.perf_counter()
+                await daytona.delete(sandbox)
+                result["deleted_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                mark("delete", t)
+                log("sandbox_deleted", sandbox_id=sandbox.id)
+    return result
+
+
+async def keep_alive(sandbox):
+    """Counts as activity, so the sandbox doesn't auto-stop (and, being ephemeral, vanish) while Droid works."""
+    while True:
+        await asyncio.sleep(KEEPALIVE_SECONDS)
+        try:
+            await sandbox.refresh_activity()
+        except Exception:
+            pass  # the TTL and the finally block still bound the sandbox's life
+
+
+async def run_hybrid_jobs(export_bytes, filename, job_id, droid_step, on_log=None, job_timeout=JOB_TIMEOUT) -> dict:
+    """D4 hybrid: the real export only ever lives in the sandbox; Droid sees only the redacted copy.
+
+    droid_step(redacted_bytes, suffix) runs on the backend (blocking; called in a thread) and returns
+    {"ok", "parser": bytes, "analyze_py": bytes, "expected": {exchanges, regenerations, images}, ...}.
+    Returns {ok, sandbox_id, timings, audit, insights, summary (the in-sandbox real run), droid (the
+    droid_step result without the scripts), error}.
+    """
+    emit = on_log or (lambda entry: None)
+    timings, audit = {}, {"uploaded": [], "downloaded": []}
+    result = {"job_id": job_id, "ok": False, "sandbox_id": None, "timings": timings, "audit": audit}
+    safe_name = Path(filename).name or "export"
+    suffix = Path(safe_name).suffix.lower() or ".json"
+    export_path = f"{WORK_DIR}/input/{safe_name}"
+    redacted_path = f"{WORK_DIR}/redacted/export{suffix}"
+
+    def log(event, **fields):
+        emit({"source": "backend", "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+              "event": event, **fields})
+
+    def mark(step, start):
+        timings[step] = round(time.perf_counter() - start, 2)
+        log("step_done", step=step, seconds=timings[step])
+
+    # No Factory key: Droid doesn't run in here.
+    env_vars = {"WORK_DIR": WORK_DIR, "FOOTPRINT_PY": f"{JOBS_DIR}/footprint.py"}
+
+    async with AsyncDaytona() as daytona:
+        sandbox, keeper = None, None
+        try:
+            t = time.perf_counter()
+            sandbox = await daytona.create(CreateSandboxFromSnapshotParams(
+                language="python", env_vars=env_vars, labels={**LABELS, "job_id": job_id},
+                ephemeral=True, auto_stop_interval=HYBRID_AUTO_STOP_MINUTES, ttl_minutes=HYBRID_TTL_MINUTES,
+            ))
+            result["sandbox_id"] = sandbox.id
+            result["created_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            log("sandbox_created", sandbox_id=sandbox.id)
+            mark("create", t)
+            keeper = asyncio.create_task(keep_alive(sandbox))
+
+            t = time.perf_counter()
+            await install_deps(sandbox)
+            mark("install", t)
+
+            t = time.perf_counter()
+            audit["uploaded"].append(await upload_code(sandbox, jobs_tarball({"footprint.py": FOOTPRINT_SRC})))
+            mark("upload_code", t)
+
+            t = time.perf_counter()
+            size = len(export_bytes)
+            await sandbox.fs.upload_file(export_bytes, export_path)
+            export_bytes = None  # drop our reference; the export now lives only in the sandbox
+            audit["uploaded"].append({"name": f"input/{safe_name}", "bytes": size})
+            mark("upload_export", t)
+
+            # 1. Redact inside the sandbox; only the redacted copy comes out. redact.py's output names
+            # kept fields, not values, but it isn't needed, so it isn't kept.
+            t = time.perf_counter()
+            code, _ = await sh(sandbox, f"mkdir -p {WORK_DIR}/redacted && python3 {JOBS_DIR}/lib/redact.py "
+                                        f"{shlex.quote(export_path)} {redacted_path}")
+            if code != 0:
+                raise RuntimeError(f"redact.py failed in the sandbox (exit {code})")
+            redacted = await sandbox.fs.download_file(redacted_path)
+            audit["downloaded"].append({"name": f"redacted/export{suffix}", "bytes": len(redacted)})
+            mark("redact", t)
+
+            # 2. Droid on the backend, with the redacted copy only.
+            t = time.perf_counter()
+            log("droid_start")
+            step = await asyncio.to_thread(droid_step, redacted, suffix)
+            result["droid"] = {k: v for k, v in step.items() if k not in ("parser", "analyze_py")}
+            mark("droid", t)
+            if not step.get("ok"):
+                raise RuntimeError("Droid's jobs on the redacted copy failed our checks")
+
+            # 3. Droid's scripts on the real export, in the sandbox, with our checks.
+            t = time.perf_counter()
+            for name, data in (("parser.py", step["parser"]), ("analyze.py", step["analyze_py"])):
+                await sandbox.fs.upload_file(data, f"{WORK_DIR}/droid/{name}")
+                audit["uploaded"].append({"name": f"droid/{name}", "bytes": len(data)})
+            mark("upload_scripts", t)
+
+            t = time.perf_counter()
+            stream = LineStream(emit)
+            expected = json.dumps(step["expected"])
+            code, timed_out = await run_streamed(
+                sandbox, f"python3 -u {JOBS_DIR}/run_real.py --expected {shlex.quote(expected)}", stream, job_timeout)
+            result["run_exit_code"], result["timed_out"] = code, timed_out
+            if timed_out:
+                result["error"] = f"timed out after {job_timeout}s"
+                log("job_timeout", seconds=job_timeout)
+            mark("run_real", t)
+
+            t = time.perf_counter()
+            files = {}
+            for rel in HYBRID_DOWNLOADS:
+                try:
+                    files[rel] = await sandbox.fs.download_file(f"{WORK_DIR}/{rel}")
+                    audit["downloaded"].append({"name": rel, "bytes": len(files[rel])})
+                except Exception:
+                    files[rel] = None  # e.g. no insights.json because a check failed
+            mark("download", t)
+
+            insights, summary = files["output/insights.json"], files["output/summary.json"]
+            result["insights"] = json.loads(insights) if insights else None
+            result["summary"] = json.loads(summary) if summary else None
+            result["ok"] = (not timed_out and code == 0 and bool(result["summary"] and result["summary"].get("ok"))
+                            and result["insights"] is not None)
+            if not result["ok"] and not result.get("error"):
+                result["error"] = (result["summary"] or {}).get("error") or "checks on the real export failed"
+        except Exception as e:
+            result["error"] = f"{type(e).__name__}: {e}"[:MAX_LOG_LINE]
+            log("failed", error=result["error"])
+        finally:
+            if keeper is not None:
+                keeper.cancel()
             if sandbox is not None:
                 t = time.perf_counter()
                 await daytona.delete(sandbox)

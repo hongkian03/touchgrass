@@ -17,6 +17,11 @@ On that real run we check Droid's work ourselves; any failure fails the job:
   4. analyze.py imports footprint and has no numeric constants on lines about energy,
      water or carbon
 
+Daytona hybrid (REDACTED_INPUT=1): WORK_DIR/output/prompts.jsonl was parsed from the redacted copy,
+so its text is placeholders like "<text 42 chars>". The aggregates count those as the lengths they
+stand for, and the run and checks here are a first pass; the sandbox repeats them on the real data
+(run_real.py).
+
 Usage: py sandbox_jobs/analyze.py                 (needs WORK_DIR/output/prompts.jsonl from the Ingestor)
        py sandbox_jobs/analyze.py --checks-only   (re-run our checks on the last run, no Droid call)
 """
@@ -55,6 +60,8 @@ FOOTPRINT_SRC = Path(os.environ.get("FOOTPRINT_PY", REPO / "backend" / "footprin
 FAKE_PROMPTS = Path(__file__).resolve().parent / "samples" / "chatgpt_fake" / "prompts_example.jsonl"
 PYTHON = os.environ.get("DROID_PYTHON", "py" if os.name == "nt" else "python3")
 RUN_TIMEOUT = 300
+REDACTED_INPUT = os.environ.get("REDACTED_INPUT") == "1"
+PLACEHOLDER = re.compile(r"<text (\d+) chars>")
 
 # Words that mark a line as being about energy, water or carbon (matched against identifier parts).
 FOOTPRINT_WORDS = {"wh", "kwh", "mwh", "watt", "watts", "energy", "joule", "joules", "water", "ml",
@@ -136,6 +143,13 @@ def copy_lib(root=WORK_DIR):
     shutil.copy2(FOOTPRINT_SRC, root / "lib" / "footprint.py")
 
 
+def text_len(text):
+    """Length of a text field; in a redacted run, a placeholder counts as the length it stands for."""
+    if not REDACTED_INPUT:
+        return len(text)
+    return len(PLACEHOLDER.sub("", text)) + sum(int(n) for n in PLACEHOLDER.findall(text))
+
+
 def aggregates(prompts):
     """Counts of the real data for Droid. Numbers and model names only, never text."""
     rows = [json.loads(line) for line in prompts.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -153,8 +167,8 @@ def aggregates(prompts):
         "per_kind": dict(Counter(r["kind"] for r in rows)),
         "per_day": dict(sorted(Counter(r["ts"][:10] for r in rows).items())),
         "regenerated": sum(r["regenerated"] for r in rows),
-        "prompt_chars": stats([len(r["prompt_text"]) for r in rows]),
-        "response_chars": stats([len(r["response_text"]) for r in rows]),
+        "prompt_chars": stats([text_len(r["prompt_text"]) for r in rows]),
+        "response_chars": stats([text_len(r["response_text"]) for r in rows]),
     }
 
 

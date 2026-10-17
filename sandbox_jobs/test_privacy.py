@@ -9,10 +9,17 @@ in the fake data Droid is allowed to see. The test fails if any marker shows up 
 its full transcripts (every prompt, message, tool input and tool result), or in any file in its view
 folders, and if Droid's file tools (Read, Grep, LS, Glob) were pointed outside its own folder. A
 control test first checks the markers really are in the real data, so the test can't pass by accident.
+
+Daytona hybrid (D4): set PRIVACY_MODE=daytona, and WORK_DIR and DROID_VIEW_DIR to the job's folders
+(work/jobs/<id>, droid_view/jobs/<id>). The real export never reaches this machine there, so the
+control checks the planted sample that was uploaded instead, and one more test checks that no marker
+is anywhere in the job's work folder, except the insights.json that came back from the sandbox (its
+tips quote up to 3 example prompts, by design).
 """
 
 import ast
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -24,6 +31,8 @@ MARKERS = [line.strip() for line in MARKERS_FILE.read_text(encoding="utf-8").spl
            if line.strip() and not line.startswith("#")]
 JOBS = ["ingest", "analyze"]
 FILE_TOOLS = {"Read", "Grep", "LS", "Glob"}
+DAYTONA = os.environ.get("PRIVACY_MODE") == "daytona"
+PLANTED = MARKERS_FILE.with_name("conversations.json")
 
 
 def text_of(path):
@@ -39,6 +48,21 @@ def transcripts():
     return [WORK_DIR / "logs" / f"{job}.transcript.jsonl" for job in JOBS]
 
 
+@pytest.mark.skipif(not DAYTONA, reason="Daytona hybrid only")
+def test_daytona_planted_markers_were_uploaded():
+    assert set(markers_in(PLANTED)) == set(MARKERS), f"control failed: markers missing from {PLANTED}"
+
+
+@pytest.mark.skipif(not DAYTONA, reason="Daytona hybrid only")
+def test_daytona_no_marker_in_backend_work_folder():
+    files = [p for p in WORK_DIR.rglob("*") if p.is_file()]
+    assert any(p.parent.name == "input" for p in files), "no redacted export in input/; run the Daytona job first"
+    leaks = {str(p): markers_in(p) for p in files
+             if p != WORK_DIR / "output" / "insights.json" and markers_in(p)}
+    assert not leaks, f"marker words reached the backend's disk: {leaks}"
+
+
+@pytest.mark.skipif(DAYTONA, reason="local mode only; the real export never reaches the backend in Daytona mode")
 def test_planted_markers_are_in_the_real_data():
     exports = [p for p in (WORK_DIR / "input").iterdir() if p.is_file()]
     assert exports, "no export in work/input; run the end-to-end job on the planted sample first"
