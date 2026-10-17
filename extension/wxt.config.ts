@@ -6,13 +6,13 @@ export default defineConfig({
     name: "Puddle",
     description: "Track AI usage. Coach before you waste a prompt.",
     permissions: ["storage", "tabs", "scripting"],
-    // Opt-in hosts only after onboarding (issue #4). Keep empty at install.
-    host_permissions: [],
+    // Site hosts stay empty until onboarding. Groq = AI-site check.
+    host_permissions: ["https://api.groq.com/*"],
   },
   hooks: {
     "build:manifestGenerated": (_wxt, manifest) => {
-      // WXT copies content-script matches into host_permissions; wipe for #2/#4 gate.
-      manifest.host_permissions = [];
+      // Wipe content-script matches WXT may copy; keep Groq API host only.
+      manifest.host_permissions = ["https://api.groq.com/*"];
     },
   },
 });
