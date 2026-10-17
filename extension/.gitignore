@@ -8,3 +8,6 @@ dist
 .env
 .env.*
 !.env.example
+.verify7/*.png
+.verify7/playwright-report/
+.verify7/playwright-results/
