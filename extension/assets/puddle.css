@@ -1,16 +1,24 @@
 @font-face {
-  font-family: "Castoro";
-  src: url("/fonts/Castoro-Regular.woff2") format("woff2");
+  font-family: "Geist";
+  src: url("/fonts/Geist-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Castoro";
-  src: url("/fonts/Castoro-Italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
+  font-family: "Geist";
+  src: url("/fonts/Geist-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
   font-display: swap;
 }
 
@@ -20,6 +28,23 @@
   --yale-blue: #1b4965;
   --pale-sky: #cae9ff;
   --fresh-sky: #5fa8d3;
+  --surface: #ffffff;
+
+  /* shadcn tokens */
+  --background: #ffffff;
+  --foreground: #1b4965;
+  --primary: #1b4965;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #1b4965;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #1b4965;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #1b4965;
+  --radius: 0.5rem;
 }
 
 * {
@@ -31,12 +56,69 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+  background: #ffffff;
 }
 
 body {
-  font-family: "Castoro", serif;
-  background: var(--pale-sky);
-  color: var(--yale-blue);
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+  background: #ffffff;
+  color: var(--foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* BrandIcon inlines from thesvg.org — fill the wrapper */
+[role="img"] > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Still sticker — no bounce. Light shadow only. */
+.pip-sticker {
+  filter: drop-shadow(0 2px 6px rgba(27, 73, 101, 0.16));
+}
+
+/* Peek from panel corner — sized for extension chrome */
+.pip-peek {
+  position: absolute;
+  top: -2px;
+  right: -10px;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.pip-peek--panel {
+  top: 2px;
+  right: -8px;
+}
+
+.pip-peek--popup {
+  top: 2px;
+  right: -12px;
+}
+
+@keyframes pip-sprite {
+  from {
+    background-position-x: 0%;
+  }
+  to {
+    background-position-x: 100%;
+  }
 }
 
 @tailwind base;
