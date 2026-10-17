@@ -1,0 +1,135 @@
+{
+ "saved_from_job": "c5c4c69552e3",
+ "created_at": "2026-10-17T19:28:19+00:00",
+ "finished_at": "2026-10-17T19:35:37+00:00",
+ "log_order": [
+  "sandbox.jsonl",
+  "ingest.jsonl",
+  "analyze.jsonl"
+ ],
+ "job_summary": {
+  "success": true,
+  "executor": "daytona",
+  "error": null,
+  "exit_code": 0,
+  "ingest": {
+   "success": true,
+   "cache_hit": false,
+   "duration": 158.4,
+   "credits": 39403.0,
+   "exchanges": 12,
+   "regenerations": 1,
+   "images": 1,
+   "models": {
+    "gpt-4o": 9,
+    "o3": 1,
+    "gpt-4o-mini": 2
+   }
+  },
+  "analyze": {
+   "success": true,
+   "droid_subtype": "success",
+   "seconds": 265.36,
+   "credits": 60434.0,
+   "error": null,
+   "checks": {
+    "footprint_unchanged": {
+     "ok": true,
+     "detail": "sha256 2e12d0add436"
+    },
+    "schema_valid": {
+     "ok": true,
+     "detail": "PASS"
+    },
+    "rerun_identical": {
+     "ok": true,
+     "detail": "identical output"
+    },
+    "no_hardcoded_constants": {
+     "ok": true,
+     "detail": "imports footprint, no footprint constants"
+    }
+   }
+  },
+  "real_run": {
+   "ok": true,
+   "counts_match": true,
+   "checks": {
+    "footprint_unchanged": {
+     "ok": true,
+     "detail": "sha256 2e12d0add436"
+    },
+    "schema_valid": {
+     "ok": true,
+     "detail": "PASS"
+    },
+    "rerun_identical": {
+     "ok": true,
+     "detail": "identical output"
+    },
+    "no_hardcoded_constants": {
+     "ok": true,
+     "detail": "imports footprint, no footprint constants"
+    }
+   },
+   "timings": {
+    "parse": 0.031,
+    "validate": 0.097,
+    "analyze": 0.646,
+    "checks": 0.611
+   },
+   "error": null
+  },
+  "factory_credits": 99837.0,
+  "has_insights": true,
+  "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f",
+  "timings": {
+   "create": 0.87,
+   "install": 1.02,
+   "upload_code": 0.35,
+   "upload_export": 0.16,
+   "redact": 0.33,
+   "droid": 428.11,
+   "upload_scripts": 0.42,
+   "run_real": 3.62,
+   "download": 0.22,
+   "delete": 0.09
+  },
+  "audit": {
+   "uploaded": [
+    {
+     "name": "jobs.tar.gz",
+     "bytes": 40855
+    },
+    {
+     "name": "input/conversations.json",
+     "bytes": 40598
+    },
+    {
+     "name": "droid/parser.py",
+     "bytes": 23300
+    },
+    {
+     "name": "droid/analyze.py",
+     "bytes": 31399
+    }
+   ],
+   "downloaded": [
+    {
+     "name": "redacted/export.json",
+     "bytes": 31346
+    },
+    {
+     "name": "output/insights.json",
+     "bytes": 2851
+    },
+    {
+     "name": "output/summary.json",
+     "bytes": 923
+    }
+   ]
+  },
+  "created_at": "2026-10-17T19:28:23+00:00",
+  "deleted_at": "2026-10-17T19:35:37+00:00"
+ }
+}

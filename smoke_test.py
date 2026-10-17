@@ -107,6 +107,7 @@ def check_audit(base, job_id, kind, daytona):
 def upload_flow(base, daytona, live):
     print("\n== Flow 1: upload -> redact -> Droid -> real-data run -> insights -> audit", flush=True)
     job_id = post_file(base, "/upload", SAMPLE.name, SAMPLE.read_bytes())["job_id"]
+    print(f"  upload job {job_id}", flush=True)
     job, seconds = wait_job(base, job_id, 2400 if live else 600)
     summary = job["summary"] or {}
     check("upload: job succeeded", job["status"] == "succeeded", job["error"] or f"{seconds}s")
@@ -156,6 +157,7 @@ def repair_flow(base, daytona, live, keep_adapter):
                   "expected_prompt": expected["prompt"], "has_responses": expected["has_responses"]}
         job_id = http(base, "POST", "/adapter-failure", json.dumps(report).encode(),
                       {"Content-Type": "application/json"})["job_id"]
+        print(f"  repair job {job_id}", flush=True)
         job, seconds = wait_job(base, job_id, 1200 if live else 300)
         summary = job["summary"] or {}
         check("repair: job succeeded", job["status"] == "succeeded", job["error"] or f"{seconds}s")
