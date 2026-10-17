@@ -1,11 +1,23 @@
 import { useEffect, useState } from "react";
 
-type Props = {
+type CountUpProps = {
   value: number;
   durationMs?: number;
+  decimals?: number;
+  suffix?: string;
+  className?: string;
+  "data-testid"?: string;
 };
 
-export function ScoreCountUp({ value, durationMs = 700 }: Props) {
+/** Ease number from 0 → value (score, Wh, L, g). */
+export function CountUp({
+  value,
+  durationMs = 700,
+  decimals = 0,
+  suffix = "",
+  className,
+  "data-testid": testId,
+}: CountUpProps) {
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
@@ -15,19 +27,37 @@ export function ScoreCountUp({ value, durationMs = 700 }: Props) {
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
       const eased = 1 - (1 - t) * (1 - t);
-      setShown(Math.round(from + (value - from) * eased));
+      setShown(from + (value - from) * eased);
       if (t < 1) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [value, durationMs]);
 
+  const text =
+    decimals > 0
+      ? `${shown.toFixed(decimals)}${suffix}`
+      : `${Math.round(shown)}${suffix}`;
+
   return (
-    <span
+    <span data-testid={testId} className={className}>
+      {text}
+    </span>
+  );
+}
+
+type ScoreProps = {
+  value: number;
+  durationMs?: number;
+};
+
+export function ScoreCountUp({ value, durationMs = 700 }: ScoreProps) {
+  return (
+    <CountUp
+      value={value}
+      durationMs={durationMs}
       data-testid="score"
       className="font-sans text-[3.25rem] leading-none text-foreground tabular-nums"
-    >
-      {shown}
-    </span>
+    />
   );
 }
