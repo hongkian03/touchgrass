@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-10-16T22:32:14+00:00",
+  "period": {
+    "start": "2026-09-22T14:04:14+00:00",
+    "end": "2026-10-16T22:32:14+00:00"
+  },
+  "totals": {
+    "exchanges": 12,
+    "energy_wh": {
+      "low": 2.238738,
+      "high": 8.95495
+    },
+    "water_ml": {
+      "low": 4.477475,
+      "high": 17.9099
+    },
+    "co2_g": {
+      "low": 0.895495,
+      "high": 3.58198
+    }
+  },
+  "tips": [
+    {
+      "id": "model_mix",
+      "title": "9 text ask(s) on gpt-4o, o3 would cost 0.203313-0.81325 Wh less on gpt-4o-mini (86% of their energy)",
+      "pattern": "other",
+      "evidence": {
+        "counts": {
+          "heavy_model_exchanges": 9,
+          "text_exchanges": 11,
+          "exchanges_on_gpt-4o-mini": 2,
+          "total_exchanges": 12,
+          "exchanges_on_gpt-4o": 8,
+          "exchanges_on_o3": 1
+        },
+        "examples": [
+          "How do I square every number in a Python list?",
+          "And only keep the even ones?",
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.203313,
+          "high": 0.81325
+        }
+      },
+      "how_to_fix": "Send short asks like those 9 to gpt-4o-mini instead of gpt-4o, o3; your history shows it keeps the same answers at 86% less energy."
+    },
+    {
+      "id": "repeated_questions",
+      "title": "4 duplicate ask(s) across 2 repeated question(s) cost 0.12945-0.5178 Wh",
+      "pattern": "repeated_questions",
+      "evidence": {
+        "counts": {
+          "repeated_questions": 2,
+          "duplicate_asks": 4,
+          "total_exchanges": 12
+        },
+        "examples": [
+          "How do I center a div in CSS on my ZEBRAQUARTZ page?",
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.12945,
+          "high": 0.5178
+        }
+      },
+      "how_to_fix": "Ask each of those 2 question(s) once and reuse the answer; the 4 re-typed ask(s) bought nothing new."
+    },
+    {
+      "id": "regenerate_loops",
+      "title": "1 regenerated response(s) wasted 0.006825-0.0273 Wh; 1 of them re-asked a question you had already asked",
+      "pattern": "regenerate_loops",
+      "evidence": {
+        "counts": {
+          "regenerated_exchanges": 1,
+          "regenerate_loops": 1,
+          "total_exchanges": 12
+        },
+        "examples": [
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.006825,
+          "high": 0.0273
+        }
+      },
+      "how_to_fix": "Put length, tone and format in the first prompt so its answer is usable: 1 of 12 responses here were regenerations."
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "insights.json",
+  "description": "The Analyst's output. Ours; Droid never edits this file. Every energy, water and CO2 number must come from footprint.py.",
+  "type": "object",
+  "$defs": {
+    "range": {
+      "type": "object",
+      "properties": {"low": {"type": "number", "minimum": 0}, "high": {"type": "number", "minimum": 0}},
+      "required": ["low", "high"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "generated_at": {"type": "string", "format": "date-time"},
+    "period": {
+      "type": "object",
+      "properties": {"start": {"type": "string"}, "end": {"type": "string"}},
+      "required": ["start", "end"],
+      "additionalProperties": false
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "exchanges": {"type": "integer", "minimum": 0},
+        "energy_wh": {"$ref": "#/$defs/range"},
+        "water_ml": {"$ref": "#/$defs/range"},
+        "co2_g": {"$ref": "#/$defs/range"}
+      },
+      "required": ["exchanges", "energy_wh", "water_ml", "co2_g"],
+      "additionalProperties": false
+    },
+    "tips": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "pattern": {"enum": ["repeated_questions", "regenerate_loops", "long_output_short_ask", "media_spike", "time_of_day", "other"]},
+          "evidence": {
+            "type": "object",
+            "properties": {
+              "counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}, "minProperties": 1},
+              "examples": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 80}}
+            },
+            "required": ["counts", "examples"],
+            "additionalProperties": false
+          },
+          "estimated_savings": {
+            "type": "object",
+            "properties": {"energy_wh": {"$ref": "#/$defs/range"}},
+            "required": ["energy_wh"],
+            "additionalProperties": false
+          },
+          "how_to_fix": {"type": "string", "minLength": 1}
+        },
+        "required": ["id", "title", "pattern", "evidence", "estimated_savings", "how_to_fix"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["generated_at", "period", "totals", "tips"],
+  "additionalProperties": false
+}

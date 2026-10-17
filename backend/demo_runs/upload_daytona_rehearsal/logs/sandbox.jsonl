@@ -1,0 +1,26 @@
+{"ts": "2026-10-17T19:28:23.442+00:00", "source": "backend", "event": "sandbox_created", "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f"}
+{"ts": "2026-10-17T19:28:23.444+00:00", "source": "backend", "event": "step_done", "step": "create", "seconds": 0.87}
+{"ts": "2026-10-17T19:28:24.468+00:00", "source": "backend", "event": "step_done", "step": "install", "seconds": 1.02}
+{"ts": "2026-10-17T19:28:24.824+00:00", "source": "backend", "event": "step_done", "step": "upload_code", "seconds": 0.35}
+{"ts": "2026-10-17T19:28:24.984+00:00", "source": "backend", "event": "step_done", "step": "upload_export", "seconds": 0.16}
+{"ts": "2026-10-17T19:28:25.317+00:00", "source": "backend", "event": "step_done", "step": "redact", "seconds": 0.33}
+{"ts": "2026-10-17T19:28:25.318+00:00", "source": "backend", "event": "droid_start"}
+{"ts": "2026-10-17T19:35:33.429+00:00", "source": "backend", "event": "step_done", "step": "droid", "seconds": 428.11}
+{"ts": "2026-10-17T19:35:33.853+00:00", "source": "backend", "event": "step_done", "step": "upload_scripts", "seconds": 0.42}
+{"ts": "2026-10-17T19:35:34.859+00:00", "source": "sandbox", "event": "parse_start"}
+{"ts": "2026-10-17T19:35:34.891+00:00", "source": "sandbox", "event": "parse_done", "seconds": 0.031}
+{"ts": "2026-10-17T19:35:34.891+00:00", "source": "sandbox", "event": "validate_start"}
+{"ts": "2026-10-17T19:35:34.988+00:00", "source": "sandbox", "event": "validate_done", "seconds": 0.097}
+{"ts": "2026-10-17T19:35:34.989+00:00", "source": "sandbox", "event": "analyze_start"}
+{"ts": "2026-10-17T19:35:35.635+00:00", "source": "sandbox", "event": "analyze_done", "seconds": 0.646}
+{"ts": "2026-10-17T19:35:35.635+00:00", "source": "sandbox", "event": "checks_start"}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "checks_done", "seconds": 0.611}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "footprint_unchanged", "ok": true}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "schema_valid", "ok": true}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "rerun_identical", "ok": true}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "no_hardcoded_constants", "ok": true}
+{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "finished", "ok": true}
+{"ts": "2026-10-17T19:35:37.469+00:00", "source": "backend", "event": "step_done", "step": "run_real", "seconds": 3.62}
+{"ts": "2026-10-17T19:35:37.693+00:00", "source": "backend", "event": "step_done", "step": "download", "seconds": 0.22}
+{"ts": "2026-10-17T19:35:37.787+00:00", "source": "backend", "event": "step_done", "step": "delete", "seconds": 0.09}
+{"ts": "2026-10-17T19:35:37.788+00:00", "source": "backend", "event": "sandbox_deleted", "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f"}

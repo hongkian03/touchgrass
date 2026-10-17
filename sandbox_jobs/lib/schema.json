@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "prompts.jsonl line",
+  "description": "One exchange (a prompt and its response). Ours; Droid never edits this file.",
+  "type": "object",
+  "properties": {
+    "ts": {"type": "string", "format": "date-time", "description": "ISO 8601 timestamp of the prompt"},
+    "provider": {"type": "string", "minLength": 1},
+    "model": {"type": ["string", "null"]},
+    "kind": {"enum": ["text", "image", "video"]},
+    "prompt_text": {"type": "string"},
+    "response_text": {"type": "string"},
+    "regenerated": {"type": "boolean"}
+  },
+  "required": ["ts", "provider", "model", "kind", "prompt_text", "response_text", "regenerated"],
+  "additionalProperties": false
+}
