@@ -1,5 +1,6 @@
 import platformsData from "../data/platforms.json";
 import { classify } from "./classify";
+import { coachTargetDisplay, type CoachTargetDisplay } from "./coachTargetDisplay";
 import { route } from "./route";
 import type { Platform, RouteSuggestion } from "./types";
 
@@ -19,19 +20,34 @@ export function buildCoachSuggestion(args: {
   });
 }
 
-/** Try same-page model switch; else open paste tab (never DeepSeek). */
-export async function runCoachYes(args: {
+export type CoachAutoResult =
+  | {
+      kind: "switched";
+      suggestion: RouteSuggestion;
+      model: string;
+    }
+  | {
+      kind: "redirect";
+      suggestion: RouteSuggestion;
+      url: string;
+      target: CoachTargetDisplay;
+    };
+
+/** Resolve auto action. Does not open tabs yet. */
+export function planCoachAuto(args: {
   draft: string;
   model: string;
   provider: string;
-  /** fixture / page model label node */
   modelLabel?: HTMLElement | null;
-}): Promise<RouteSuggestion> {
+}): CoachAutoResult {
   const suggestion = buildCoachSuggestion(args);
 
   if (suggestion.action === "switch_model" && args.modelLabel) {
-    args.modelLabel.textContent = suggestion.targetModel;
-    return suggestion;
+    return {
+      kind: "switched",
+      suggestion,
+      model: suggestion.targetModel,
+    };
   }
 
   const url =
@@ -44,11 +60,52 @@ export async function runCoachYes(args: {
     throw new Error("refuse DeepSeek green route");
   }
 
+  return {
+    kind: "redirect",
+    suggestion: { ...suggestion, action: "open_paste", targetUrl: url },
+    url,
+    target: coachTargetDisplay(url, platforms),
+  };
+}
+
+/** Apply same-page model switch. */
+export function applyCoachSwitch(
+  modelLabel: HTMLElement,
+  model: string,
+): void {
+  modelLabel.textContent = model;
+}
+
+/** Open paste tab (never DeepSeek). */
+export async function openCoachPaste(args: {
+  url: string;
+  draft: string;
+}): Promise<void> {
+  if (/deepseek/i.test(args.url)) {
+    throw new Error("refuse DeepSeek green route");
+  }
   await browser.runtime.sendMessage({
     type: "puddle/coach-open-paste",
-    url,
+    url: args.url,
     draft: args.draft,
   });
+}
 
-  return { ...suggestion, action: "open_paste", targetUrl: url };
+/** @deprecated Prefer planCoachAuto + apply/open. Kept for callers mid-migrate. */
+export async function runCoachYes(args: {
+  draft: string;
+  model: string;
+  provider: string;
+  modelLabel?: HTMLElement | null;
+}): Promise<RouteSuggestion> {
+  const plan = planCoachAuto(args);
+  if (plan.kind === "switched" && args.modelLabel) {
+    applyCoachSwitch(args.modelLabel, plan.model);
+    return plan.suggestion;
+  }
+  if (plan.kind === "redirect") {
+    await openCoachPaste({ url: plan.url, draft: args.draft });
+    return plan.suggestion;
+  }
+  return buildCoachSuggestion(args);
 }

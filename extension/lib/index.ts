@@ -23,7 +23,16 @@ export {
   coachNeverDeepSeek,
   shouldShowCoach,
 } from "./coach";
-export { buildCoachSuggestion, runCoachYes } from "./coachYes";
+export {
+  applyCoachSwitch,
+  buildCoachSuggestion,
+  openCoachPaste,
+  planCoachAuto,
+  runCoachYes,
+} from "./coachYes";
+export { coachTargetDisplay } from "./coachTargetDisplay";
+export type { CoachTargetDisplay } from "./coachTargetDisplay";
+export type { CoachAutoResult } from "./coachYes";
 export { recomputeAccuracy } from "./evalAccuracy";
 export { parseExport } from "./upload";
 export { parseVoiceIntent } from "./voiceIntent";
