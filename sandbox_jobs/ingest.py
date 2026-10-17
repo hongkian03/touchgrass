@@ -1,8 +1,8 @@
 """F2/F3: Droid Job 1, the Ingestor, with a parser cache and an Eval 2 mode.
 
 Privacy: Droid never sees the user's text. It works in DROID_VIEW_DIR/ingest, which holds only a redacted
-copy of the export (lib/redact.py: same structure, text replaced by "<text N chars>"), with web
-tools and subagents turned off. There it writes parser.py, tests it, and fixes it until our
+copy of the export (lib/redact.py: same structure, text replaced by "<text N chars>"), with
+Droid's default tools. There it writes parser.py, tests it, and fixes it until our
 validator passes on the redacted output. Then we copy parser.py into WORK_DIR and run it on the
 real export ourselves, without Droid, and only report success if our validator passes on the real
 output and its counts match the redacted run.
@@ -40,8 +40,6 @@ load_dotenv(REPO / ".env")
 
 from droid_runner import (  # noqa: E402
     DROID_VIEW_DIR,
-    PRIVATE_DATA_DISABLED_TOOLS,
-    PRIVATE_DATA_ENABLED_TOOLS,
     WORK_DIR,
     ensure_work_dirs,
     run_droid_job,
@@ -239,8 +237,7 @@ async def ingest_once(no_cache=False):
     clear(WORK_DIR / "droid")
     build_droid_view(exports[0])
     job = await run_droid_job("ingest", PROMPT, output_model=IngestSummary, timeout=900,
-                              work_dir=VIEW, disabled_tools=PRIVATE_DATA_DISABLED_TOOLS,
-                              enabled_tools=PRIVATE_DATA_ENABLED_TOOLS)
+                              work_dir=VIEW)
     print(f"\nDroid: success={job.success} subtype={job.subtype} seconds={job.duration} "
           f"factory_credits={job.factory_credits}")
     if job.error:
@@ -257,7 +254,9 @@ async def ingest_once(no_cache=False):
     # Now the real export, without Droid: our copy of its parser, our validator.
     droid_parser = VIEW / "droid" / "parser.py"
     passed, report, why = False, "", "no parser.py from Droid"
-    if job.success and view_passed and droid_parser.is_file():
+    # Our checks decide, not how Droid's turn ended: a turn can end in a connection error after the
+    # parser is written and passing. A changed protected folder always fails.
+    if not job.tampered and view_passed and droid_parser.is_file():
         shutil.copy2(droid_parser, WORK_DIR / "droid" / "parser.py")
         ran, why = run_parser_on_real()
         if ran and prompts.exists():
@@ -267,7 +266,9 @@ async def ingest_once(no_cache=False):
     same = passed and counts(prompts) == counts(view_prompts)
     if passed and not same:
         print(f"counts differ: real {counts(prompts)} vs redacted {counts(view_prompts)}")
-    result["success"] = job.success and view_passed and passed and same
+    result["success"] = not job.tampered and view_passed and passed and same
+    if result["success"] and not job.success:
+        print(f"note: Droid's turn ended as {job.subtype}, but the parser it wrote passes our checks")
     if result["success"]:
         result.update(normalize_and_count(prompts))
         parser = WORK_DIR / "droid" / "parser.py"
