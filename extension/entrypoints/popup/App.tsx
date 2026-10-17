@@ -255,24 +255,66 @@ export function PopupApp() {
           <PeriodSwitch period={period} onChange={setPeriod} />
           <PeriodMeta period={period} days={totals.days} />
 
-          <section data-testid="more-insights" className="flex flex-col gap-2.5">
-            <PuddleMeter
-              label="small model"
-              hint="Share of prompts a cheaper model could handle."
-              value={smallPct}
-              wash="#e8f6df"
-              accent="#5cb85c"
-              glyph="mini"
-            />
-            <PuddleMeter
-              label="regenerates"
-              hint="How often you hit regenerate on the same answer."
-              value={regenPct}
-              wash="#fff8dc"
-              accent="#f5c400"
-              glyph="spin"
-            />
-            <PromptMix text={texts} image={images} video={videos} />
+          <section data-testid="more-insights" className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <CartoonTick
+                label="small model"
+                hint="Share of prompts a cheaper model could handle."
+                value={smallPct}
+                decimals={0}
+                suffix="%"
+                testId="tick-small"
+                wash="#e8f6df"
+              >
+                <MiniModel size={56} />
+              </CartoonTick>
+              <CartoonTick
+                label="regenerates"
+                hint="How often you hit regenerate on the same answer."
+                value={regenPct}
+                decimals={0}
+                suffix="%"
+                testId="tick-regen"
+                wash="#fff8dc"
+              >
+                <RegenSpin size={56} />
+              </CartoonTick>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <CartoonTick
+                label="text"
+                hint="Text prompts in this range."
+                value={texts}
+                decimals={0}
+                suffix=""
+                testId="tick-text"
+                wash="#e7f6ff"
+              >
+                <MixBubble size={56} />
+              </CartoonTick>
+              <CartoonTick
+                label="image"
+                hint="Image jobs in this range."
+                value={images}
+                decimals={0}
+                suffix=""
+                testId="tick-image"
+                wash="#fff8dc"
+              >
+                <MixFrame size={56} />
+              </CartoonTick>
+              <CartoonTick
+                label="video"
+                hint="Video jobs in this range."
+                value={videos}
+                decimals={0}
+                suffix=""
+                testId="tick-video"
+                wash="#eef1f4"
+              >
+                <MixClapper size={56} />
+              </CartoonTick>
+            </div>
           </section>
 
           <ul className="m-0 list-none space-y-2 p-0 text-sm leading-snug text-muted-foreground">
@@ -363,230 +405,118 @@ function PeriodMeta({ period, days }: { period: Period; days: number }) {
   );
 }
 
-function PuddleMeter({
-  label,
-  hint,
-  value,
-  wash,
-  accent,
-  glyph,
-}: {
-  label: string;
-  hint: string;
-  value: number;
-  wash: string;
-  accent: string;
-  glyph: "mini" | "spin";
-}) {
-  const pct = Math.max(0, Math.min(100, value));
-  const beads = 10;
-  const lit = Math.round((pct / 100) * beads);
+function MiniModel({ size = 56 }: { size?: number }) {
   return (
-    <div
-      title={hint}
-      className="cursor-help rounded-xl px-3 py-2.5"
-      style={{ background: wash }}
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MeterGlyph kind={glyph} color={accent} />
-          <span className="text-xs font-medium text-foreground">{label}</span>
-        </div>
-        <span className="text-sm font-semibold tabular-nums">{pct}%</span>
-      </div>
-      <div className="flex gap-1" aria-hidden="true">
-        {Array.from({ length: beads }, (_, i) => (
-          <span
-            key={i}
-            className="insight-bead h-3.5 flex-1 rounded-full"
-            style={{
-              background: i < lit ? accent : "rgba(27, 73, 101, 0.1)",
-              transform: i < lit ? "scaleY(1)" : "scaleY(0.55)",
-              opacity: i < lit ? 1 : 0.55,
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#d8f0c8" />
+      <rect x="17" y="27" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <rect x="17" y="34" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <rect x="17" y="41" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <rect x="48" y="27" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <rect x="48" y="34" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <rect x="48" y="41" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+      <g className="ft-drop">
+        <rect x="24" y="22" width="24" height="28" rx="6" fill="#5cb85c" />
+        <ellipse cx="30" cy="30" rx="4" ry="5" fill="#8fd18f" opacity="0.95" />
+        <circle className="ft-eye" cx="31" cy="34" r="1.8" fill="#2d5a27" />
+        <circle className="ft-eye ft-eye--late" cx="41" cy="34" r="1.8" fill="#2d5a27" />
+        <path
+          d="M31 42 Q36 45 42 41"
+          fill="none"
+          stroke="#2d5a27"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </g>
+    </svg>
   );
 }
 
-function MeterGlyph({
-  kind,
-  color,
-}: {
-  kind: "mini" | "spin";
-  color: string;
-}) {
-  if (kind === "mini") {
-    return (
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <rect
-          x="3"
-          y="8"
-          width="8"
-          height="8"
-          rx="2"
-          fill={color}
-        />
-        <rect
-          x="13"
-          y="4"
-          width="8"
-          height="12"
-          rx="2"
-          fill="none"
-          stroke={color}
-          strokeWidth="1.6"
-          opacity="0.45"
-        />
-      </svg>
-    );
-  }
+function RegenSpin({ size = 56 }: { size?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" fill={color} opacity="0.35" />
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#fff3c4" />
+      <circle cx="36" cy="36" r="16" fill="#f5c400" opacity="0.35" />
       <path
         className="ft-orbit"
-        d="M12 5 A7 7 0 1 1 5.5 14"
+        d="M36 18 A18 18 0 1 1 20 42"
         fill="none"
-        stroke={color}
-        strokeWidth="2.2"
+        stroke="#f5c400"
+        strokeWidth="4"
         strokeLinecap="round"
       />
       <path
-        d="M5 11 L5.5 14.5 L8.5 13"
+        d="M18 36 L20 44 L28 40"
         fill="none"
-        stroke={color}
-        strokeWidth="2"
+        stroke="#8a5a00"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <circle className="ft-eye" cx="30" cy="34" r="1.8" fill="#8a5a00" />
+      <circle className="ft-eye ft-eye--late" cx="40" cy="34" r="1.8" fill="#8a5a00" />
     </svg>
   );
 }
 
-function PromptMix({
-  text,
-  image,
-  video,
-}: {
-  text: number;
-  image: number;
-  video: number;
-}) {
-  const total = text + image + video;
-  const share = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
-  const cols = [
-    {
-      key: "text",
-      count: text,
-      pct: share(text),
-      label: "text",
-      wash: "#e7f6ff",
-      accent: "#2ba4e0",
-      art: <MixBubble />,
-    },
-    {
-      key: "image",
-      count: image,
-      pct: share(image),
-      label: "image",
-      wash: "#fff8dc",
-      accent: "#f5c400",
-      art: <MixFrame />,
-    },
-    {
-      key: "video",
-      count: video,
-      pct: share(video),
-      label: "video",
-      wash: "#eef1f4",
-      accent: "#8e99a4",
-      art: <MixClapper />,
-    },
-  ] as const;
-
+function MixBubble({ size = 56 }: { size?: number }) {
   return (
-    <div>
-      <div className="mb-1.5 text-xs font-medium text-foreground">
-        text, image, video
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {cols.map((c) => (
-          <div
-            key={c.key}
-            className="flex flex-col items-center rounded-xl px-1.5 py-2 text-center"
-            style={{ background: c.wash }}
-          >
-            {c.art}
-            <div
-              className="mt-1.5 flex h-14 w-5 items-end overflow-hidden rounded-full bg-white/70"
-              aria-hidden="true"
-            >
-              <div
-                className="insight-fill w-full rounded-full"
-                style={{
-                  height: `${Math.max(c.pct, c.count > 0 ? 12 : 0)}%`,
-                  background: c.accent,
-                }}
-              />
-            </div>
-            <div className="mt-1 text-sm font-semibold tabular-nums">
-              {c.count}
-            </div>
-            <div className="text-[10px] text-muted-foreground">{c.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MixBubble() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
-      <ellipse className="ft-puff" cx="15" cy="14" rx="11" ry="9" fill="#2ba4e0" />
-      <path d="M10 20 L8 26 L15 21 Z" fill="#2ba4e0" />
-      <circle className="ft-eye" cx="12" cy="13" r="1.4" fill="#1b4965" />
-      <circle className="ft-eye ft-eye--late" cx="18" cy="13" r="1.4" fill="#1b4965" />
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#d6f0ff" />
+      <ellipse className="ft-cloud" cx="36" cy="32" rx="18" ry="14" fill="#2ba4e0" />
+      <path d="M26 42 L22 54 L36 44 Z" fill="#2ba4e0" />
+      <circle className="ft-eye" cx="30" cy="30" r="2" fill="#0b4f74" />
+      <circle className="ft-eye ft-eye--late" cx="42" cy="30" r="2" fill="#0b4f74" />
+      <path
+        d="M30 38 Q36 42 42 37"
+        fill="none"
+        stroke="#0b4f74"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-function MixFrame() {
+function MixFrame({ size = 56 }: { size?: number }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#fff3c4" />
       <rect
-        className="ft-zap"
-        x="5"
-        y="7"
-        width="22"
-        height="18"
-        rx="3"
+        className="ft-bolt"
+        x="16"
+        y="20"
+        width="40"
+        height="30"
+        rx="5"
         fill="#f5c400"
       />
-      <circle cx="12" cy="14" r="3" fill="#fff8dc" />
-      <path d="M8 22 L14 16 L18 19 L24 13 L24 22 Z" fill="#1b4965" opacity="0.35" />
+      <circle cx="28" cy="32" r="5" fill="#fff8dc" />
+      <path
+        d="M20 50 L30 38 L38 44 L52 30 L56 50 Z"
+        fill="#8a5a00"
+        opacity="0.35"
+      />
     </svg>
   );
 }
 
-function MixClapper() {
+function MixClapper({ size = 56 }: { size?: number }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#eef1f4" />
       <rect
-        className="ft-bounce"
-        x="6"
-        y="12"
-        width="20"
-        height="12"
-        rx="2"
+        className="ft-drop"
+        x="18"
+        y="30"
+        width="36"
+        height="22"
+        rx="3"
         fill="#8e99a4"
       />
-      <path d="M6 12 L12 6 L26 6 L20 12 Z" fill="#1b4965" opacity="0.55" />
-      <rect x="8" y="16" width="6" height="2" rx="1" fill="#eef1f4" />
-      <rect x="16" y="16" width="8" height="2" rx="1" fill="#eef1f4" />
+      <path d="M18 30 L28 18 L54 18 L44 30 Z" fill="#4a5560" opacity="0.7" />
+      <rect x="22" y="38" width="10" height="3" rx="1.5" fill="#eef1f4" />
+      <rect x="36" y="38" width="14" height="3" rx="1.5" fill="#eef1f4" />
     </svg>
   );
 }
