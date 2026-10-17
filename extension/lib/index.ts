@@ -79,6 +79,16 @@ export {
 export { computeStreak } from "./streak";
 export { DEFAULT_STATE, readState, writeState } from "./storage";
 export type { PuddleState } from "./storage";
+export {
+  DEFAULT_BACKEND_BASE,
+  backendFetch,
+  backendHealth,
+  fetchHealth,
+  readBackendConfig,
+  resolveBaseUrl,
+  writeBackendConfig,
+} from "./backendClient";
+export type { BackendConfig, HealthResult } from "./backendClient";
 export { dayTotals } from "./totals";
 export type { DayTotals, FootprintModel } from "./totals";
 export type {
