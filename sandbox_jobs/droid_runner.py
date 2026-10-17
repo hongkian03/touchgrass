@@ -10,6 +10,9 @@ Permission rules (enforced by our handler, not by Droid):
   no pipes or redirects); `cd` into WORK_DIR is allowed between them
 - everything else is cancelled and logged as rejected
 
+A refused action ends Droid's turn, so after a refusal the runner sends up to max_followups more
+turns in the same session, telling Droid what was refused and to carry on.
+
 Session autonomy defaults to OFF so that every edit and command reaches the handler. At higher
 levels Droid runs those actions on its own and the path check never sees them.
 
@@ -164,7 +167,8 @@ def _describe(action):
     return type(action).__name__
 
 
-async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autonomy=Autonomy.OFF) -> JobResult:
+async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autonomy=Autonomy.OFF,
+                        max_followups=2) -> JobResult:
     ensure_work_dirs()
     log_path = WORK_DIR / "logs" / f"{job_name}.jsonl"
     rejected = []
@@ -213,21 +217,45 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
     )
     result = None
     error = None
+    turn_credits = []
     try:
         async with session:
-            stream = session.stream(prompt, timeout=timeout, output=output_model)
-            async for event in stream:
-                if isinstance(event, AssistantMessage) and event.text:
-                    log("assistant", text=event.text)
-                elif isinstance(event, ToolCall):
-                    inp = event.input or {}
-                    target = inp.get("file_path") or inp.get("command") or inp.get("path") or ""
-                    log("tool_call", tool=event.name, target=str(target))
-                elif isinstance(event, ToolResult):
-                    log("tool_result", tool=event.tool_name, is_error=event.is_error)
-                elif isinstance(event, ErrorEvent):
-                    log("error", text=event.message)
-            result = stream.result
+            turn_prompt = prompt
+            for turn in range(1 + max_followups):
+                remaining = timeout - (time.monotonic() - start)
+                if remaining <= 0:
+                    raise RunTimeoutError(f"timed out after {timeout}s")
+                rejected_before = len(rejected)
+                stream = session.stream(turn_prompt, timeout=remaining, output=output_model)
+                async for event in stream:
+                    if isinstance(event, AssistantMessage) and event.text:
+                        log("assistant", text=event.text)
+                    elif isinstance(event, ToolCall):
+                        inp = event.input or {}
+                        target = inp.get("file_path") or inp.get("command") or inp.get("path") or ""
+                        log("tool_call", tool=event.name, target=str(target))
+                    elif isinstance(event, ToolResult):
+                        log("tool_result", tool=event.tool_name, is_error=event.is_error)
+                    elif isinstance(event, ErrorEvent):
+                        log("error", text=event.message)
+                result = stream.result
+                credits_now = result.usage.factory_credits if result.usage else None
+                turn_credits.append(credits_now)
+                log("turn_end", turn=turn + 1, success=result.success, subtype=result.subtype,
+                    factory_credits=credits_now)
+                # A refused action ends Droid's turn. Tell it why and let it carry on in the same
+                # session (it keeps its context), a limited number of times.
+                new_rejections = rejected[rejected_before:]
+                if result.success or not new_rejections or turn == max_followups:
+                    break
+                turn_prompt = (
+                    "Your last action was refused by the job's permission rules, which ended your turn: "
+                    + "; ".join(new_rejections)
+                    + ". Continue the original task from where you left off, using only the allowed "
+                    "commands and your file tools (LS, Glob, Read) for looking at files. Follow the "
+                    "original instructions about what not to read."
+                )
+                log("followup", turn=turn + 2, reason=new_rejections[-1])
     except RunTimeoutError:
         error = f"timed out after {timeout}s"
     except DroidError as e:
@@ -238,7 +266,9 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
     if changed:
         error = f"protected folder changed during the job: {', '.join(changed)}"
 
-    credits = result.usage.factory_credits if result is not None and result.usage else None
+    # Each turn's usage as reported at its end, summed. turn_end log lines keep the per-turn values.
+    known = [c for c in turn_credits if c is not None]
+    credits = sum(known) if known else None
     job = JobResult(
         success=result is not None and result.success and error is None,
         subtype=result.subtype if result is not None and error is None else "error",
@@ -250,6 +280,6 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
         rejected=rejected,
         error=error,
     )
-    log("job_end", success=job.success, subtype=job.subtype, seconds=duration,
+    log("job_end", success=job.success, subtype=job.subtype, seconds=duration, turns=len(turn_credits),
         factory_credits=credits, rejected=len(rejected), error=error)
     return job
