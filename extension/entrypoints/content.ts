@@ -1,4 +1,5 @@
 import coachCopy from "../data/coach-copy.json";
+import platformsData from "../data/platforms.json";
 import { shouldShowCoach } from "../lib/coach";
 import { mountCoach, unmountCoach } from "../lib/coachMount";
 import {
@@ -7,8 +8,11 @@ import {
   planCoachAuto,
 } from "../lib/coachYes";
 import { classify } from "../lib/classify";
+import { providerFromHostname } from "../lib/route";
 import { readState, writeState } from "../lib/storage";
+import type { Platform } from "../lib/types";
 
+const platforms = platformsData as Platform[];
 const REDIRECT_MS = 1600;
 const SWITCH_HOLD_MS = 1800;
 
@@ -50,15 +54,25 @@ async function boot() {
   if (!draft) return;
   if (classify(draft, "text") !== "small_ok") return;
 
+  const provider =
+    providerFromHostname(location.hostname, platforms) ?? "chatgpt";
+  const platform = platforms.find((p) => p.id === provider);
+  const modelLabel = findModelLabel();
+  const model =
+    modelLabel?.textContent?.trim() ||
+    platform?.defaultModel ||
+    "gpt-5";
+
   const plan = planCoachAuto({
     draft,
-    model: "gpt-5",
-    provider: "chatgpt",
-    modelLabel: findModelLabel(),
+    model,
+    provider,
+    modelLabel,
+    enabledPlatforms: state.enabledPlatforms,
   });
 
-  if (plan.kind === "switched" && findModelLabel()) {
-    applyCoachSwitch(findModelLabel()!, plan.model);
+  if (plan.kind === "switched" && modelLabel) {
+    applyCoachSwitch(modelLabel, plan.model);
     mountCoach({
       shadow: true,
       message: coachCopy.switched.replace("{model}", plan.model),
