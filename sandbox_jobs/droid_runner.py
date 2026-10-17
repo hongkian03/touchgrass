@@ -103,6 +103,9 @@ def _inside(path, roots):
 def _fingerprint(folder):
     h = hashlib.sha256()
     for p in sorted(folder.rglob("*")):
+        # Importing a module from lib/ makes Python write __pycache__ there; that isn't a change to our files.
+        if "__pycache__" in p.parts or p.suffix == ".pyc":
+            continue
         h.update(p.relative_to(folder).as_posix().encode())
         if p.is_file():
             h.update(p.read_bytes())

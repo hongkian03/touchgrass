@@ -1,0 +1,1267 @@
+[
+  {
+    "title": "List comprehension basics",
+    "create_time": 1790085854.0,
+    "update_time": 1790085935.0,
+    "mapping": {
+      "ed2c6e38-2be4-59a8-ae46-83c362469d83": {
+        "id": "ed2c6e38-2be4-59a8-ae46-83c362469d83",
+        "message": null,
+        "parent": null,
+        "children": [
+          "07ee7803-055d-593b-b050-afff407ae9be"
+        ]
+      },
+      "07ee7803-055d-593b-b050-afff407ae9be": {
+        "id": "07ee7803-055d-593b-b050-afff407ae9be",
+        "message": {
+          "id": "07ee7803-055d-593b-b050-afff407ae9be",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "ed2c6e38-2be4-59a8-ae46-83c362469d83",
+        "children": [
+          "8b98cd6a-4849-57ab-b5a1-bdf076813e6c"
+        ]
+      },
+      "8b98cd6a-4849-57ab-b5a1-bdf076813e6c": {
+        "id": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+        "message": {
+          "id": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085854.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How do I square every number in a Python list?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "07ee7803-055d-593b-b050-afff407ae9be",
+        "children": [
+          "b6392921-d474-5e8f-9713-ed9c068e2599"
+        ]
+      },
+      "b6392921-d474-5e8f-9713-ed9c068e2599": {
+        "id": "b6392921-d474-5e8f-9713-ed9c068e2599",
+        "message": {
+          "id": "b6392921-d474-5e8f-9713-ed9c068e2599",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085861.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Use a list comprehension: `squares = [x * x for x in nums]`."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "8b98cd6a-4849-57ab-b5a1-bdf076813e6c",
+        "children": [
+          "1b5554aa-b123-561c-98f4-f1acbc208861"
+        ]
+      },
+      "1b5554aa-b123-561c-98f4-f1acbc208861": {
+        "id": "1b5554aa-b123-561c-98f4-f1acbc208861",
+        "message": {
+          "id": "1b5554aa-b123-561c-98f4-f1acbc208861",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085928.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "And only keep the even ones?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "b6392921-d474-5e8f-9713-ed9c068e2599",
+        "children": [
+          "a45608b7-dc51-5649-9dc5-26a993ead40d"
+        ]
+      },
+      "a45608b7-dc51-5649-9dc5-26a993ead40d": {
+        "id": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+        "message": {
+          "id": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790085935.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Add a condition: `[x * x for x in nums if x % 2 == 0]`."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "1b5554aa-b123-561c-98f4-f1acbc208861",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a45608b7-dc51-5649-9dc5-26a993ead40d",
+    "plugin_ids": null,
+    "conversation_id": "e0e3ac91-619c-5ee3-8502-65ff3a78a821",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "e0e3ac91-619c-5ee3-8502-65ff3a78a821"
+  },
+  {
+    "title": "Polite follow-up email",
+    "create_time": 1790329334.0,
+    "update_time": 1790329348.0,
+    "mapping": {
+      "5f1de20a-561d-515a-9461-92d94dd9786d": {
+        "id": "5f1de20a-561d-515a-9461-92d94dd9786d",
+        "message": null,
+        "parent": null,
+        "children": [
+          "aa35ac3d-7dc3-53cb-8895-0b12295c94c1"
+        ]
+      },
+      "aa35ac3d-7dc3-53cb-8895-0b12295c94c1": {
+        "id": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+        "message": {
+          "id": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "5f1de20a-561d-515a-9461-92d94dd9786d",
+        "children": [
+          "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3"
+        ]
+      },
+      "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3": {
+        "id": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "message": {
+          "id": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329334.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "aa35ac3d-7dc3-53cb-8895-0b12295c94c1",
+        "children": [
+          "e871dd27-190c-5429-9763-e7e0e0aad13d",
+          "9bef6258-589c-5cbe-9a67-23c0a70fb5c3"
+        ]
+      },
+      "e871dd27-190c-5429-9763-e7e0e0aad13d": {
+        "id": "e871dd27-190c-5429-9763-e7e0e0aad13d",
+        "message": {
+          "id": "e871dd27-190c-5429-9763-e7e0e0aad13d",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329341.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Could you send me the report by Friday? Thanks so much!"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "children": []
+      },
+      "9bef6258-589c-5cbe-9a67-23c0a70fb5c3": {
+        "id": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+        "message": {
+          "id": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790329348.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Hi! Whenever you get a chance, would you mind sending the report over by Friday? Thank you!"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "d0aa2aa6-e72c-5b30-aeff-d743e9d50ed3",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "9bef6258-589c-5cbe-9a67-23c0a70fb5c3",
+    "plugin_ids": null,
+    "conversation_id": "25f38b8b-87c1-5b81-a313-1be137fcae8f",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "25f38b8b-87c1-5b81-a313-1be137fcae8f"
+  },
+  {
+    "title": "Bakery logo idea",
+    "create_time": 1790791994.0,
+    "update_time": 1790792015.0,
+    "mapping": {
+      "6e1e5c91-b140-5d21-870f-28da38a15a0a": {
+        "id": "6e1e5c91-b140-5d21-870f-28da38a15a0a",
+        "message": null,
+        "parent": null,
+        "children": [
+          "02ab8f31-4918-58a8-a56a-60e0c7e19518"
+        ]
+      },
+      "02ab8f31-4918-58a8-a56a-60e0c7e19518": {
+        "id": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+        "message": {
+          "id": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "6e1e5c91-b140-5d21-870f-28da38a15a0a",
+        "children": [
+          "311be3c9-88cf-54c4-8432-f398e83fec25"
+        ]
+      },
+      "311be3c9-88cf-54c4-8432-f398e83fec25": {
+        "id": "311be3c9-88cf-54c4-8432-f398e83fec25",
+        "message": {
+          "id": "311be3c9-88cf-54c4-8432-f398e83fec25",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790791994.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Make a simple logo for a bakery called Crumb & Co, flat style, warm colors."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "02ab8f31-4918-58a8-a56a-60e0c7e19518",
+        "children": [
+          "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e"
+        ]
+      },
+      "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e": {
+        "id": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+        "message": {
+          "id": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790792001.0,
+          "update_time": null,
+          "content": {
+            "content_type": "code",
+            "language": "json",
+            "text": "{\"prompt\": \"Flat vector logo for a bakery named 'Crumb & Co', warm orange and brown palette, minimal croissant icon\", \"size\": \"1024x1024\", \"n\": 1}"
+          },
+          "status": "finished_successfully",
+          "end_turn": false,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "dalle.text2im",
+          "channel": null
+        },
+        "parent": "311be3c9-88cf-54c4-8432-f398e83fec25",
+        "children": [
+          "14634783-f694-5a49-8bae-1d3aa53a9b33"
+        ]
+      },
+      "14634783-f694-5a49-8bae-1d3aa53a9b33": {
+        "id": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+        "message": {
+          "id": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+          "author": {
+            "role": "tool",
+            "name": "dalle.text2im",
+            "metadata": {}
+          },
+          "create_time": 1790792008.0,
+          "update_time": null,
+          "content": {
+            "content_type": "multimodal_text",
+            "parts": [
+              {
+                "content_type": "image_asset_pointer",
+                "asset_pointer": "file-service://file-0f5a3c0b-85c0-5af0-bc1b-",
+                "size_bytes": 412337,
+                "width": 1024,
+                "height": 1024,
+                "fovea": 512,
+                "metadata": {
+                  "dalle": {
+                    "gen_id": "9d029b8f-4f5a-50",
+                    "prompt": "Flat vector logo for a bakery named 'Crumb & Co', warm orange and brown palette, minimal croissant icon",
+                    "seed": 1180234467
+                  }
+                }
+              }
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "4d27edef-d5eb-5a27-ae9c-e0576e8e9b3e",
+        "children": [
+          "5010746e-0c76-58ef-91e5-ffd44bf92900"
+        ]
+      },
+      "5010746e-0c76-58ef-91e5-ffd44bf92900": {
+        "id": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+        "message": {
+          "id": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1790792015.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Here's a flat-style logo for Crumb & Co with a minimal croissant icon."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "14634783-f694-5a49-8bae-1d3aa53a9b33",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "5010746e-0c76-58ef-91e5-ffd44bf92900",
+    "plugin_ids": null,
+    "conversation_id": "2a5d8378-55fb-594e-8135-a67a959c1e58",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "2a5d8378-55fb-594e-8135-a67a959c1e58"
+  },
+  {
+    "title": "SQL left join",
+    "create_time": 1791113294.0,
+    "update_time": 1791113301.0,
+    "mapping": {
+      "c416550a-b704-5c98-9eca-1faf5df0e0a5": {
+        "id": "c416550a-b704-5c98-9eca-1faf5df0e0a5",
+        "message": null,
+        "parent": null,
+        "children": [
+          "3d47d6be-6c4c-5863-b4fd-687439c6feb7"
+        ]
+      },
+      "3d47d6be-6c4c-5863-b4fd-687439c6feb7": {
+        "id": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+        "message": {
+          "id": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "c416550a-b704-5c98-9eca-1faf5df0e0a5",
+        "children": [
+          "08f3c951-ecb2-5322-bf0b-03f57dc51dff"
+        ]
+      },
+      "08f3c951-ecb2-5322-bf0b-03f57dc51dff": {
+        "id": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+        "message": {
+          "id": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791113294.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "What's the difference between INNER JOIN and LEFT JOIN?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "3d47d6be-6c4c-5863-b4fd-687439c6feb7",
+        "children": [
+          "a46951a1-c55b-538a-a0ca-6f5c2ac567ea"
+        ]
+      },
+      "a46951a1-c55b-538a-a0ca-6f5c2ac567ea": {
+        "id": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+        "message": {
+          "id": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791113301.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "INNER JOIN keeps only rows that match in both tables; LEFT JOIN keeps every row from the left table and fills NULLs where there is no match."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "o3",
+            "default_model_slug": "o3"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "08f3c951-ecb2-5322-bf0b-03f57dc51dff",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a46951a1-c55b-538a-a0ca-6f5c2ac567ea",
+    "plugin_ids": null,
+    "conversation_id": "63afed86-d777-5978-af3e-4561f4ee6d09",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "o3",
+    "id": "63afed86-d777-5978-af3e-4561f4ee6d09"
+  },
+  {
+    "title": "Weekend in Boston",
+    "create_time": 1791662774.0,
+    "update_time": 1791662855.0,
+    "mapping": {
+      "b6b323f7-ffb5-53dc-a79e-da8ead74869a": {
+        "id": "b6b323f7-ffb5-53dc-a79e-da8ead74869a",
+        "message": null,
+        "parent": null,
+        "children": [
+          "8899c8bd-7389-5d3e-8fd3-3ac018937b3e"
+        ]
+      },
+      "8899c8bd-7389-5d3e-8fd3-3ac018937b3e": {
+        "id": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+        "message": {
+          "id": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "b6b323f7-ffb5-53dc-a79e-da8ead74869a",
+        "children": [
+          "98384d83-302d-5c05-9f4e-b5df5a006f78"
+        ]
+      },
+      "98384d83-302d-5c05-9f4e-b5df5a006f78": {
+        "id": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+        "message": {
+          "id": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662774.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Plan a one-day walking itinerary in Boston for a rainy Saturday."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "8899c8bd-7389-5d3e-8fd3-3ac018937b3e",
+        "children": [
+          "163a891d-4de9-5775-8b34-62cb3feb5c32"
+        ]
+      },
+      "163a891d-4de9-5775-8b34-62cb3feb5c32": {
+        "id": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+        "message": {
+          "id": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662781.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Morning: Boston Public Library and Copley Square. Midday: Quincy Market for lunch. Afternoon: Museum of Fine Arts. Evening: dinner in the North End."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o-mini",
+            "default_model_slug": "gpt-4o-mini"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "98384d83-302d-5c05-9f4e-b5df5a006f78",
+        "children": [
+          "ecd10ac9-0b20-5688-aab1-faff6a0852d8"
+        ]
+      },
+      "ecd10ac9-0b20-5688-aab1-faff6a0852d8": {
+        "id": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+        "message": {
+          "id": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662848.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Swap the museum for something free."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "163a891d-4de9-5775-8b34-62cb3feb5c32",
+        "children": [
+          "c8df1100-db3b-5056-96a0-f9c7a6978a3b"
+        ]
+      },
+      "c8df1100-db3b-5056-96a0-f9c7a6978a3b": {
+        "id": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+        "message": {
+          "id": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791662855.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Try the Boston Athenaeum's free first floor or the Massachusetts State House tour, both free and indoors."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o-mini",
+            "default_model_slug": "gpt-4o-mini"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "ecd10ac9-0b20-5688-aab1-faff6a0852d8",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "c8df1100-db3b-5056-96a0-f9c7a6978a3b",
+    "plugin_ids": null,
+    "conversation_id": "3dd1b4f6-47e6-5902-a8c8-b4b1466bbb12",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o-mini",
+    "id": "3dd1b4f6-47e6-5902-a8c8-b4b1466bbb12"
+  },
+  {
+    "title": "Centering a div",
+    "create_time": 1791882674.0,
+    "update_time": 1791882681.0,
+    "mapping": {
+      "bdb5a7e8-3ccd-5430-af1e-cedd0f02de39": {
+        "id": "bdb5a7e8-3ccd-5430-af1e-cedd0f02de39",
+        "message": null,
+        "parent": null,
+        "children": [
+          "7e3f86ad-7c87-5709-8c01-409cf327484b"
+        ]
+      },
+      "7e3f86ad-7c87-5709-8c01-409cf327484b": {
+        "id": "7e3f86ad-7c87-5709-8c01-409cf327484b",
+        "message": {
+          "id": "7e3f86ad-7c87-5709-8c01-409cf327484b",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "bdb5a7e8-3ccd-5430-af1e-cedd0f02de39",
+        "children": [
+          "3c56059a-e056-53a2-9d57-6b0615c43e20"
+        ]
+      },
+      "3c56059a-e056-53a2-9d57-6b0615c43e20": {
+        "id": "3c56059a-e056-53a2-9d57-6b0615c43e20",
+        "message": {
+          "id": "3c56059a-e056-53a2-9d57-6b0615c43e20",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791882674.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How do I center a div in CSS?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "7e3f86ad-7c87-5709-8c01-409cf327484b",
+        "children": [
+          "1efef4f1-0565-5a59-bc75-566fdbabf838"
+        ]
+      },
+      "1efef4f1-0565-5a59-bc75-566fdbabf838": {
+        "id": "1efef4f1-0565-5a59-bc75-566fdbabf838",
+        "message": {
+          "id": "1efef4f1-0565-5a59-bc75-566fdbabf838",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791882681.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "There are several ways to center a div. With flexbox, give the parent display: flex, justify-content: center and align-items: center. With grid, use display: grid and place-items: center on the parent. For horizontal centering only, give the div a width and margin: 0 auto. For absolute positioning, set position: absolute, top: 50%, left: 50% and transform: translate(-50%, -50%). Flexbox and grid are the modern choices; margin auto works for block elements with a known width; absolute positioning is best for overlays and modals."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "3c56059a-e056-53a2-9d57-6b0615c43e20",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "1efef4f1-0565-5a59-bc75-566fdbabf838",
+    "plugin_ids": null,
+    "conversation_id": "de82fc01-7d48-5fe5-b857-f72f13c579ef",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "de82fc01-7d48-5fe5-b857-f72f13c579ef"
+  },
+  {
+    "title": "Centering a div",
+    "create_time": 1791992594.0,
+    "update_time": 1791992601.0,
+    "mapping": {
+      "0dcef47d-3c23-5de5-9d6f-789cf7b13717": {
+        "id": "0dcef47d-3c23-5de5-9d6f-789cf7b13717",
+        "message": null,
+        "parent": null,
+        "children": [
+          "7b50b3a9-4227-5042-a005-b4d52acc047c"
+        ]
+      },
+      "7b50b3a9-4227-5042-a005-b4d52acc047c": {
+        "id": "7b50b3a9-4227-5042-a005-b4d52acc047c",
+        "message": {
+          "id": "7b50b3a9-4227-5042-a005-b4d52acc047c",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "0dcef47d-3c23-5de5-9d6f-789cf7b13717",
+        "children": [
+          "063d253f-7d1b-5a49-bbf4-e8fd459a4c3d"
+        ]
+      },
+      "063d253f-7d1b-5a49-bbf4-e8fd459a4c3d": {
+        "id": "063d253f-7d1b-5a49-bbf4-e8fd459a4c3d",
+        "message": {
+          "id": "063d253f-7d1b-5a49-bbf4-e8fd459a4c3d",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791992594.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "how do i center a div in css"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "7b50b3a9-4227-5042-a005-b4d52acc047c",
+        "children": [
+          "3ae8d37d-e2f5-5664-9e5c-f93d9e07f8f3"
+        ]
+      },
+      "3ae8d37d-e2f5-5664-9e5c-f93d9e07f8f3": {
+        "id": "3ae8d37d-e2f5-5664-9e5c-f93d9e07f8f3",
+        "message": {
+          "id": "3ae8d37d-e2f5-5664-9e5c-f93d9e07f8f3",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1791992601.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "There are several ways to center a div. With flexbox, give the parent display: flex, justify-content: center and align-items: center. With grid, use display: grid and place-items: center on the parent. For horizontal centering only, give the div a width and margin: 0 auto. For absolute positioning, set position: absolute, top: 50%, left: 50% and transform: translate(-50%, -50%). Flexbox and grid are the modern choices; margin auto works for block elements with a known width; absolute positioning is best for overlays and modals."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "063d253f-7d1b-5a49-bbf4-e8fd459a4c3d",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "3ae8d37d-e2f5-5664-9e5c-f93d9e07f8f3",
+    "plugin_ids": null,
+    "conversation_id": "6ed0fc2e-8fde-5147-af2c-6617dc1fffe9",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "6ed0fc2e-8fde-5147-af2c-6617dc1fffe9"
+  },
+  {
+    "title": "Centering a div",
+    "create_time": 1792062374.0,
+    "update_time": 1792062381.0,
+    "mapping": {
+      "4faf84e2-60c8-546d-a69f-7eed6ecde5d9": {
+        "id": "4faf84e2-60c8-546d-a69f-7eed6ecde5d9",
+        "message": null,
+        "parent": null,
+        "children": [
+          "b8775f60-d47f-5bec-88cf-d0b349b6b46b"
+        ]
+      },
+      "b8775f60-d47f-5bec-88cf-d0b349b6b46b": {
+        "id": "b8775f60-d47f-5bec-88cf-d0b349b6b46b",
+        "message": {
+          "id": "b8775f60-d47f-5bec-88cf-d0b349b6b46b",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "4faf84e2-60c8-546d-a69f-7eed6ecde5d9",
+        "children": [
+          "e7f45981-8afb-54e3-bea3-5236081f51ac"
+        ]
+      },
+      "e7f45981-8afb-54e3-bea3-5236081f51ac": {
+        "id": "e7f45981-8afb-54e3-bea3-5236081f51ac",
+        "message": {
+          "id": "e7f45981-8afb-54e3-bea3-5236081f51ac",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1792062374.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How do I center a div in CSS?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "b8775f60-d47f-5bec-88cf-d0b349b6b46b",
+        "children": [
+          "a04e21a1-e257-5d3f-9a6b-21815ae2634c"
+        ]
+      },
+      "a04e21a1-e257-5d3f-9a6b-21815ae2634c": {
+        "id": "a04e21a1-e257-5d3f-9a6b-21815ae2634c",
+        "message": {
+          "id": "a04e21a1-e257-5d3f-9a6b-21815ae2634c",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1792062381.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "There are several ways to center a div. With flexbox, give the parent display: flex, justify-content: center and align-items: center. With grid, use display: grid and place-items: center on the parent. For horizontal centering only, give the div a width and margin: 0 auto. For absolute positioning, set position: absolute, top: 50%, left: 50% and transform: translate(-50%, -50%). Flexbox and grid are the modern choices; margin auto works for block elements with a known width; absolute positioning is best for overlays and modals."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "e7f45981-8afb-54e3-bea3-5236081f51ac",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a04e21a1-e257-5d3f-9a6b-21815ae2634c",
+    "plugin_ids": null,
+    "conversation_id": "bf2f1a52-c907-5252-a47e-5e3cabb3b069",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "bf2f1a52-c907-5252-a47e-5e3cabb3b069"
+  },
+  {
+    "title": "Centering a div",
+    "create_time": 1792189934.0,
+    "update_time": 1792189941.0,
+    "mapping": {
+      "38c28701-f7b1-5a46-809e-ac48acfc7061": {
+        "id": "38c28701-f7b1-5a46-809e-ac48acfc7061",
+        "message": null,
+        "parent": null,
+        "children": [
+          "25248d62-e051-5b51-93d1-ad8dfb7cde49"
+        ]
+      },
+      "25248d62-e051-5b51-93d1-ad8dfb7cde49": {
+        "id": "25248d62-e051-5b51-93d1-ad8dfb7cde49",
+        "message": {
+          "id": "25248d62-e051-5b51-93d1-ad8dfb7cde49",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 0.0,
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "38c28701-f7b1-5a46-809e-ac48acfc7061",
+        "children": [
+          "9329218d-e79e-5f16-bb7c-668465e4cdae"
+        ]
+      },
+      "9329218d-e79e-5f16-bb7c-668465e4cdae": {
+        "id": "9329218d-e79e-5f16-bb7c-668465e4cdae",
+        "message": {
+          "id": "9329218d-e79e-5f16-bb7c-668465e4cdae",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1792189934.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How can I center a div in CSS?"
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1.0,
+          "metadata": {},
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "25248d62-e051-5b51-93d1-ad8dfb7cde49",
+        "children": [
+          "8ca56bfe-f721-581e-9fc7-3ab9e52c6b52"
+        ]
+      },
+      "8ca56bfe-f721-581e-9fc7-3ab9e52c6b52": {
+        "id": "8ca56bfe-f721-581e-9fc7-3ab9e52c6b52",
+        "message": {
+          "id": "8ca56bfe-f721-581e-9fc7-3ab9e52c6b52",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1792189941.0,
+          "update_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "There are several ways to center a div. With flexbox, give the parent display: flex, justify-content: center and align-items: center. With grid, use display: grid and place-items: center on the parent. For horizontal centering only, give the div a width and margin: 0 auto. For absolute positioning, set position: absolute, top: 50%, left: 50% and transform: translate(-50%, -50%). Flexbox and grid are the modern choices; margin auto works for block elements with a known width; absolute positioning is best for overlays and modals."
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1.0,
+          "metadata": {
+            "model_slug": "gpt-4o",
+            "default_model_slug": "gpt-4o"
+          },
+          "recipient": "all",
+          "channel": null
+        },
+        "parent": "9329218d-e79e-5f16-bb7c-668465e4cdae",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "8ca56bfe-f721-581e-9fc7-3ab9e52c6b52",
+    "plugin_ids": null,
+    "conversation_id": "dcd25973-1d02-5c4f-b308-cabf442744a6",
+    "conversation_template_id": null,
+    "gizmo_id": null,
+    "is_archived": false,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "dcd25973-1d02-5c4f-b308-cabf442744a6"
+  }
+]
