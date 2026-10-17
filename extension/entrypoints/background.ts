@@ -11,6 +11,13 @@ export default defineBackground(() => {
     }
   });
 
+  browser.commands.onCommand.addListener((command) => {
+    if (command !== "pip-recap") return;
+    void browser.tabs.create({
+      url: browser.runtime.getURL("/dashboard.html#recap"),
+    });
+  });
+
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "puddle/classify-ai-site") {
       const hostname = String(message.hostname ?? "");
