@@ -393,6 +393,14 @@ body {
   }
 }
 
+.insight-bead {
+  transform-origin: center bottom;
+  transition: transform 0.25s ease, opacity 0.25s ease, background 0.25s ease;
+}
+.insight-fill {
+  transition: height 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
 /* Duo-ish streak flame */
 .streak-flame__body {
   transform-box: fill-box;
