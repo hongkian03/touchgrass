@@ -31,6 +31,12 @@ async def pair(body: PairingRequest, request: Request):
         raise HTTPException(401, "invalid_pairing") from None
 
 
+@router.post("/coaching/auto-pair")
+async def auto_pair(request: Request):
+    """Extension mints a session on startup — no pasted code for the demo."""
+    return {"session_token": request.app.state.repository.auto_pair()}
+
+
 @router.post("/classify", response_model=ClassifyResponse)
 async def classify(body: ClassifyRequest, request: Request, session=Depends(owner)):
     try:
@@ -57,3 +63,9 @@ async def events(body: CoachingEvent, request: Request, session=Depends(owner)):
 async def clear(request: Request, session=Depends(owner)):
     request.app.state.repository.clear(session)
     return {"status": "cleared"}
+
+
+@router.get("/coaching/insights")
+async def coaching_insights(request: Request, session=Depends(owner)):
+    """Aggregate classify/event history for popup Insights (no prompts)."""
+    return request.app.state.repository.owner_insights(session)

@@ -50,6 +50,49 @@ def test_pairing_is_one_use(client):
     assert client.post("/coaching/pair", json={"code": code}).status_code == 401
 
 
+def test_auto_pair_mints_session_without_code(client, request_data):
+    response = client.post("/coaching/auto-pair")
+    assert response.status_code == 200
+    token = response.json()["session_token"]
+    assert token
+    headers = {"Authorization": "Bearer " + token}
+    assert client.post("/classify", json=request_data, headers=headers).status_code == 200
+
+
+def test_coaching_insights_aggregates(client, request_data):
+    assert client.get("/coaching/insights").status_code == 401
+    headers = pair(client)
+    empty = client.get("/coaching/insights", headers=headers).json()
+    assert empty == {
+        "decisions": 0,
+        "suggest_small": 0,
+        "switched": 0,
+        "sent_anyway": 0,
+        "tips": [],
+    }
+    decision = client.post("/classify", json=request_data, headers=headers).json()
+    assert (
+        client.post(
+            "/coaching/events",
+            headers=headers,
+            json={
+                "event_id": str(uuid4()),
+                "decision_id": decision["decision_id"],
+                "draft_revision": 1,
+                "event_type": "sent_anyway",
+            },
+        ).status_code
+        == 200
+    )
+    body = client.get("/coaching/insights", headers=headers).json()
+    assert body["decisions"] == 1
+    assert body["sent_anyway"] == 1
+    assert body["switched"] == 0
+    assert any(t["id"] == "chalk-small" for t in body["tips"])
+    assert any(t["id"] == "chalk-switch" for t in body["tips"])
+    assert request_data["prompt_text"] not in str(body)
+
+
 def test_limits_and_safe_validation(client, request_data):
     headers = pair(client)
     assert (
