@@ -1,6 +1,7 @@
 import type { RouteSuggestion } from "./types";
 
-export const COACH_HIDE_MS = 10 * 60 * 1000;
+/** Cooldown after a redirect so we don't spam tabs. */
+export const COACH_HIDE_MS = 60 * 1000;
 export const COACH_BUBBLE_MAX = 240;
 export const COACH_RIGHT = 16;
 export const COACH_TOP = 16;

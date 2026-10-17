@@ -13,34 +13,26 @@ import {
 } from "../lib/coach";
 import { allPlatformMatchPatterns } from "../lib/coachInject";
 import { mountCoach, unmountCoach } from "../lib/coachMount";
-import {
-  applyCoachSwitch,
-  openCoachPaste,
-  planCoachAuto,
-} from "../lib/coachYes";
-import { classify } from "../lib/classify";
+import { applyCoachSwitch, openCoachPaste } from "../lib/coachYes";
+import { coachTargetDisplay } from "../lib/coachTargetDisplay";
 import {
   DraftCoach,
   type CoachClassifyResponse,
   type CoachDraft,
 } from "../lib/draftCoach";
 import { draftFrom, findComposer } from "../lib/findComposer";
-import { providerFromHostname } from "../lib/route";
+import type { GroqRouteResult } from "../lib/groqRoute";
+import { providerFromHostname, urlForPlatformId } from "../lib/route";
+import { resolveActiveSite } from "../lib/siteDetect";
 import { readState, writeState } from "../lib/storage";
 import type { Platform } from "../lib/types";
 
 const platforms = platformsData as Platform[];
 const REDIRECT_MS = 1600;
-const SWITCH_HOLD_MS = 1800;
-const NOOP_HOLD_MS = 2200;
 const MISS_THRESHOLD = 3;
 
 function uuid(): string {
   return crypto.randomUUID();
-}
-
-function siteIdFromHost(): string {
-  return providerFromHostname(location.hostname, platforms) ?? "chatgpt";
 }
 
 export default defineContentScript({
@@ -66,9 +58,87 @@ function bootWatch() {
   let draftRevision = 0;
   let holdBound = false;
   let pendingRelease: (() => void) | null = null;
+  let lastRoutedDraft = "";
+  /** Groq/cross-site toast up — chalk must not unmount it. */
+  let redirectToastActive = false;
+  let activeSite: string | null =
+    providerFromHostname(location.hostname, platforms) ?? null;
+
+  const runCrossSiteRedirect = async (
+    draftText: string,
+    provider: string,
+    enabled: string[],
+    composer: HTMLTextAreaElement | HTMLElement,
+  ): Promise<boolean> => {
+    const result = (await browser.runtime.sendMessage({
+      type: "puddle/route-query",
+      draft: draftText,
+      provider,
+      enabledPlatforms: enabled,
+    })) as GroqRouteResult;
+
+    if (!result?.ok) {
+      console.warn("[Touchgrass] Groq route failed", result);
+      return false;
+    }
+    if (result.platformId === provider) {
+      console.log(
+        `[Touchgrass] stay on ${provider} (${result.reason})`,
+      );
+      lastRoutedDraft = draftText;
+      return false;
+    }
+    const url = urlForPlatformId(result.platformId, platforms);
+    if (!url) {
+      console.warn("[Touchgrass] no URL for", result.platformId);
+      return false;
+    }
+
+    lastRoutedDraft = draftText;
+    redirectToastActive = true;
+    const target = coachTargetDisplay(url, platforms);
+    console.log(
+      `[Touchgrass] redirect → ${result.platformId} (${result.reason})`,
+    );
+    mountCoach({
+      shadow: true,
+      message: coachCopy.redirecting.replace("{name}", target.name),
+      target,
+    });
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), REDIRECT_MS);
+    });
+
+    try {
+      await openCoachPaste({
+        url,
+        draft: draftFrom(composer),
+      });
+      return true;
+    } finally {
+      await writeState({ lastCoachAt: Date.now() });
+      redirectToastActive = false;
+      unmountCoach();
+    }
+  };
+
+  const ensureSite = async (): Promise<string | null> => {
+    if (activeSite) return activeSite;
+    const resolved = await resolveActiveSite(location.hostname);
+    if (!resolved) return null;
+    activeSite = resolved.site;
+    console.log(
+      `[Touchgrass] site=${activeSite} via=${resolved.via}${
+        resolved.label ? ` (${resolved.label})` : ""
+      }`,
+    );
+    return activeSite;
+  };
 
   const loadAdapter = async () => {
-    const site = siteIdFromHost();
+    const site = await ensureSite();
+    if (!site) return;
     const res = await bgBackend<{ ok?: boolean; adapter?: SiteAdapter | null }>(
       "adapter-get",
       { site },
@@ -110,7 +180,9 @@ function bootWatch() {
 
   const maybeReportMiss = async () => {
     if (!adapter || repairInFlight) return;
-    if (siteIdFromHost() !== "chatgpt") return;
+    // Only sites with a published adapter can call Mechanic repair.
+    const site = await ensureSite();
+    if (!site || adapter.site !== site) return;
     const missing = missingSelectorKeys(adapter, document, [
       "prompt_box",
       "send_button",
@@ -170,6 +242,7 @@ function bootWatch() {
 
   const chalkCoach = new DraftCoach({
     holdMs: 800,
+    classifyTimeoutMs: 5000,
     classify: async (draft, signal) => {
       const res = await bgBackend<{
         ok?: boolean;
@@ -182,10 +255,13 @@ function bootWatch() {
     },
     emit: (eventType, response) => void emitEvent(eventType, response),
     display: (response) => {
+      // Never wipe an in-flight cross-site redirect toast
       if (!response) {
-        unmountCoach();
+        if (!redirectToastActive) unmountCoach();
         return;
       }
+      if (redirectToastActive) return;
+
       const label =
         response.target &&
         typeof response.target === "object" &&
@@ -244,12 +320,14 @@ function bootWatch() {
   ): Promise<CoachDraft | null> => {
     const cfg = await readBackendConfig();
     if (!cfg.sessionToken) return null;
+    const site = await ensureSite();
+    if (!site) return null;
     draftRevision += 1;
     return {
       request_id: uuid(),
       draft_revision: draftRevision,
       conversation_id: location.pathname || "chat",
-      site: siteIdFromHost(),
+      site,
       current_model_label: model,
       prompt_text: text.slice(0, 12000),
       recent_messages: [],
@@ -273,12 +351,23 @@ function bootWatch() {
           const t = ev.target as Element | null;
           if (!t) return;
           const sendSel = adapter?.selectors.send_button;
-          const sendBtn = sendSel
-            ? t.closest(sendSel)
-            : t.closest("button[type='submit'], button[aria-label='Send']");
+          let sendBtn: Element | null = null;
+          try {
+            sendBtn = sendSel
+              ? t.closest(sendSel)
+              : t.closest(
+                  "button[type='submit'], button[aria-label='Send'], button[aria-label='Send message'], button[data-testid='send-button']",
+                );
+          } catch {
+            sendBtn = t.closest(
+              "button[type='submit'], button[aria-label='Send']",
+            );
+          }
           if (!sendBtn) return;
           const cfg = await readBackendConfig();
           if (!cfg.sessionToken || !cfg.backendEnabled) return;
+          const site = await ensureSite();
+          if (!site) return;
           if (chalkCoach.bypassHoldOnce) {
             chalkCoach.bypassHoldOnce = false;
             return;
@@ -290,8 +379,8 @@ function bootWatch() {
           const text = draftFrom(composer).trim();
           const model =
             modelLabelEl()?.textContent?.trim() ||
-            platforms.find((p) => p.id === siteIdFromHost())?.defaultModel ||
-            "gpt-5";
+            platforms.find((p) => p.id === site)?.defaultModel ||
+            "default";
           const draft = await buildDraft(text, model);
           if (!draft) return;
           pendingRelease = () => {
@@ -320,96 +409,64 @@ function bootWatch() {
   };
 
   const maybeCoach = async () => {
-    if (acting) return;
+    if (acting || redirectToastActive) return;
     void maybeReportMiss();
     const composer = composerForSite();
-    if (!composer) return;
+    if (!composer) {
+      console.warn("[Touchgrass] no composer found");
+      return;
+    }
     ensureBound(composer);
     bindHold();
 
-    const cfg = await readBackendConfig();
-    // Paired Chalk path: draft updates only (hold handles send)
-    if (cfg.sessionToken && cfg.backendEnabled) {
-      const text = draftFrom(composer).trim();
-      if (!text) return;
-      const model =
-        modelLabelEl()?.textContent?.trim() ||
-        platforms.find((p) => p.id === siteIdFromHost())?.defaultModel ||
-        "gpt-5";
-      const draft = await buildDraft(text, model);
-      if (draft) chalkCoach.update(draft);
+    const text = draftFrom(composer).trim();
+    if (!text || text.length < 8) return;
+
+    const state = await readState();
+    if (!shouldShowCoach(state.lastCoachAt)) {
+      console.log("[Touchgrass] coach cooldown — wait ~1 min");
+      return;
+    }
+    if (text === lastRoutedDraft) return;
+
+    const enabled = state.enabledPlatforms.filter(Boolean);
+    if (enabled.length === 0) {
+      console.warn("[Touchgrass] no enabledPlatforms — re-run onboarding");
       return;
     }
 
-    // Offline / unpaired: existing local auto-coach
-    const state = await readState();
-    if (!shouldShowCoach(state.lastCoachAt)) return;
-
-    const draft = draftFrom(composer).trim();
-    if (!draft) return;
-    if (classify(draft, "text") !== "small_ok") return;
-
     const provider =
-      providerFromHostname(location.hostname, platforms) ?? "chatgpt";
-    const platform = platforms.find((p) => p.id === provider);
-    const modelLabel = modelLabelEl();
-    const model =
-      modelLabel?.textContent?.trim() ||
-      platform?.defaultModel ||
-      "gpt-5";
-
-    const plan = planCoachAuto({
-      draft,
-      model,
-      provider,
-      modelLabel,
-      enabledPlatforms: state.enabledPlatforms,
-    });
+      (await ensureSite()) ||
+      providerFromHostname(location.hostname, platforms) ||
+      "chatgpt";
 
     acting = true;
     try {
-      if (plan.kind === "noop") {
-        mountCoach({
-          shadow: true,
-          message: coachCopy.needAnotherPlatform,
-        });
-        await writeState({ lastCoachAt: Date.now() });
-        window.setTimeout(() => unmountCoach(), NOOP_HOLD_MS);
-        return;
+      // Cross-site redirect first (works on Claude/Gemini/etc., Opus or not).
+      // Backend same-site Switch still available on Send via hold.
+      const redirected = await runCrossSiteRedirect(
+        text,
+        provider,
+        enabled,
+        composer,
+      );
+
+      const cfg = await readBackendConfig();
+      if (
+        !redirected &&
+        cfg.sessionToken &&
+        cfg.backendEnabled &&
+        !redirectToastActive
+      ) {
+        const model =
+          modelLabelEl()?.textContent?.trim() ||
+          platforms.find((p) => p.id === provider)?.defaultModel ||
+          "default";
+        const chalkDraft = await buildDraft(text, model);
+        if (chalkDraft) chalkCoach.update(chalkDraft);
       }
-
-      if (plan.kind === "switched" && modelLabel) {
-        applyCoachSwitch(modelLabel, plan.model);
-        mountCoach({
-          shadow: true,
-          message: coachCopy.switched.replace("{model}", plan.model),
-        });
-        await writeState({ lastCoachAt: Date.now() });
-        window.setTimeout(() => unmountCoach(), SWITCH_HOLD_MS);
-        return;
-      }
-
-      if (plan.kind !== "redirect") return;
-
-      mountCoach({
-        shadow: true,
-        message: coachCopy.redirecting.replace("{name}", plan.target.name),
-        target: plan.target,
-      });
-
-      await new Promise<void>((resolve) => {
-        window.setTimeout(() => resolve(), REDIRECT_MS);
-      });
-
-      try {
-        await openCoachPaste({
-          url: plan.url,
-          draft: draftFrom(composer),
-        });
-      } finally {
-        await writeState({ lastCoachAt: Date.now() });
-        unmountCoach();
-      }
+    } catch (e) {
+      console.warn("[Touchgrass] coach route error", e);
     } finally {
       acting = false;
     }

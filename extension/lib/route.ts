@@ -33,7 +33,6 @@ export function urlForPlatformId(
   const p = platforms.find((x) => x.id === id);
   if (!p) return null;
   const url = platformOpenUrl(p);
-  if (/deepseek/i.test(url)) return null;
   return url;
 }
 

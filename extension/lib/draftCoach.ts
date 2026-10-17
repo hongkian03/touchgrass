@@ -46,6 +46,8 @@ export type DraftCoachHooks = {
   expectedPolicyVersion?: string | null;
   /** Max wait on Send before releasing (ms). */
   holdMs?: number;
+  /** Abort classify fetch after this (ms). Separate from hold. */
+  classifyTimeoutMs?: number;
 };
 
 export class DraftCoach {
@@ -55,6 +57,7 @@ export class DraftCoach {
   now: () => number;
   debounceMs: number;
   holdMs: number;
+  classifyTimeoutMs: number;
   expectedProfileVersion: string | null;
   expectedPolicyVersion: string | null;
   generation = 0;
@@ -74,6 +77,7 @@ export class DraftCoach {
     this.now = hooks.now ?? (() => Date.now());
     this.debounceMs = hooks.debounceMs ?? 400;
     this.holdMs = hooks.holdMs ?? 800;
+    this.classifyTimeoutMs = hooks.classifyTimeoutMs ?? 4000;
     this.expectedProfileVersion = hooks.expectedProfileVersion ?? null;
     this.expectedPolicyVersion = hooks.expectedPolicyVersion ?? null;
   }
@@ -122,7 +126,10 @@ export class DraftCoach {
     const controller = new AbortController();
     this.controller = controller;
     const requestedAt = this.now();
-    const cutoff = setTimeout(() => controller.abort(), this.holdMs);
+    const cutoff = setTimeout(
+      () => controller.abort(),
+      this.classifyTimeoutMs,
+    );
     try {
       const response = await this.classify(draft, controller.signal);
       if (
@@ -224,7 +231,10 @@ export class DraftCoach {
     const controller = new AbortController();
     this.controller = controller;
     const requestedAt = this.now();
-    const cutoff = setTimeout(() => controller.abort(), this.holdMs);
+    const cutoff = setTimeout(
+      () => controller.abort(),
+      this.classifyTimeoutMs,
+    );
     try {
       const response = await this.classify(draft, controller.signal);
       if (

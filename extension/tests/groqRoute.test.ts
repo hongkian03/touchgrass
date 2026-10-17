@@ -15,14 +15,14 @@ describe("parseRouteQueryResponse", () => {
     }
   });
 
-  it("refuses DeepSeek", () => {
+  it("prefers non-DeepSeek when alternatives exist", () => {
     const r = parseRouteQueryResponse(
       '{"platformId":"deepseek","reason":"cheap"}',
       ["chatgpt", "deepseek", "gemini"],
       "chatgpt",
     );
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toBe("refuse_deepseek");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).not.toMatch(/deepseek/i);
   });
 
   it("falls back to current when id not in enabled list", () => {
