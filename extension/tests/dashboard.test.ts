@@ -5,6 +5,7 @@ import evalsData from "../data/evals.json";
 import insights from "../data/insights.json";
 import { recomputeAccuracy } from "../lib/evalAccuracy";
 import {
+  DASHBOARD_COLUMN_WIDTH,
   DASHBOARD_MAX_WIDTH,
   DASHBOARD_MIN_WIDTH,
 } from "../lib/layout";
@@ -26,14 +27,19 @@ const platforms: Platform[] = [
 
 describe("dashboard layout (#6)", () => {
   it("column width is 720–880", () => {
+    // Recorded walk width: 800 (inside 720–880).
     expect(DASHBOARD_MIN_WIDTH).toBe(720);
     expect(DASHBOARD_MAX_WIDTH).toBe(880);
+    expect(DASHBOARD_COLUMN_WIDTH).toBe(800);
+    expect(DASHBOARD_COLUMN_WIDTH).toBeGreaterThanOrEqual(720);
+    expect(DASHBOARD_COLUMN_WIDTH).toBeLessThanOrEqual(880);
     const app = readFileSync(
       resolve(__dirname, "../entrypoints/dashboard/App.tsx"),
       "utf8",
     );
     expect(app).toMatch(/DASHBOARD_MIN_WIDTH/);
     expect(app).toMatch(/DASHBOARD_MAX_WIDTH/);
+    expect(app).toMatch(/DASHBOARD_COLUMN_WIDTH/);
   });
 
   it("shows three insights from insights.json", () => {

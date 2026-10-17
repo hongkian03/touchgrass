@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  DASHBOARD_COLUMN_WIDTH,
   DASHBOARD_MAX_WIDTH,
   DASHBOARD_MIN_WIDTH,
   ONBOARDING_MAX_WIDTH,
@@ -29,6 +30,9 @@ describe("layout constants (issue #4)", () => {
     expect(src).toMatch(/POPUP_WIDTH/);
     expect(src).toMatch(/POPUP_HEIGHT/);
     expect(src).not.toMatch(/width:\s*360\b/);
+    expect(src).toMatch(/period-switch/);
+    expect(src).toMatch(/setPeriod/);
+    expect(src).not.toMatch(/dashboard\.html/);
   });
 
   it("onboarding App uses ONBOARDING_MAX_WIDTH", () => {
@@ -43,5 +47,6 @@ describe("layout constants (issue #4)", () => {
   it("dashboard column 720–880", () => {
     expect(DASHBOARD_MIN_WIDTH).toBe(720);
     expect(DASHBOARD_MAX_WIDTH).toBe(880);
+    expect(DASHBOARD_COLUMN_WIDTH).toBe(800);
   });
 });

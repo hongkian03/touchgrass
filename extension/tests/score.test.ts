@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classify } from "../lib/classify";
 import { route, routeTargetHost } from "../lib/route";
-import { score, wastePenalty, weekWindow } from "../lib/score";
+import { monthWindow, score, wastePenalty, weekWindow } from "../lib/score";
 import type { Platform, UsageRow } from "../lib/types";
 
 // Hand-computed weights from issue #3 — duplicated here on purpose.
@@ -183,5 +183,12 @@ describe("weekWindow", () => {
     expect(keys).toHaveLength(7);
     expect(keys[0]).toBe("2026-10-17");
     expect(keys[6]).toBe("2026-10-11");
+  });
+
+  it("month window is 30 days ending today", () => {
+    const keys = monthWindow(today);
+    expect(keys).toHaveLength(30);
+    expect(keys[0]).toBe("2026-10-17");
+    expect(keys[29]).toBe("2026-09-18");
   });
 });
