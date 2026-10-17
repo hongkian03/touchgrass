@@ -5,3 +5,6 @@ dist
 .verify
 *.local
 .DS_Store
+.env
+.env.*
+!.env.example
