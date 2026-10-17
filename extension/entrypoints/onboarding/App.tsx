@@ -122,20 +122,22 @@ export function OnboardingApp() {
       {/* Compact panel — same chrome scale as the popup, not full desktop */}
       <div
         data-testid="onboarding-column"
-        className="relative flex w-full flex-col items-stretch gap-4 overflow-hidden rounded-2xl bg-white px-4 pb-6 pt-5 shadow-sm"
+        className="relative flex w-full flex-col items-stretch gap-4 overflow-hidden rounded-2xl bg-white px-5 pb-7 pt-6 shadow-sm"
         style={{
           maxWidth: ONBOARDING_MAX_WIDTH,
-          minHeight: 520,
+          minHeight: step === 1 ? 540 : 560,
         }}
       >
-        <div className="pip-peek pip-peek--panel" aria-hidden="true">
-          <Pip size={96} variant="sticker" tilt={-6} />
-        </div>
+        {step === 1 ? (
+          <div className="pip-peek pip-peek--panel" aria-hidden="true">
+            <Pip size={108} variant="sticker" pose="hello" tilt={-6} />
+          </div>
+        ) : null}
 
-        <div className="relative z-10 pr-24">
+        <div className={`relative z-10 ${step === 1 ? "pr-28" : "pr-2"}`}>
           <h1
             data-testid="puddle-title"
-            className="m-0 text-2xl font-semibold tracking-tight"
+            className="m-0 text-3xl font-semibold tracking-tight"
           >
             Puddle
           </h1>
@@ -192,29 +194,29 @@ export function OnboardingApp() {
             </Button>
           </>
         ) : (
-          <div className="relative z-10 flex flex-1 flex-col gap-4">
-            <p className="m-0 max-w-[240px] text-base leading-snug">
-              Prompts stay on this computer.
-            </p>
-            <Button
-              type="button"
-              data-testid="got-it"
-              disabled={busy}
-              size="lg"
-              className="min-w-[160px] self-start"
-              onClick={() => void finish()}
-            >
-              Got it
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="self-start"
-              onClick={() => setStep(1)}
-            >
-              Back
-            </Button>
-            {error ? <p className="text-sm">{error}</p> : null}
+          <div className="relative z-10 flex flex-1 flex-col">
+            <div className="flex flex-1 items-center justify-between gap-3">
+              <p className="m-0 max-w-[180px] text-lg leading-snug">
+                Prompts stay on this computer.
+              </p>
+              <Pip size={200} variant="sticker" pose="gotit" tilt={4} />
+            </div>
+            <div className="mt-6 flex flex-col items-end gap-3">
+              <Button
+                type="button"
+                data-testid="got-it"
+                disabled={busy}
+                size="lg"
+                className="min-w-[180px]"
+                onClick={() => void finish()}
+              >
+                Got it
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              {error ? <p className="text-sm">{error}</p> : null}
+            </div>
           </div>
         )}
       </div>

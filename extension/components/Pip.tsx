@@ -6,14 +6,21 @@ const ROWS = 9;
 const CELL_W = 192;
 const CELL_H = 208;
 const SHEET = "/pets/muskie/spritesheet.webp";
-/** Ahead-style die-cut sticker (white rim, transparent ground). */
-const STICKER = "/pets/muskie/sticker-hello.png";
+/** Ahead-style die-cut stickers (white rim, transparent ground). */
+const STICKERS = {
+  hello: "/pets/muskie/sticker-hello.png",
+  gotit: "/pets/muskie/sticker-gotit.png",
+} as const;
+
+export type PipPose = keyof typeof STICKERS;
 
 type Props = {
   size?: number;
   talking?: boolean;
   /** sticker = Ahead floating cutout; sprite = animated sheet */
   variant?: "sticker" | "sprite";
+  /** which sticker pose */
+  pose?: PipPose;
   /** slight sticker tilt in degrees */
   tilt?: number;
   className?: string;
@@ -24,18 +31,20 @@ export function Pip({
   size = 140,
   talking = false,
   variant = "sticker",
+  pose = "hello",
   tilt = -6,
   className,
 }: Props) {
   if (variant === "sticker") {
     return (
       <img
-        src={STICKER}
+        src={STICKERS[pose]}
         alt="Pip"
         height={size}
         data-testid="pip"
         data-pip-pet="muskie"
         data-pip-variant="sticker"
+        data-pip-pose={pose}
         data-talking={talking ? "true" : "false"}
         className={["pip-sticker", className].filter(Boolean).join(" ")}
         style={
