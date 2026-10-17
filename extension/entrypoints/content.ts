@@ -4,6 +4,7 @@ import {
   COACH_TYPE_DEBOUNCE_MS,
   shouldShowCoach,
 } from "../lib/coach";
+import { allPlatformMatchPatterns } from "../lib/coachInject";
 import { mountCoach, unmountCoach } from "../lib/coachMount";
 import {
   applyCoachSwitch,
@@ -11,6 +12,7 @@ import {
   planCoachAuto,
 } from "../lib/coachYes";
 import { classify } from "../lib/classify";
+import { draftFrom, findComposer } from "../lib/findComposer";
 import { providerFromHostname } from "../lib/route";
 import { readState, writeState } from "../lib/storage";
 import type { Platform } from "../lib/types";
@@ -18,18 +20,7 @@ import type { Platform } from "../lib/types";
 const platforms = platformsData as Platform[];
 const REDIRECT_MS = 1600;
 const SWITCH_HOLD_MS = 1800;
-
-function findComposer(): HTMLTextAreaElement | HTMLElement | null {
-  return (
-    document.querySelector<HTMLTextAreaElement>("textarea") ||
-    document.querySelector<HTMLElement>("[contenteditable='true']")
-  );
-}
-
-function draftFrom(el: HTMLTextAreaElement | HTMLElement): string {
-  if (el instanceof HTMLTextAreaElement) return el.value;
-  return el.textContent ?? "";
-}
+const NOOP_HOLD_MS = 2200;
 
 function findModelLabel(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -38,9 +29,8 @@ function findModelLabel(): HTMLElement | null {
 }
 
 export default defineContentScript({
-  // Matches for WXT typing only. registration:runtime keeps
-  // content_scripts [] until chrome.permissions.request (#4).
-  matches: ["https://chatgpt.com/*", "https://claude.ai/*"],
+  // All AI hosts from platforms.json. Runtime until permissions granted.
+  matches: allPlatformMatchPatterns(),
   registration: "runtime",
   main() {
     bootWatch();
@@ -48,6 +38,12 @@ export default defineContentScript({
 });
 
 function bootWatch() {
+  // Avoid double-boot if background also executeScript-injects
+  const flag = "__puddleCoachWatch";
+  const w = window as unknown as Record<string, boolean>;
+  if (w[flag]) return;
+  w[flag] = true;
+
   let debounceTimer: number | undefined;
   let acting = false;
   let bound: HTMLTextAreaElement | HTMLElement | null = null;
@@ -89,10 +85,18 @@ function bootWatch() {
       enabledPlatforms: state.enabledPlatforms,
     });
 
-    if (plan.kind === "noop") return;
-
     acting = true;
     try {
+      if (plan.kind === "noop") {
+        mountCoach({
+          shadow: true,
+          message: coachCopy.needAnotherPlatform,
+        });
+        await writeState({ lastCoachAt: Date.now() });
+        window.setTimeout(() => unmountCoach(), NOOP_HOLD_MS);
+        return;
+      }
+
       if (plan.kind === "switched" && modelLabel) {
         applyCoachSwitch(modelLabel, plan.model);
         mountCoach({
@@ -147,7 +151,6 @@ function bootWatch() {
   };
 
   attach();
-  // Chat apps remount the composer often
   const mo = new MutationObserver(() => attach());
   mo.observe(document.documentElement, { childList: true, subtree: true });
 }

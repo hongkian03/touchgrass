@@ -110,6 +110,14 @@ export function OnboardingApp() {
         streak,
         lastCoachAt: 0,
       });
+      try {
+        await browser.runtime.sendMessage({
+          type: "puddle/coach-rebind",
+          enabledPlatforms: selected,
+        });
+      } catch {
+        // background may be waking; tabs pick up on next navigate
+      }
       window.close();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not finish setup");
