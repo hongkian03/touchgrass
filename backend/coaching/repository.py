@@ -73,6 +73,16 @@ class Repository:
             )
         return token
 
+    def auto_pair(self):
+        """Mint a session without a pairing code (demo / extension auto-start)."""
+        token, owner = secrets.token_urlsafe(32), str(uuid4())
+        with self.db:
+            self.db.execute(
+                "INSERT INTO sessions VALUES (?,?,?)",
+                (self.token_hash(token), owner, time.time() + self.retention_seconds),
+            )
+        return token
+
     def owner(self, token):
         row = self.db.execute(
             "SELECT owner FROM sessions WHERE token=? AND expires>?",
@@ -185,6 +195,81 @@ class Repository:
     def clear(self, owner):
         with self.db:
             self.db.execute("DELETE FROM coaching_decisions WHERE owner=?", (owner,))
+
+    def owner_insights(self, owner):
+        """Aggregate classify + event counts for Insights cards (no prompts)."""
+        self.prune()
+        decisions = self.db.execute(
+            "SELECT metadata FROM coaching_decisions WHERE owner=?",
+            (owner,),
+        ).fetchall()
+        events = self.db.execute(
+            "SELECT payload FROM coaching_events WHERE owner=?",
+            (owner,),
+        ).fetchall()
+
+        total = len(decisions)
+        suggest_small = 0
+        small_ok = 0
+        for row in decisions:
+            try:
+                meta = json.loads(row["metadata"])
+                response = meta.get("response") or {}
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if response.get("action") == "suggest_small":
+                suggest_small += 1
+            if response.get("classification") == "small_ok":
+                small_ok += 1
+
+        switched = 0
+        sent_anyway = 0
+        for row in events:
+            try:
+                payload = json.loads(row["payload"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            kind = payload.get("event_type")
+            if kind in ("switch_confirmed", "sent_with_target"):
+                switched += 1
+            elif kind == "sent_anyway":
+                sent_anyway += 1
+
+        tips = []
+        if total > 0 and (suggest_small > 0 or small_ok > 0):
+            n = suggest_small if suggest_small > 0 else small_ok
+            tips.append(
+                {
+                    "id": "chalk-small",
+                    "title": (
+                        f"{n} of {total} drafts were simple. "
+                        "Default model was oversized."
+                    ),
+                }
+            )
+        if switched > 0 or sent_anyway > 0:
+            parts = []
+            if switched > 0:
+                parts.append(
+                    f"You switched {switched} time"
+                    + ("s" if switched != 1 else "")
+                    + "."
+                )
+            if sent_anyway > 0:
+                parts.append(
+                    f"You sent the big model anyway {sent_anyway} time"
+                    + ("s" if sent_anyway != 1 else "")
+                    + "."
+                )
+            tips.append({"id": "chalk-switch", "title": " ".join(parts)})
+
+        return {
+            "decisions": total,
+            "suggest_small": suggest_small,
+            "switched": switched,
+            "sent_anyway": sent_anyway,
+            "tips": tips,
+        }
 
     def publish(self, report):
         with self.db:
