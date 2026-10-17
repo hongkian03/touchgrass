@@ -56,9 +56,6 @@ export function DashboardApp() {
   const [insightCards, setInsightCards] = useState<InsightCard[]>(
     seedInsights.slice(0, 3),
   );
-  const [pairCode, setPairCode] = useState("");
-  const [pairNote, setPairNote] = useState<string | null>(null);
-  const [paired, setPaired] = useState(false);
   const [evalsSummary, setEvalsSummary] = useState<EvalsSummary | null>(null);
   const [voiceLine, setVoiceLine] = useState("");
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
@@ -75,7 +72,8 @@ export function DashboardApp() {
   useEffect(() => {
     void (async () => {
       const health = await bgBackend<HealthResult>("health");
-      setBackendOnline(Boolean(health && "ok" in health && health.ok));
+      const online = Boolean(health && "ok" in health && health.ok);
+      setBackendOnline(online);
       if (health && "ok" in health && health.ok) {
         try {
           const latest = await bgBackend<{
@@ -101,22 +99,18 @@ export function DashboardApp() {
       } else {
         setEvalsSummary(null);
       }
-      const tok = await browser.storage.local.get("coachingSessionToken");
-      setPaired(Boolean(tok.coachingSessionToken));
     })();
   }, []);
 
   useEffect(() => {
-    if (location.hash === "#recap") {
-      recapRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    const onHash = () => {
+    const scrollHash = () => {
       if (location.hash === "#recap") {
         recapRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    scrollHash();
+    window.addEventListener("hashchange", scrollHash);
+    return () => window.removeEventListener("hashchange", scrollHash);
   }, [state]);
 
   const evalResult = useMemo(() => recomputeAccuracy(evalRows), []);
@@ -413,57 +407,6 @@ export function DashboardApp() {
               </>
             )}
           </div>
-        </section>
-
-        <section data-testid="pairing">
-          <h2 className="m-0 text-lg font-semibold">Chalk pairing</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Coaching sends your unsent text and recent visible messages to the
-            Prompt Print backend, Chalk, and the configured model provider. Your
-            original conversation still runs on its provider website.
-          </p>
-          <p
-            data-testid="pair-status"
-            className="mt-2 text-xs text-muted-foreground"
-          >
-            {paired ? "Paired session active" : "Not paired"}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Input
-              data-testid="pair-code"
-              value={pairCode}
-              onChange={(e) => setPairCode(e.target.value)}
-              placeholder="Paste pairing code"
-              className="max-w-xs"
-            />
-            <Button
-              type="button"
-              data-testid="pair-submit"
-              onClick={() => {
-                void (async () => {
-                  setPairNote(null);
-                  const res = await bgBackend<{
-                    ok?: boolean;
-                    error?: string;
-                    session_token?: string;
-                  }>("pair", { code: pairCode.trim() });
-                  if (!res?.ok) {
-                    setPairNote(res?.error || "pair failed");
-                    return;
-                  }
-                  setPaired(true);
-                  setPairNote("Paired. Hold-coach enabled on ChatGPT.");
-                })();
-              }}
-            >
-              Pair
-            </Button>
-          </div>
-          {pairNote ? (
-            <p data-testid="pair-note" className="mt-2 text-sm">
-              {pairNote}
-            </p>
-          ) : null}
         </section>
 
         <section data-testid="upload">

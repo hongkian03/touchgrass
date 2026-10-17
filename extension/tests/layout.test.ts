@@ -32,7 +32,12 @@ describe("layout constants (issue #4)", () => {
     expect(src).not.toMatch(/width:\s*360\b/);
     expect(src).toMatch(/period-switch/);
     expect(src).toMatch(/setPeriod/);
-    expect(src).not.toMatch(/dashboard\.html/);
+    expect(src).toMatch(/coaching-insights/);
+    expect(src).not.toMatch(/pane-switch/);
+    expect(src).not.toMatch(/pane-coaching/);
+    expect(src).not.toMatch(/coaching-pane/);
+    expect(src).not.toMatch(/pair-code/);
+    expect(src).not.toMatch(/chalk-coaching/);
   });
 
   it("onboarding App uses ONBOARDING_MAX_WIDTH", () => {
