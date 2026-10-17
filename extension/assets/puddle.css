@@ -1,0 +1,44 @@
+@font-face {
+  font-family: "Castoro";
+  src: url("/fonts/Castoro-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Castoro";
+  src: url("/fonts/Castoro-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --frozen-water: #bee9e8;
+  --pacific-blue: #62b6cb;
+  --yale-blue: #1b4965;
+  --pale-sky: #cae9ff;
+  --fresh-sky: #5fa8d3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Castoro", serif;
+  background: var(--pale-sky);
+  color: var(--yale-blue);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
