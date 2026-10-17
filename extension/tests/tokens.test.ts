@@ -81,19 +81,19 @@ describe("onboarding chrome", () => {
   });
 });
 
-describe("Puddle branding strings", () => {
-  it("popup title is Puddle, not Prompt Print", () => {
+describe("Touchgrass branding strings", () => {
+  it("popup title is Touchgrass, not Prompt Print", () => {
     const html = readFileSync(
       resolve(__dirname, "../entrypoints/popup/index.html"),
       "utf8",
     );
-    expect(html).toMatch(/<title>\s*Puddle\s*<\/title>/);
+    expect(html).toMatch(/<title>\s*Touchgrass\s*<\/title>/);
     expect(html).not.toMatch(/Prompt Print/i);
   });
 
-  it("manifest name in wxt.config is Puddle", () => {
+  it("manifest name in wxt.config is Touchgrass", () => {
     const cfg = readFileSync(resolve(__dirname, "../wxt.config.ts"), "utf8");
-    expect(cfg).toMatch(/name:\s*["']Puddle["']/);
+    expect(cfg).toMatch(/name:\s*["']Touchgrass["']/);
     expect(cfg).toMatch(/api\.groq\.com/);
     expect(cfg).toMatch(/["']storage["']/);
     expect(cfg).toMatch(/["']tabs["']/);
@@ -111,7 +111,7 @@ describe("Puddle branding strings", () => {
       host_permissions?: string[];
       optional_host_permissions?: string[];
     };
-    expect(manifest.name).toBe("Puddle");
+    expect(manifest.name).toBe("Touchgrass");
     expect(manifest.permissions).toEqual(
       expect.arrayContaining(["storage", "tabs", "scripting"]),
     );

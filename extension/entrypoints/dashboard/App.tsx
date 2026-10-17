@@ -201,7 +201,7 @@ export function DashboardApp() {
               data-testid="puddle-title"
               className="m-0 text-3xl font-semibold tracking-tight"
             >
-              Puddle
+              Touchgrass
             </h1>
             <p className="mt-1 mb-0 text-sm text-muted-foreground">
               Week · insights · upload · recap

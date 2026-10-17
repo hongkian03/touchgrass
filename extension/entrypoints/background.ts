@@ -1,7 +1,7 @@
 import { groqIsAiSite } from "../lib/groqClassify";
 
 export default defineBackground(() => {
-  console.log("[Puddle] background ready");
+  console.log("[Touchgrass] background ready");
 
   browser.runtime.onInstalled.addListener((details) => {
     if (details.reason === "install") {
