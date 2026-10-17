@@ -17,8 +17,10 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import evalsData from "../../data/evals.json";
 import footprintData from "../../data/footprint.json";
-import insights from "../../data/insights.json";
+import seedInsights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
+import { bgBackend } from "../../lib/backendBridge";
+import type { EvalsSummary, HealthResult } from "../../lib/backendClient";
 import { recomputeAccuracy } from "../../lib/evalAccuracy";
 import {
   DASHBOARD_COLUMN_WIDTH,
@@ -34,6 +36,8 @@ import { weekTotals } from "../../lib/weekTotals";
 import type { FootprintModel } from "../../lib/totals";
 import type { Platform, UsageRow } from "../../lib/types";
 
+type InsightCard = { id: string; text: string };
+
 const platforms = platformsData as Platform[];
 const models = (footprintData as { models: Record<string, FootprintModel> })
   .models;
@@ -47,6 +51,15 @@ const HAND_EVAL = { correct: 30, total: 30, accuracy: 1 };
 export function DashboardApp() {
   const [state, setState] = useState<PuddleState | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [insightCards, setInsightCards] = useState<InsightCard[]>(
+    seedInsights.slice(0, 3),
+  );
+  const [pairCode, setPairCode] = useState("");
+  const [pairNote, setPairNote] = useState<string | null>(null);
+  const [paired, setPaired] = useState(false);
+  const [evalsSummary, setEvalsSummary] = useState<EvalsSummary | null>(null);
   const [voiceLine, setVoiceLine] = useState("");
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
@@ -57,6 +70,40 @@ export function DashboardApp() {
 
   useEffect(() => {
     void readState().then(setState);
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      const health = await bgBackend<HealthResult>("health");
+      setBackendOnline(Boolean(health && "ok" in health && health.ok));
+      if (health && "ok" in health && health.ok) {
+        try {
+          const latest = await bgBackend<{
+            ok?: boolean;
+            cards?: InsightCard[];
+          }>("insights-latest");
+          if (latest?.ok && latest.cards?.length) {
+            setInsightCards(latest.cards);
+          }
+        } catch {
+          // keep seed tips
+        }
+        try {
+          await bgBackend("adapter-sync");
+        } catch {
+          // offline adapters stay bundled
+        }
+        const ev = await bgBackend<{ ok?: boolean; summary?: EvalsSummary }>(
+          "evals-summary",
+        );
+        if (ev?.ok && ev.summary) setEvalsSummary(ev.summary);
+        else setEvalsSummary({ status: "not_run" });
+      } else {
+        setEvalsSummary(null);
+      }
+      const tok = await browser.storage.local.get("coachingSessionToken");
+      setPaired(Boolean(tok.coachingSessionToken));
+    })();
   }, []);
 
   useEffect(() => {
@@ -87,18 +134,53 @@ export function DashboardApp() {
   const onFile = async (file: File | null) => {
     if (!file || !state) return;
     setUploadError(null);
+    setUploadStatus(null);
+
+    const health = await bgBackend<HealthResult>("health");
+    const online = Boolean(health && "ok" in health && health.ok);
+    setBackendOnline(online);
+
+    if (online) {
+      try {
+        setUploadStatus("Uploading to PromptPrint…");
+        const bytes = await file.arrayBuffer();
+        const result = await bgBackend<{
+          ok?: boolean;
+          error?: string;
+          job_id?: string;
+          cards?: InsightCard[];
+        }>("upload-pipeline", {
+          bytes,
+          filename: file.name || "export.json",
+        });
+        if (!result?.ok) {
+          throw new Error(result?.error || "upload failed");
+        }
+        if (result.cards?.length) setInsightCards(result.cards);
+        setUploadStatus(`Job ${result.job_id} succeeded · live insights`);
+        return;
+      } catch (e) {
+        setUploadError(
+          e instanceof Error
+            ? `Backend upload failed (${e.message}). Falling back to local parse.`
+            : "Backend upload failed. Falling back to local parse.",
+        );
+        // fall through to local parse
+      }
+    }
+
     const text = await file.text();
-    const prevLen = state.usage.length;
     const parsed = parseExport(text, state.usage);
     if (!parsed.ok) {
       setUploadError(parsed.error);
-      // P2/P3: do not mutate usage
-      void prevLen;
       return;
     }
     const next = { ...state, usage: parsed.rows };
     await writeState({ usage: parsed.rows });
     setState(next);
+    setUploadStatus(
+      online ? null : "Offline · parsed locally (demo data mode)",
+    );
   };
 
   const goRecap = () => {
@@ -206,6 +288,16 @@ export function DashboardApp() {
             <p className="mt-1 mb-0 text-sm text-muted-foreground">
               Week · insights · upload · recap
             </p>
+            <p
+              data-testid="backend-status"
+              className="mt-1 mb-0 text-xs text-muted-foreground"
+            >
+              {backendOnline === null
+                ? "Checking backend…"
+                : backendOnline
+                  ? "Backend online"
+                  : "Offline / demo data"}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -274,7 +366,7 @@ export function DashboardApp() {
         <section data-testid="insights">
           <h2 className="m-0 text-lg font-semibold">Insights</h2>
           <ul className="mt-3 list-none space-y-2 p-0">
-            {insights.slice(0, 3).map((i) => (
+            {insightCards.slice(0, 3).map((i) => (
               <li
                 key={i.id}
                 data-testid={`insight-${i.id}`}
@@ -289,14 +381,89 @@ export function DashboardApp() {
         <section data-testid="eval-card">
           <h2 className="m-0 text-lg font-semibold">Classifier eval</h2>
           <p className="mt-1 mb-0 text-sm" data-testid="eval-accuracy">
-            {/* Hand: {HAND_EVAL.correct}/{HAND_EVAL.total}={HAND_EVAL.accuracy}. Live recompute below. */}
-            Accuracy {Math.round(evalResult.accuracy * 100)}% (
-            {evalResult.correct}/{evalResult.total}), recomputed
+            Local seed accuracy {Math.round(evalResult.accuracy * 100)}% (
+            {evalResult.correct}/{evalResult.total})
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Hand check: {HAND_EVAL.correct}/{HAND_EVAL.total} ={" "}
             {HAND_EVAL.accuracy}
           </p>
+          <div data-testid="evals-summary" className="mt-3 text-sm">
+            {!backendOnline || !evalsSummary ? (
+              <p className="m-0 text-muted-foreground">
+                Backend evals unavailable offline
+              </p>
+            ) : evalsSummary.status === "not_run" ? (
+              <p className="m-0" data-testid="evals-not-run">
+                Evaluation not run
+              </p>
+            ) : (
+              <>
+                {evalsSummary.source_mode === "mock" ? (
+                  <p
+                    data-testid="evals-mock-badge"
+                    className="m-0 mb-2 font-semibold text-foreground"
+                  >
+                    Synthetic mock results
+                  </p>
+                ) : null}
+                <p className="m-0 text-muted-foreground">
+                  Report status: {String(evalsSummary.status ?? "ready")}
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+
+        <section data-testid="pairing">
+          <h2 className="m-0 text-lg font-semibold">Chalk pairing</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Coaching sends your unsent text and recent visible messages to the
+            Prompt Print backend, Chalk, and the configured model provider. Your
+            original conversation still runs on its provider website.
+          </p>
+          <p
+            data-testid="pair-status"
+            className="mt-2 text-xs text-muted-foreground"
+          >
+            {paired ? "Paired session active" : "Not paired"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Input
+              data-testid="pair-code"
+              value={pairCode}
+              onChange={(e) => setPairCode(e.target.value)}
+              placeholder="Paste pairing code"
+              className="max-w-xs"
+            />
+            <Button
+              type="button"
+              data-testid="pair-submit"
+              onClick={() => {
+                void (async () => {
+                  setPairNote(null);
+                  const res = await bgBackend<{
+                    ok?: boolean;
+                    error?: string;
+                    session_token?: string;
+                  }>("pair", { code: pairCode.trim() });
+                  if (!res?.ok) {
+                    setPairNote(res?.error || "pair failed");
+                    return;
+                  }
+                  setPaired(true);
+                  setPairNote("Paired. Hold-coach enabled on ChatGPT.");
+                })();
+              }}
+            >
+              Pair
+            </Button>
+          </div>
+          {pairNote ? (
+            <p data-testid="pair-note" className="mt-2 text-sm">
+              {pairNote}
+            </p>
+          ) : null}
         </section>
 
         <section data-testid="upload">
@@ -320,6 +487,14 @@ export function DashboardApp() {
               onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
             />
           </div>
+          {uploadStatus ? (
+            <p
+              data-testid="upload-status"
+              className="mt-2 text-sm text-muted-foreground"
+            >
+              {uploadStatus}
+            </p>
+          ) : null}
           {uploadError ? (
             <p data-testid="upload-error" className="mt-2 text-sm text-foreground">
               {uploadError}
