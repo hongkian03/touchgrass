@@ -149,9 +149,17 @@ async def main():
         print(f"rejected actions: {job.rejected}")
     print(f"Droid's reply: {job.text!r}")
 
+    def summarize(ok, problems=(), published=None, version=None):
+        # For the backend: outcome, timings and credits.
+        (JOB_DIR / "output" / "repair_summary.json").write_text(json.dumps({
+            "success": ok, "problems": list(problems), "published": published, "version": version,
+            "droid_subtype": job.subtype, "seconds": round(time.monotonic() - start, 2),
+            "credits": job.factory_credits or 0.0}, indent=1), encoding="utf-8")
+
     fixed_path = JOB_DIR / "output" / "adapter.json"
     if not fixed_path.is_file():
         print("\nREPAIR FAILED: Droid wrote no output/adapter.json")
+        summarize(False, ["Droid wrote no output/adapter.json"])
         return 1
     fixed = json.loads(fixed_path.read_text(encoding="utf-8"))
     passed, report = run_checker(fixed_path, JOB_DIR / "input" / "snapshot.html", JOB_DIR / "input" / "expected.json")
@@ -166,18 +174,21 @@ async def main():
         problems.append("selector keys changed")
     if fixed.get("version") != broken.get("version", 0) + 1:
         problems.append(f"version is {fixed.get('version')}, expected {broken.get('version', 0) + 1}")
-    if fixed.get("version", 0) <= published_version(args.site):
+    if not args.no_publish and fixed.get("version", 0) <= published_version(args.site):
         problems.append(f"version not higher than the published v{published_version(args.site)}")
     # Our checks decide, not how Droid's turn ended; a changed protected folder always fails.
     if job.tampered:
         problems.append(job.error)
     if problems:
         print(f"\nREPAIR FAILED: {'; '.join(problems)} (not published)")
+        summarize(False, problems, version=fixed.get("version"))
         return 1
     if not job.success:
         print(f"note: Droid's turn ended as {job.subtype}, but the adapter it wrote passes our checks")
-    print("\npublish: " + ("skipped (--no-publish)" if args.no_publish else publish(args.site, fixed)))
+    outcome = "skipped (--no-publish)" if args.no_publish else publish(args.site, fixed)
+    print("\npublish: " + outcome)
     print(f"\nREPAIR PASSED in {time.monotonic() - start:.1f}s")
+    summarize(True, published=outcome, version=fixed.get("version"))
     return 0
 
 
