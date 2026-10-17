@@ -7,6 +7,13 @@ type Props = {
   message: string;
   /** Platform chip for open-paste redirect. */
   target?: CoachTargetDisplay | null;
+  /** Hold-coach actions (Chalk suggest). */
+  actions?: {
+    onSwitch?: () => void;
+    onSendAnyway?: () => void;
+    switchLabel?: string;
+    badge?: string | null;
+  } | null;
 };
 
 const shell: CSSProperties = {
@@ -41,6 +48,36 @@ const chip: CSSProperties = {
   padding: "6px 8px",
   borderRadius: 10,
   background: "rgba(255, 255, 255, 0.7)",
+};
+
+const btnRow: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  marginTop: 10,
+  flexWrap: "wrap",
+};
+
+const btn: CSSProperties = {
+  border: "1px solid #5fa8d3",
+  background: "#fff",
+  color: "#1b4965",
+  borderRadius: 8,
+  padding: "6px 10px",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const badgeStyle: CSSProperties = {
+  display: "inline-block",
+  marginBottom: 6,
+  padding: "2px 6px",
+  borderRadius: 6,
+  background: "#f0c808",
+  color: "#1b4965",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 0.3,
 };
 
 function TargetChip({ target }: { target: CoachTargetDisplay }): ReactNode {
@@ -85,12 +122,41 @@ function TargetChip({ target }: { target: CoachTargetDisplay }): ReactNode {
 }
 
 /** Compact top-right toast. No pet. */
-export function CoachOverlay({ message, target = null }: Props) {
+export function CoachOverlay({ message, target = null, actions = null }: Props) {
   return (
     <div data-testid="coach-overlay" style={shell}>
       <div data-testid="coach-bubble" style={bubble}>
+        {actions?.badge ? (
+          <span data-testid="coach-mode-badge" style={badgeStyle}>
+            {actions.badge}
+          </span>
+        ) : null}
         <p style={{ margin: 0 }}>{message}</p>
         {target ? <TargetChip target={target} /> : null}
+        {actions?.onSwitch || actions?.onSendAnyway ? (
+          <div style={btnRow}>
+            {actions.onSwitch ? (
+              <button
+                type="button"
+                data-testid="coach-switch"
+                style={btn}
+                onClick={actions.onSwitch}
+              >
+                {actions.switchLabel || "Switch"}
+              </button>
+            ) : null}
+            {actions.onSendAnyway ? (
+              <button
+                type="button"
+                data-testid="coach-send-anyway"
+                style={{ ...btn, background: "#1b4965", color: "#fff" }}
+                onClick={actions.onSendAnyway}
+              >
+                Send anyway
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

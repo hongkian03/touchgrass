@@ -11,6 +11,12 @@ export type CoachMountOpts = {
   target?: CoachTargetDisplay | null;
   /** false = light DOM (fixture). true = Shadow DOM (live pages). */
   shadow?: boolean;
+  actions?: {
+    onSwitch?: () => void;
+    onSendAnyway?: () => void;
+    switchLabel?: string;
+    badge?: string | null;
+  } | null;
 };
 
 let root: Root | null = null;
@@ -42,6 +48,7 @@ export function mountCoach(opts: CoachMountOpts): HTMLElement {
     createElement(CoachOverlay, {
       message: opts.message,
       target: opts.target ?? null,
+      actions: opts.actions ?? null,
     }),
   );
   return host;
