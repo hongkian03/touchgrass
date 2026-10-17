@@ -206,6 +206,65 @@ async def insights_latest():
     return {"job_id": job_id, "insights": json.loads(path.read_text(encoding="utf-8"))}
 
 
+REQUIRED_SELECTOR_KEYS = ("prompt_box", "send_button", "model_name", "response")
+
+
+@app.get("/adapters/versions")
+async def adapter_versions():
+    versions = {}
+    if ADAPTERS_DIR.is_dir():
+        for path in sorted(ADAPTERS_DIR.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            site = data.get("site") or path.stem
+            version = data.get("version")
+            if isinstance(version, int):
+                versions[site] = version
+    return versions
+
+
+@app.get("/adapters/{site}")
+async def get_adapter(site: str):
+    adapter = published_adapter(site)
+    if adapter is None:
+        raise HTTPException(404, f"no adapter for {site!r}")
+    return adapter
+
+
+@app.put("/adapters/{site}")
+async def put_adapter(site: str, request: Request):
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, "adapter must be a JSON object")
+    selectors = body.get("selectors")
+    if not isinstance(selectors, dict):
+        raise HTTPException(400, "selectors object required")
+    missing = [k for k in REQUIRED_SELECTOR_KEYS if k not in selectors]
+    if missing:
+        raise HTTPException(400, f"missing selector keys: {missing}")
+    version = body.get("version")
+    if not isinstance(version, int) or version < 1:
+        raise HTTPException(400, "version must be a positive int")
+    current = published_adapter(site)
+    current_version = (current or {}).get("version", 0)
+    if version <= current_version:
+        raise HTTPException(
+            409,
+            f"version {version} not higher than published {current_version}",
+        )
+    payload = {
+        "site": site,
+        "version": version,
+        "selectors": {k: str(selectors[k]) for k in selectors},
+    }
+    ADAPTERS_DIR.mkdir(parents=True, exist_ok=True)
+    path = ADAPTERS_DIR / f"{Path(site).name}.json"
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return payload
+
+
 @app.post("/adapter-failure")
 async def adapter_failure(report: AdapterFailure):
     current = published_adapter(report.site)
@@ -224,6 +283,9 @@ async def adapter_failure(report: AdapterFailure):
     start(job_id, executor.run_repair, report.site, report.snapshot_html, broken, report.failed_keys, job_id,
           expected_prompt=report.expected_prompt, has_responses=report.has_responses)
     return {"job_id": job_id}
+
+
+# Coaching factory lives below; PromptPrint routes above use module-level `app`.
 """Loopback demo API. Importing this module performs no network calls."""
 
 import asyncio
@@ -246,16 +308,25 @@ from backend.integrations.mock_models import MockClassifier
 from backend.reports.router import router as reports_router
 
 
+def _coaching_path(path: str) -> bool:
+    return (
+        path == "/classify"
+        or path == "/evals/summary"
+        or path.startswith("/coaching/")
+    )
+
+
 class RequestBoundary:
+    """Buffers small coaching bodies only — never wraps /upload or job SSE."""
+
     def __init__(self, app, limit=65536, classify_deadline_ms=700):
         self.app, self.limit = app, limit
         self.classify_deadline_ms = classify_deadline_ms
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
+        if scope["type"] != "http" or not _coaching_path(scope.get("path", "")):
             return await self.app(scope, receive, send)
         scope["started"] = time.monotonic()
-        # Buffer a bounded body before validation; covers chunked requests too.
         body = bytearray()
         more = True
         body_budget = (
@@ -290,12 +361,16 @@ class RequestBoundary:
         await self.app(scope, replay, send)
 
 
-def create_app(settings=None, classifier_client=None):
+def _install_coaching(target: FastAPI, settings=None, classifier_client=None):
+    """Mount pair/classify/events/evals on an app (PromptPrint or coaching-only)."""
     settings = settings or Settings.from_env()
     profile, policy = settings.artifacts()
+    # Idempotent: skip if already wired
+    if getattr(target.state, "_coaching_wired", False):
+        return target
 
     @asynccontextmanager
-    async def lifespan(app):
+    async def lifespan(app_):
         key = settings.session_secret.get_secret_value() or secrets.token_urlsafe(32)
         repository = Repository(settings.db_path, key, settings.retention_days)
         async with httpx.AsyncClient(
@@ -306,25 +381,30 @@ def create_app(settings=None, classifier_client=None):
             client = classifier_client or (
                 MockClassifier() if settings.mode == "mock" else Gateway(http, settings)
             )
-            app.state.repository = repository
-            app.state.classifier = ClassifierService(settings, profile, policy, client)
+            app_.state.repository = repository
+            app_.state.classifier = ClassifierService(settings, profile, policy, client)
+            app_.state.coaching_settings = settings
             try:
                 yield
             finally:
                 repository.close()
 
-    app = FastAPI(title="Prompt Print coaching", version="1.0.0", lifespan=lifespan)
-    app.add_middleware(RequestBoundary, classify_deadline_ms=settings.deadline_ms)
-    app.add_middleware(
+    # Combine with any existing lifespan (PromptPrint app has none today).
+    target.router.lifespan_context = lifespan
+    target.add_middleware(RequestBoundary, classify_deadline_ms=settings.deadline_ms)
+    origins = settings.allowed_origins or [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+    target.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins,
+        allow_origins=origins,
         allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
-    @app.exception_handler(RequestValidationError)
+    @target.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc):
-        # FastAPI's default error contains input values, potentially private text.
         return JSONResponse(
             {
                 "detail": [
@@ -334,17 +414,27 @@ def create_app(settings=None, classifier_client=None):
             422,
         )
 
-    @app.get("/health")
-    async def health():
+    target.include_router(coaching_router)
+    target.include_router(reports_router)
+    target.state._coaching_wired = True
+    return target
+
+
+def create_app(settings=None, classifier_client=None):
+    """Coaching-focused app for unit tests (`TestClient(create_app(...))`)."""
+    settings = settings or Settings.from_env()
+    coaching_app = FastAPI(title="Prompt Print coaching", version="1.0.0")
+
+    @coaching_app.get("/health")
+    async def coaching_health():
         return {
             "status": "ok",
             "mode": settings.mode,
             "coaching_mode": settings.coaching_mode,
         }
 
-    app.include_router(coaching_router)
-    app.include_router(reports_router)
-    return app
+    return _install_coaching(coaching_app, settings, classifier_client)
 
 
-# Use uvicorn backend.main:create_app --factory; no startup on import.
+# PromptPrint job app (`py start.py`) also serves coaching on the same port.
+_install_coaching(app)
