@@ -19,6 +19,8 @@ pnpm-debug.log*
 
 # Droid work folder: can hold real chat history
 work/
+# Droid-written parsers, cached by export fingerprint
+parser_cache/
 
 # Env
 .env
