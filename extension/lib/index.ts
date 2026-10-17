@@ -1,5 +1,21 @@
 export { classify } from "./classify";
-export { canContinueOnboarding, hostsForPlatforms } from "./hosts";
+export { isAllowedAiHost } from "./aiSites";
+export { groqIsAiSite, grokIsAiSite } from "./groqClassify";
+export type { AiSiteVerdict, GrokAiVerdict } from "./groqClassify";
+export {
+  canContinueOnboarding,
+  coreHostname,
+  customPlatformId,
+  extractHostname,
+  faviconForHost,
+  hostnameFromCustomId,
+  hostLadder,
+  hostsForPlatforms,
+  isCustomPlatformId,
+  originPatternFromInput,
+  resolvePlatformFromInput,
+} from "./hosts";
+export type { ResolveResult } from "./hosts";
 export { route, routeTargetHost } from "./route";
 export { localDateKey, score, wastePenalty, weekWindow } from "./score";
 export { computeStreak } from "./streak";
