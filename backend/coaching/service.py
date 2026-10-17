@@ -22,7 +22,7 @@ class ClassifierService:
         )
         self.inflight = 0
 
-    def skip_reason(self, req):
+    def skip_reason(self, req, *, evaluation=False):
         if not req.opted_in:
             return "not_opted_in"
         if not req.prompt_text.strip():
@@ -35,24 +35,27 @@ class ClassifierService:
             return "context_unavailable"
         if self.profile.validity == "disabled":
             return "unsupported_profile"
-        if (
-            req.site != self.profile.site
-            or req.current_model_label not in self.profile.website_aliases
-        ):
-            return "unsupported_model"
-        if not self.profile.switch_supported or not req.target_available:
-            return "target_unavailable"
+        if not evaluation:
+            if (
+                req.site != self.profile.site
+                or req.current_model_label not in self.profile.website_aliases
+            ):
+                return "unsupported_model"
+            if not self.profile.switch_supported or not req.target_available:
+                return "target_unavailable"
         if self.settings.mode == "live" and req.mock_fixture_id is not None:
             return "mock_fixture_in_live"
         return None
 
-    async def classify(self, req, started=None):
+    async def classify(self, req, started=None, *, evaluation=False):
+        # Only trusted evaluation runners set this flag; it is not a request field.
+        # Evaluate the frozen model pair without asserting any website mapping.
         start = time.monotonic() if started is None else started
         # Reserve time for metadata persistence and response serialization.
         reserve_ms = min(50, self.settings.deadline_ms / 10)
         deadline = start + (self.settings.deadline_ms - reserve_ms) / 1000
         reason, pred, action, candidate = (
-            self.skip_reason(req),
+            self.skip_reason(req, evaluation=evaluation),
             None,
             "abstain",
             "abstain",
@@ -71,7 +74,7 @@ class ClassifierService:
                         self.profile,
                         self.policy,
                         self.settings.mode,
-                        self.settings.coaching_mode,
+                        "shadow" if evaluation else self.settings.coaching_mode,
                     )
                 if time.monotonic() >= deadline:
                     raise TimeoutError()

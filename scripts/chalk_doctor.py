@@ -7,12 +7,14 @@ import json
 import httpx
 
 from backend.coaching.config import Settings
-from backend.integrations.chalk_gateway import Gateway
+from backend.integrations.chalk_gateway import Gateway, GatewayError
 from evals.data import load_dataset
 
 
 async def inspect(args, settings):
     profile, policy = settings.artifacts()
+    if profile.fingerprint != policy.profile_fingerprint:
+        raise ValueError("profile/policy fingerprint mismatch")
     result = {
         "mode": settings.mode,
         "coaching_mode": settings.coaching_mode,
@@ -53,12 +55,21 @@ async def inspect(args, settings):
                 row = load_dataset("evals/datasets/smoke.jsonl")[0]
                 request = row.request.model_copy(
                     update={
-                        "current_model_label": profile.website_aliases[0],
+                        "current_model_label": (
+                            profile.website_aliases[0]
+                            if profile.website_aliases
+                            else "offline-baseline"
+                        ),
                         "mock_fixture_id": None,
                         "site": profile.site,
                     }
                 )
                 prediction = await gateway.predict(request, profile)
+                if (
+                    profile.expected_jev_resolved_model
+                    and prediction.resolved_model != profile.expected_jev_resolved_model
+                ):
+                    raise GatewayError("model_version_mismatch")
                 result["prediction"] = prediction.model_dump()
                 result["inference_checked"] = True
             elif args.smoke:
@@ -83,6 +94,8 @@ async def inspect(args, settings):
                     "resolved_model": answer.resolved_model,
                     "usage": answer.usage,
                 }
+                if not answer.valid:
+                    raise GatewayError("invalid_answer")
                 result["inference_checked"] = True
     return result
 
@@ -109,6 +122,11 @@ def main():
                 {
                     "status": "configuration_or_gateway_error",
                     "error_type": type(exc).__name__,
+                    "category": (
+                        exc.category
+                        if isinstance(exc, GatewayError)
+                        else "configuration_error"
+                    ),
                 }
             )
         )

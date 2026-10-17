@@ -137,12 +137,20 @@ class Gateway:
             content = message["content"]
             if not isinstance(content, str) or not isinstance(data["model"], str):
                 raise ValueError()
+            usage = data.get("usage")
+            if usage is None:
+                usage = {}
+            if not isinstance(usage, dict):
+                raise ValueError()
+            # The public Answer contract stores flat counters. Providers may also
+            # return nested usage details; do not flatten and double-count them.
+            counters = {k: v for k, v in usage.items() if type(v) is int}
             return Answer(
                 text=content,
                 requested_model=model,
                 resolved_model=data["model"],
                 finish_reason=item["finish_reason"],
-                usage=data.get("usage", {}),
+                usage=counters,
                 elapsed_ms=(time.monotonic() - start) * 1000,
                 valid=item["finish_reason"] == "stop"
                 and not message.get("refusal")

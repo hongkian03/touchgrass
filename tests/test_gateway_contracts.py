@@ -159,6 +159,84 @@ def test_chat_contract(req, profile):
     asyncio.run(run())
 
 
+@pytest.mark.parametrize(
+    "usage,expected",
+    [
+        (
+            {
+                "prompt_tokens": 7,
+                "completion_tokens": 12,
+                "total_tokens": 19,
+                "prompt_tokens_details": {"cached_tokens": 0},
+                "completion_tokens_details": {"reasoning_tokens": 0},
+            },
+            {"prompt_tokens": 7, "completion_tokens": 12, "total_tokens": 19},
+        ),
+        (
+            {
+                "input_tokens": 20,
+                "output_tokens": 4,
+                "cache_creation": {"ephemeral_5m_input_tokens": 5},
+                "service_tier": "standard",
+                "optional_details": None,
+                "flag": True,
+            },
+            {"input_tokens": 20, "output_tokens": 4},
+        ),
+        (None, {}),
+        ({}, {}),
+    ],
+)
+@pytest.mark.parametrize(
+    "finish_reason,refusal,valid",
+    [("stop", None, True), ("length", None, False), ("stop", "refused", False)],
+)
+def test_chat_usage_metadata(usage, expected, finish_reason, refusal, valid, profile):
+    async def run():
+        body = {
+            "model": "resolved/model",
+            "choices": [
+                {
+                    "finish_reason": finish_reason,
+                    "message": {"content": "ready", "refusal": refusal},
+                }
+            ],
+            "usage": usage,
+        }
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json=body))
+        ) as client:
+            answer = await Gateway(client, Settings()).chat(
+                "requested/model", [], profile.small_generation
+            )
+        assert answer.usage == expected
+        assert answer.valid is valid
+        assert answer.text == "ready"
+        assert answer.requested_model == "requested/model"
+        assert answer.resolved_model == "resolved/model"
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("usage", [[], "invalid", 42])
+def test_malformed_chat_usage_fails_closed(usage, profile):
+    async def run():
+        body = {
+            "model": "resolved/model",
+            "choices": [{"finish_reason": "stop", "message": {"content": "ready"}}],
+            "usage": usage,
+        }
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json=body))
+        ) as client:
+            with pytest.raises(GatewayError, match="invalid_output"):
+                await Gateway(client, Settings()).chat(
+                    "requested/model", [], profile.small_generation
+                )
+
+    asyncio.run(run())
+
+
 def test_unknown_optional_answer_is_not_required(req, profile):
     data = payload()
     data["answers"]["extra_question"] = {"type": "score", "score": 0.5}
