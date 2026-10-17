@@ -2,12 +2,15 @@
 
   py backend/save_demo_run.py upload JOB_ID --export sandbox_jobs/samples/chatgpt_fake/conversations.json
   py backend/save_demo_run.py repair JOB_ID
+  py backend/save_demo_run.py upload_daytona JOB_ID     (an EXECUTOR=daytona upload; replayed when
+                                                         DEMO_REPLAY=1 and EXECUTOR=daytona)
 
 Copies the job's short Droid logs (logs/*.jsonl, not the full transcripts), its results and its
 job summary into backend/demo_runs/<kind>/. An upload job deletes its prompts.jsonl when it
 finishes, so for the saved copy it's rebuilt by running that job's own parser on --export (the
-fake sample the demo uses), without Droid. Only save runs on fake data: the saved files are
-committed.
+fake sample the demo uses), without Droid. A Daytona upload's prompts.jsonl never left its sandbox,
+so none is saved for it; its sandbox log and its summary's audit are. Only save runs on fake data:
+the saved files are committed.
 """
 
 import argparse
@@ -24,7 +27,8 @@ from backend.jobs import JobStore  # noqa: E402
 
 JOB_ROOT = REPO / "work" / "jobs"
 DEMO_RUNS = REPO / "backend" / "demo_runs"
-LOG_ORDER = {"upload": ["ingest.jsonl", "analyze.jsonl"], "repair": ["repair.jsonl"]}
+LOG_ORDER = {"upload": ["ingest.jsonl", "analyze.jsonl"], "repair": ["repair.jsonl"],
+             "upload_daytona": ["sandbox.jsonl", "ingest.jsonl", "analyze.jsonl"]}
 
 
 def rebuild_prompts(job_dir, export, dst):
@@ -48,7 +52,7 @@ def rebuild_prompts(job_dir, export, dst):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("kind", choices=["upload", "repair"])
+    ap.add_argument("kind", choices=list(LOG_ORDER))
     ap.add_argument("job_id")
     ap.add_argument("--export", type=Path, help="upload only: the fake export the job ran on")
     args = ap.parse_args()
@@ -73,6 +77,8 @@ def main():
             raise SystemExit("upload needs --export (the fake sample the job ran on)")
         shutil.copy2(job_dir / "output" / "insights.json", out / "insights.json")
         rebuild_prompts(job_dir, args.export, out / "prompts.jsonl")
+    elif args.kind == "upload_daytona":
+        shutil.copy2(job_dir / "output" / "insights.json", out / "insights.json")
     else:
         shutil.copy2(job_dir / "mechanic" / "output" / "adapter.json", out / "adapter.json")
         shutil.copy2(job_dir / "mechanic" / "input" / "adapter.json", out / "broken_adapter.json")
