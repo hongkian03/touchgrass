@@ -27,16 +27,31 @@ export { buildCoachSuggestion, runCoachYes } from "./coachYes";
 export { recomputeAccuracy } from "./evalAccuracy";
 export { parseExport } from "./upload";
 export { parseVoiceIntent } from "./voiceIntent";
-export { weekTotals } from "./weekTotals";
+export { monthTotals, totalsForKeys, weekTotals } from "./weekTotals";
+export {
+  G_CO2_PER_SAPLING,
+  daySavings,
+  monthSavings,
+  saplingsFromCo2G,
+  weekSavings,
+} from "./savings";
 export { route, routeTargetHost } from "./route";
 export {
+  DASHBOARD_COLUMN_WIDTH,
   DASHBOARD_MAX_WIDTH,
   DASHBOARD_MIN_WIDTH,
   ONBOARDING_MAX_WIDTH,
   POPUP_HEIGHT,
   POPUP_WIDTH,
 } from "./layout";
-export { localDateKey, score, wastePenalty, weekWindow } from "./score";
+export {
+  lastNDays,
+  localDateKey,
+  monthWindow,
+  score,
+  wastePenalty,
+  weekWindow,
+} from "./score";
 export { computeStreak } from "./streak";
 export { DEFAULT_STATE, readState, writeState } from "./storage";
 export type { PuddleState } from "./storage";
