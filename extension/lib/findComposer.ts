@@ -1,8 +1,10 @@
 /** Prefer real chat boxes over hidden seed fields. */
 export function findComposer(
   root: ParentNode = document,
+  preferredSelectors: string[] = [],
 ): HTMLTextAreaElement | HTMLElement | null {
   const prefer = [
+    ...preferredSelectors,
     '[data-testid="chat-input"]',
     '[data-testid="prompt-textarea"]',
     'div.ProseMirror[contenteditable="true"]',
@@ -10,7 +12,13 @@ export function findComposer(
     'div[contenteditable="true"][data-placeholder]',
   ];
   for (const sel of prefer) {
-    const el = root.querySelector<HTMLElement>(sel);
+    if (!sel) continue;
+    let el: HTMLElement | null = null;
+    try {
+      el = root.querySelector<HTMLElement>(sel);
+    } catch {
+      continue;
+    }
     if (el && isUsableComposer(el)) return el;
   }
 
