@@ -117,6 +117,32 @@ body {
   }
 }
 
+/* Issue #5 — SVG Pip idle bob / talk bounce (light DOM fixture) */
+.pip-svg--idle {
+  animation: pip-bob 2.4s ease-in-out infinite;
+}
+.pip-svg--talk {
+  animation: pip-talk 0.55s ease-in-out infinite;
+}
+@keyframes pip-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes pip-talk {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.04);
+  }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

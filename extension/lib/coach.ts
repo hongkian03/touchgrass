@@ -1,0 +1,40 @@
+import type { RouteSuggestion } from "./types";
+
+export const COACH_HIDE_MS = 10 * 60 * 1000;
+export const COACH_BUBBLE_MAX = 280;
+export const COACH_RIGHT = 16;
+export const COACH_BOTTOM_DEFAULT = 16;
+export const COACH_BOTTOM_CLEAR = 96;
+
+export function shouldShowCoach(lastCoachAt: number, now = Date.now()): boolean {
+  if (!lastCoachAt) return true;
+  return now - lastCoachAt >= COACH_HIDE_MS;
+}
+
+/** Prefer bottom-right; lift if default box hits a composer. */
+export function coachBottomPx(
+  composer: Element | null,
+  overlayHeight = 160,
+): number {
+  if (!composer) return COACH_BOTTOM_DEFAULT;
+  const c = composer.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const box = {
+    left: vw - COACH_RIGHT - 200,
+    right: vw - COACH_RIGHT,
+    top: vh - COACH_BOTTOM_DEFAULT - overlayHeight,
+    bottom: vh - COACH_BOTTOM_DEFAULT,
+  };
+  const hit =
+    box.left < c.right &&
+    box.right > c.left &&
+    box.top < c.bottom &&
+    box.bottom > c.top;
+  return hit ? COACH_BOTTOM_CLEAR : COACH_BOTTOM_DEFAULT;
+}
+
+export function coachNeverDeepSeek(suggestion: RouteSuggestion): boolean {
+  const url = suggestion.targetUrl ?? "";
+  return !/deepseek/i.test(url);
+}

@@ -16,6 +16,14 @@ export {
   resolvePlatformFromInput,
 } from "./hosts";
 export type { ResolveResult } from "./hosts";
+export {
+  COACH_BUBBLE_MAX,
+  COACH_HIDE_MS,
+  coachBottomPx,
+  coachNeverDeepSeek,
+  shouldShowCoach,
+} from "./coach";
+export { buildCoachSuggestion, runCoachYes } from "./coachYes";
 export { route, routeTargetHost } from "./route";
 export { localDateKey, score, wastePenalty, weekWindow } from "./score";
 export { computeStreak } from "./streak";
