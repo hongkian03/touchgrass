@@ -1,7 +1,7 @@
 import platformsData from "../data/platforms.json";
 import { classify } from "./classify";
 import { coachTargetDisplay, type CoachTargetDisplay } from "./coachTargetDisplay";
-import { route } from "./route";
+import { pickEnabledAlternate, route } from "./route";
 import type { Platform, RouteSuggestion } from "./types";
 
 const platforms = platformsData as Platform[];
@@ -10,6 +10,7 @@ export function buildCoachSuggestion(args: {
   draft: string;
   model: string;
   provider: string;
+  enabledPlatforms?: string[];
 }): RouteSuggestion {
   const promptClass = classify(args.draft, "text");
   return route({
@@ -17,6 +18,7 @@ export function buildCoachSuggestion(args: {
     model: args.model,
     provider: args.provider,
     platforms,
+    enabledPlatforms: args.enabledPlatforms ?? [],
   });
 }
 
@@ -31,6 +33,10 @@ export type CoachAutoResult =
       suggestion: RouteSuggestion;
       url: string;
       target: CoachTargetDisplay;
+    }
+  | {
+      kind: "noop";
+      suggestion: RouteSuggestion;
     };
 
 /** Resolve auto action. Does not open tabs yet. */
@@ -39,8 +45,15 @@ export function planCoachAuto(args: {
   model: string;
   provider: string;
   modelLabel?: HTMLElement | null;
+  enabledPlatforms?: string[];
 }): CoachAutoResult {
-  const suggestion = buildCoachSuggestion(args);
+  const enabled = args.enabledPlatforms ?? [];
+  const suggestion = buildCoachSuggestion({
+    draft: args.draft,
+    model: args.model,
+    provider: args.provider,
+    enabledPlatforms: enabled,
+  });
 
   if (suggestion.action === "switch_model" && args.modelLabel) {
     return {
@@ -50,14 +63,22 @@ export function planCoachAuto(args: {
     };
   }
 
-  const url =
-    suggestion.targetUrl ??
-    (suggestion.action === "switch_model"
-      ? "https://chat.mistral.ai/"
-      : "https://gemini.google.com/app");
+  let url =
+    suggestion.action === "open_paste" ? suggestion.targetUrl : undefined;
 
-  if (/deepseek/i.test(url)) {
-    throw new Error("refuse DeepSeek green route");
+  // Same-site switch preferred but no label → open another enabled site.
+  if (!url) {
+    const alt = pickEnabledAlternate({
+      enabledPlatforms: enabled,
+      platforms,
+      excludeProvider: args.provider,
+      preferGemini: classify(args.draft, "text") !== "small_ok",
+    });
+    url = alt?.url;
+  }
+
+  if (!url || /deepseek/i.test(url)) {
+    return { kind: "noop", suggestion };
   }
 
   return {
@@ -97,6 +118,7 @@ export async function runCoachYes(args: {
   model: string;
   provider: string;
   modelLabel?: HTMLElement | null;
+  enabledPlatforms?: string[];
 }): Promise<RouteSuggestion> {
   const plan = planCoachAuto(args);
   if (plan.kind === "switched" && args.modelLabel) {
