@@ -1,0 +1,18 @@
+{
+ "saved_from_job": "2de22272b2eb",
+ "created_at": "2026-10-17T17:29:04+00:00",
+ "finished_at": "2026-10-17T17:29:40+00:00",
+ "log_order": [
+  "repair.jsonl"
+ ],
+ "job_summary": {
+  "success": true,
+  "problems": [],
+  "published": "backend not reachable; wrote backend\\adapters\\chatgpt.json",
+  "version": 3,
+  "droid_subtype": "success",
+  "seconds": 33.83,
+  "credits": 12738.0,
+  "exit_code": 0
+ }
+}

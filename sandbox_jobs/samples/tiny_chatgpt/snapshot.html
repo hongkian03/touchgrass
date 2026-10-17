@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- Tiny hand-written stand-in for a ChatGPT page snapshot, for testing check_adapter.py. Not a real capture. -->
+<html>
+<body>
+  <header>
+    <button data-testid="model-switcher-dropdown-button" aria-label="Model selector"><span>GPT-4o</span></button>
+  </header>
+  <main>
+    <article data-testid="conversation-turn-1">
+      <div data-message-author-role="user"><div class="whitespace-pre-wrap">What is a haiku?</div></div>
+    </article>
+    <article data-testid="conversation-turn-2">
+      <div data-message-author-role="assistant">
+        <div class="markdown prose">A haiku is a three-line poem with a 5-7-5 syllable pattern.</div>
+      </div>
+    </article>
+  </main>
+  <form>
+    <div id="prompt-textarea" contenteditable="true" class="ProseMirror"><p>PROMPTPRINT TEST PROMPT</p></div>
+    <button data-testid="send-button" aria-label="Send prompt">Send</button>
+    <button data-testid="composer-speech-button" aria-label="Start voice mode">Voice</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "request_id": "60b2d992-94ae-5724-9847-6c1996502bf4",
+  "draft_revision": 1,
+  "conversation_id": "synthetic-0",
+  "site": "chatgpt",
+  "current_model_label": "Mock Large",
+  "decision_id": "00000000-0000-4000-8000-000000000001",
+  "mode": "mock",
+  "classification": "small_ok",
+  "action": "abstain",
+  "reason_code": "below_threshold",
+  "target": null,
+  "estimated_savings": null,
+  "message": null,
+  "profile_version": "mock-v1",
+  "policy_version": "shadow-v1",
+  "policy_status": "shadow",
+  "elapsed_ms": 0,
+  "ttl_ms": 30000
+}
