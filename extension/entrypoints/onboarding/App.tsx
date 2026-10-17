@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Pip } from "../../components/Pip";
 import { PlatformGrid } from "../../components/PlatformGrid";
 import { Button } from "../../components/ui/button";
@@ -63,7 +63,6 @@ export function OnboardingApp() {
         return;
       }
 
-      // Not on allowlist — ask Groq if this is an AI product.
       const host = resolved.hostname;
       if (!host) {
         setBarError("Only AI platforms");
@@ -81,7 +80,7 @@ export function OnboardingApp() {
           return;
         }
       } catch {
-        // Groq unavailable — fall through to reject
+        // Groq unavailable. fall through to reject
       }
       setBarError("Only AI platforms");
     })();
@@ -92,12 +91,11 @@ export function OnboardingApp() {
     setError(null);
     const origins = hostsForPlatforms(selected, platforms);
     try {
-      // Only origins listed in optional_host_permissions can be requested.
       if (origins.length > 0) {
         try {
           await browser.permissions.request({ origins });
         } catch {
-          // Custom sites may be outside the optional list — still finish setup.
+          // Custom sites may be outside the optional list. still finish setup.
         }
       }
       const usage = usageSeed as UsageRow[];
@@ -122,36 +120,38 @@ export function OnboardingApp() {
   return (
     <main
       data-testid="onboarding"
-      className="flex min-h-screen items-center justify-center bg-[var(--pale-sky)] p-4 text-foreground font-sans"
+      className="flex min-h-screen items-center justify-center bg-white p-4 font-sans text-foreground"
     >
-      {/* Compact panel — same chrome scale as the popup, not full desktop */}
       <div
         data-testid="onboarding-column"
-        className="relative flex w-full flex-col items-stretch gap-4 overflow-hidden rounded-2xl bg-white px-5 pb-7 pt-6 shadow-sm"
+        className="relative flex w-full flex-col items-stretch gap-3 overflow-hidden rounded-2xl bg-white p-4"
         style={{
           maxWidth: ONBOARDING_MAX_WIDTH,
-          minHeight: step === 1 ? 540 : 560,
+          minHeight: 520,
+          boxShadow: "0 0 0 1px rgba(27, 73, 101, 0.06)",
         }}
       >
         {step === 1 ? (
           <div className="pip-peek pip-peek--panel" aria-hidden="true">
-            <Pip size={108} variant="sticker" pose="hello" tilt={-6} />
+            <Pip size={96} variant="sticker" pose="hello" tilt={-6} />
           </div>
         ) : null}
 
-        <div className={`relative z-10 ${step === 1 ? "pr-28" : "pr-2"}`}>
+        <header className={`relative z-10 ${step === 1 ? "pr-24" : ""}`}>
           <h1
             data-testid="puddle-title"
-            className="m-0 text-3xl font-semibold tracking-tight"
+            className="font-brand m-0 text-3xl font-semibold tracking-tight"
           >
             Puddle
           </h1>
-          {step === 1 ? (
-            <p className="mt-1.5 mb-0 text-sm text-muted-foreground">
-              Which AI tabs should I watch?
-            </p>
-          ) : null}
-        </div>
+          <p className="m-0 mt-1 text-sm text-muted-foreground">
+            {step === 1
+              ? "Which AI tabs should I watch?"
+              : "Almost ready"}
+          </p>
+        </header>
+
+        <StepPills step={step} />
 
         {step === 1 ? (
           <>
@@ -169,7 +169,7 @@ export function OnboardingApp() {
                     setBarError(null);
                   }}
                   placeholder="Search or paste a site URL"
-                  className="bg-white"
+                  className="rounded-xl border-0 bg-[#f4f4f5] shadow-none focus-visible:ring-1"
                 />
               </label>
             </form>
@@ -178,7 +178,7 @@ export function OnboardingApp() {
                 {barError}
               </p>
             ) : null}
-            <div className="relative z-10">
+            <div className="relative z-10 flex-1">
               <PlatformGrid
                 platforms={platforms}
                 selected={selected}
@@ -187,44 +187,158 @@ export function OnboardingApp() {
                 customIds={customSelected}
               />
             </div>
-            <Button
-              type="button"
-              data-testid="continue"
+            <SplitCta
+              testId="continue"
               disabled={!canContinue}
-              size="lg"
-              className="relative z-10 mt-auto min-w-[160px] self-center"
               onClick={() => setStep(2)}
+              className="relative z-10 mt-auto self-stretch"
             >
               Continue
-            </Button>
+            </SplitCta>
           </>
         ) : (
-          <div className="relative z-10 flex flex-1 flex-col">
-            <div className="flex flex-1 items-center justify-between gap-3">
-              <p className="m-0 max-w-[180px] text-lg leading-snug">
+          <div className="relative z-10 flex flex-1 flex-col gap-2.5">
+            <InfoCard wash="#e7f6ff">
+              <p className="m-0 text-sm font-medium leading-snug">
                 Prompts stay on this computer.
               </p>
-              <Pip size={200} variant="sticker" pose="gotit" tilt={4} />
+              <p className="m-0 mt-1 text-[11px] leading-snug text-muted-foreground">
+                Nothing leaves your machine for scoring or coaching.
+              </p>
+            </InfoCard>
+            <InfoCard wash="#e8f6df" testId="onboarding-auto-coach">
+              <p className="m-0 text-sm font-medium leading-snug">
+                Easy asks switch to a lighter model.
+              </p>
+              <p className="m-0 mt-1 text-[11px] leading-snug text-muted-foreground">
+                If another chat site is needed, Puddle opens that tab and pastes
+                your prompt.
+              </p>
+            </InfoCard>
+            <div className="flex flex-1 items-end justify-center py-2">
+              <Pip size={140} variant="sticker" pose="gotit" tilt={4} />
             </div>
-            <div className="mt-6 flex flex-col items-end gap-3">
-              <Button
-                type="button"
-                data-testid="got-it"
-                disabled={busy}
-                size="lg"
-                className="min-w-[180px]"
-                onClick={() => void finish()}
-              >
-                Got it
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(1)}>
-                Back
-              </Button>
-              {error ? <p className="text-sm">{error}</p> : null}
-            </div>
+            <SplitCta
+              testId="got-it"
+              disabled={busy}
+              onClick={() => void finish()}
+              className="self-stretch"
+            >
+              Got it
+            </SplitCta>
+            <button
+              type="button"
+              className="self-center border-0 bg-transparent p-1 text-xs text-muted-foreground"
+              onClick={() => setStep(1)}
+            >
+              Back
+            </button>
+            {error ? <p className="m-0 text-sm">{error}</p> : null}
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+function StepPills({ step }: { step: 1 | 2 }) {
+  return (
+    <div
+      className="flex rounded-full bg-[#f4f4f5] p-1"
+      role="tablist"
+      aria-label="Onboarding steps"
+    >
+      {(
+        [
+          { id: 1 as const, label: "1", name: "Pick tabs" },
+          { id: 2 as const, label: "2", name: "How it works" },
+        ] as const
+      ).map((s) => {
+        const on = step === s.id;
+        return (
+          <div
+            key={s.id}
+            role="tab"
+            aria-selected={on}
+            className={[
+              "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-medium",
+              on
+                ? "bg-white text-foreground shadow-sm"
+                : "bg-transparent text-muted-foreground",
+            ].join(" ")}
+          >
+            <span className="tabular-nums">{s.label}</span>
+            <span className="text-[11px] font-normal">{s.name}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function InfoCard({
+  wash,
+  children,
+  testId,
+}: {
+  wash: string;
+  children: ReactNode;
+  testId?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="rounded-xl px-3 py-2.5"
+      style={{ background: wash }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SplitCta({
+  children,
+  onClick,
+  testId,
+  disabled,
+  className,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  testId: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      data-testid={testId}
+      disabled={disabled}
+      size="lg"
+      className={["relative overflow-hidden pe-12", className]
+        .filter(Boolean)
+        .join(" ")}
+      onClick={onClick}
+    >
+      {children}
+      <span className="pointer-events-none absolute inset-y-0 end-0 flex w-9 items-center justify-center bg-primary-foreground/15">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          className="opacity-60"
+        >
+          <path
+            d="M6 3 L11 8 L6 13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </Button>
   );
 }
