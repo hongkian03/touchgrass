@@ -106,6 +106,17 @@ async def read_body_in_memory(request):
     raise HTTPException(400, "no 'file' field in the form")
 
 
+@app.get("/health")
+async def health():
+    """Extension probes this before live upload/coach calls."""
+    return {
+        "status": "ok",
+        "mode": MODE,
+        "reason": MODE_REASON,
+        "daytona": DAYTONA,
+    }
+
+
 @app.post("/upload")
 async def upload(request: Request):
     if DAYTONA:

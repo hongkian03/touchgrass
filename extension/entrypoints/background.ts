@@ -1,3 +1,4 @@
+import { backendHealth } from "../lib/backendClient";
 import { rebindCoachScripts } from "../lib/coachInject";
 import { groqIsAiSite } from "../lib/groqClassify";
 import { readState } from "../lib/storage";
@@ -28,6 +29,16 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "touchgrass/backend") {
+      const op = String(message.op ?? "");
+      if (op === "health") {
+        void backendHealth().then((result) => sendResponse(result));
+        return true;
+      }
+      sendResponse({ ok: false, error: `unknown_op:${op}` });
+      return true;
+    }
+
     if (message?.type === "puddle/classify-ai-site") {
       const hostname = String(message.hostname ?? "");
       void groqIsAiSite(hostname).then((verdict) => sendResponse(verdict));

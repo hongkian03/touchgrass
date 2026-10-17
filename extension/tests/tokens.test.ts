@@ -115,7 +115,13 @@ describe("Touchgrass branding strings", () => {
     expect(manifest.permissions).toEqual(
       expect.arrayContaining(["storage", "tabs", "scripting"]),
     );
-    expect(manifest.host_permissions ?? []).toEqual(["https://api.groq.com/*"]);
+    expect(manifest.host_permissions ?? []).toEqual(
+      expect.arrayContaining([
+        "https://api.groq.com/*",
+        "http://127.0.0.1:8000/*",
+        "http://localhost:8000/*",
+      ]),
+    );
     expect(manifest.optional_host_permissions ?? []).toEqual(
       expect.arrayContaining([
         "https://chatgpt.com/*",

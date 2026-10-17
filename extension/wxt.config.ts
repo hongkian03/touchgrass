@@ -17,8 +17,12 @@ export default defineConfig({
     name: "Touchgrass",
     description: "Track AI usage. Coach before you waste a prompt.",
     permissions: ["storage", "tabs", "scripting"],
-    // Active at install: Groq only. Site access opted in during onboarding.
-    host_permissions: ["https://api.groq.com/*"],
+    // Active at install: Groq + local PromptPrint API. AI sites opted in at onboarding.
+    host_permissions: [
+      "https://api.groq.com/*",
+      "http://127.0.0.1:8000/*",
+      "http://localhost:8000/*",
+    ],
     optional_host_permissions: OPTIONAL_HOSTS,
     commands: {
       "pip-recap": {
@@ -29,8 +33,12 @@ export default defineConfig({
   },
   hooks: {
     "build:manifestGenerated": (_wxt, manifest) => {
-      // Wipe content-script matches WXT may copy; keep Groq active host only.
-      manifest.host_permissions = ["https://api.groq.com/*"];
+      // Wipe content-script matches WXT may copy; keep Groq + local backend.
+      manifest.host_permissions = [
+        "https://api.groq.com/*",
+        "http://127.0.0.1:8000/*",
+        "http://localhost:8000/*",
+      ];
       manifest.optional_host_permissions = OPTIONAL_HOSTS;
     },
   },
