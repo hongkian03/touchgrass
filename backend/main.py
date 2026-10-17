@@ -8,35 +8,43 @@ Routes:
   GET  /insights/latest        the latest successful analysis's insights.json
   POST /adapter-failure        {site, failed_keys, adapter_version, snapshot_html, ...} -> {job_id}
 
-One Droid job runs at a time in local mode, up to 3 in Daytona mode (EXECUTOR=daytona, one sandbox
-each); the rest wait as "queued". Jobs run in a worker thread so requests keep being served while
-Droid works. In Daytona mode /upload reads the body into memory itself (multipart or raw with
-?filename=, 50 MB cap), since UploadFile spools large files to disk. Run: py -m uvicorn backend.main:app
+Mode (logged at startup; see executor.active_mode): Daytona when DAYTONA_API_KEY is set, local when
+it isn't, replay when DEMO_REPLAY=1; EXECUTOR=local|daytona overrides. One Droid job runs at a time
+in local mode, up to 3 in Daytona mode (one sandbox each); the rest wait as "queued". Jobs run in a
+worker thread so requests keep being served while Droid works. In Daytona mode /upload reads the
+body into memory itself (multipart or raw with ?filename=, 50 MB cap), since UploadFile spools large
+files to disk. Run: py start.py (or py -m uvicorn backend.main:app)
 """
 
 import asyncio
 import email.policy
 import json
-import os
+import logging
 from email.parser import BytesParser
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from starlette.datastructures import UploadFile as StarletteUploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
-from backend.executor import REPO, DaytonaExecutor, get_executor
-from backend.jobs import DONE, JobStore
+# Keys and mode settings, before the executor reads the environment. Values already set win.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+from backend.executor import REPO, active_mode, get_executor, sandbox_mode  # noqa: E402
+from backend.jobs import DONE, JobStore  # noqa: E402
 
 ADAPTERS_DIR = REPO / "backend" / "adapters"
 LOG_POLL_SECONDS = 0.5
 
 app = FastAPI(title="PromptPrint")
 store = JobStore()
+MODE, MODE_REASON = active_mode()
 executor = get_executor()
 # Also true with DEMO_REPLAY=1, so a replayed Daytona demo still takes uploads in memory.
-DAYTONA = isinstance(executor, DaytonaExecutor) or os.environ.get("EXECUTOR", "local").lower() == "daytona"
+DAYTONA = sandbox_mode()[0] == "daytona"
+logging.getLogger("uvicorn.error").info("PromptPrint mode: %s (%s)", MODE, MODE_REASON)
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 # Local mode: one job at a time. Daytona mode: each job has its own sandbox, so up to 3 at once.
 droid_lock = asyncio.Semaphore(3 if DAYTONA else 1)

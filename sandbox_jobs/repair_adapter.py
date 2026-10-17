@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 REPO = Path(__file__).resolve().parents[1]
 load_dotenv(REPO / ".env")
 
-from droid_runner import WORK_DIR, ensure_work_dirs, run_droid_job  # noqa: E402
+from droid_runner import DROID_SAVED_DIR, WORK_DIR, ensure_work_dirs, run_droid_job, saved_droid_job  # noqa: E402
 
 LIB_SRC = Path(__file__).resolve().parent / "lib"
 JOB_DIR = WORK_DIR / "mechanic"
@@ -139,8 +139,17 @@ async def main():
     shutil.copy2(LIB_SRC / "check_adapter.py", JOB_DIR / "lib" / "check_adapter.py")
     broken = json.loads(args.adapter.read_text(encoding="utf-8"))
 
-    job = await run_droid_job("repair", prompt(args.failed, list(broken["selectors"])), timeout=600,
-                              work_dir=JOB_DIR)
+    if DROID_SAVED_DIR:
+        # Smoke test: the adapter Droid wrote in an earlier repair of this page, no Droid call. Its
+        # version is set one above this broken adapter's, as Droid would; our checks below still decide.
+        job = saved_droid_job("repair", {"adapter.json": "output/adapter.json"}, work_dir=JOB_DIR)
+        saved = JOB_DIR / "output" / "adapter.json"
+        if saved.is_file():
+            data = json.loads(saved.read_text(encoding="utf-8"))
+            saved.write_text(json.dumps({**data, "version": broken.get("version", 0) + 1}, indent=2), encoding="utf-8")
+    else:
+        job = await run_droid_job("repair", prompt(args.failed, list(broken["selectors"])), timeout=600,
+                                  work_dir=JOB_DIR)
     print(f"\nDroid: success={job.success} subtype={job.subtype} seconds={job.duration} "
           f"factory_credits={job.factory_credits}")
     if job.error:

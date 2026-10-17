@@ -4,10 +4,12 @@ A raw `copy(document.documentElement.outerHTML)` holds more than the test conver
 sidebar's chat titles, the account's name or email, and data inside <script> tags. This keeps
 the page structure the adapter selectors need and removes:
 - <script>, <style>, <noscript>, <svg>, <img>, <link>, <meta>, <iframe>, <template>
-- the sidebar: <nav>, <aside>, and every link to a conversation (/c/...) or project (/g/...)
+- the sidebar: <nav>, <aside>, and every <a> linking to a conversation (/c/...) or project (/g/...)
+- any attribute, on any tag, whose value holds such a link (href on <area>, data-url, srcset, ...)
 - inline style attributes, and data-* attributes holding account, conversation or user ids
 - anything that looks like an email address (masked)
-Then it reports what it removed and whether any email or conversation link is left.
+Then it reports what it removed, and exits 1 if any email or conversation link is left anywhere,
+including in plain text, which it doesn't rewrite. Callers treat that as "don't use this page".
 
 Usage: py sandbox_jobs/samples/clean_snapshot.py RAW.html CLEAN.html
 """
@@ -22,6 +24,8 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 DROP_TAGS = ["script", "style", "noscript", "svg", "img", "link", "meta", "iframe", "template"]
 SIDEBAR_TAGS = ["nav", "aside"]
 ID_ATTRS = re.compile(r"^data-.*(conversation|account|user|workspace|org|project|session)-?id", re.I)
+# A conversation or project path, relative (/c/<id>) or on any host (https://chatgpt.com/g/<id>).
+CONV_LINK = re.compile(r"(?:https?://[^\s\"'<>/]+|(?<![\w.]))/(?:c|g)/[A-Za-z0-9][\w-]*")
 
 
 def clean(raw_html):
@@ -36,13 +40,19 @@ def clean(raw_html):
     removed["conversation_links"] = len(links)
     for el in links:
         el.decompose()
-    attrs = 0
+    attrs = link_attrs = 0
     for el in soup.find_all(True):
         for k in list(el.attrs):
-            if k == "style" or ID_ATTRS.match(k):
+            value = el.attrs[k]
+            value = " ".join(value) if isinstance(value, list) else str(value)
+            if CONV_LINK.search(value):
+                del el.attrs[k]
+                link_attrs += 1
+            elif k == "style" or ID_ATTRS.match(k):
                 del el.attrs[k]
                 attrs += 1
     removed["attributes"] = attrs
+    removed["link_attributes"] = link_attrs
     html = str(soup)
     html, emails = EMAIL.subn("<email removed>", html)
     removed["emails"] = emails
@@ -53,7 +63,7 @@ def main(src, dst):
     html, removed = clean(Path(src).read_text(encoding="utf-8"))
     Path(dst).write_text(html, encoding="utf-8")
     left_emails = len(EMAIL.findall(html))
-    left_links = len(re.findall(r'href="/(c|g)/', html))
+    left_links = len(CONV_LINK.findall(html))
     print(f"removed: {removed}")
     print(f"size: {len(Path(src).read_text(encoding='utf-8')):,} -> {len(html):,} characters")
     print(f"left: {left_emails} email-like strings, {left_links} conversation links")
