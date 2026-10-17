@@ -5,9 +5,10 @@
 
 GIBS (gibs.earthdata.nasa.gov) is NASA's free imagery service; it needs no key. We read its WMS
 GetCapabilities, pick the best nighttime lights layer that is actually listed (LAYER_PREFERENCE),
-and take its earliest and latest valid dates from the layer's time dimension. For each region we
-download one PNG per date and box, turn each grey pixel back into radiance with the layer's GIBS
-colormap, and average the valid pixels. Growth is (latest - earliest) / earliest.
+and take its time dimension. For each region we average the clearest June–August nights in the
+first full year of data and in the most recent full year, so both ends use the same season. Each
+grey pixel is mapped back to radiance with the layer's GIBS colormap. Growth is
+(latest - earliest) / earliest.
 
 Everything NASA returns is cached in space/cache/ (capabilities, colormap, images, results.json),
 so NASA is called at most once and the demo works offline afterwards. Delete the folder to refetch.
@@ -25,7 +26,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -45,9 +47,11 @@ LAYER_PREFERENCE = [
     "VIIRS_SNPP_DayNightBand_At_Sensor_Radiance",
     "VIIRS_SNPP_DayNightBand",
 ]
-# A date is used only if at least this share of its pixels has data; otherwise the next one in.
+# A night is used only if at least this share of its pixels has data in every box; otherwise it
+# is treated as mostly missing or cloud-filled and dropped from the average.
 MIN_VALID_SHARE = 0.9
-MAX_DATE_STEPS = 10
+# Same months on both ends, so season (snow, vegetation, sun angle) is not compared across years.
+SEASON_MONTHS = (6, 7, 8)  # June–August
 PIXELS_PER_DEGREE = 500  # about 220 m per pixel; VIIRS DNB is about 500 m
 
 # Boxes are (west, south, east, north) in degrees. A region with two boxes is averaged over both,
@@ -170,25 +174,80 @@ def radiance(png, table):
     return out
 
 
-def region_brightness(layer, table, candidates, region, offline):
-    """{date, brightness, pixels, saturated_share, images} for the first candidate date where every
-    box has enough valid pixels."""
+def season_years(valid):
+    """First and most recent full years whose June–August window sits inside the layer's dates."""
+    first, last = (date.fromisoformat(valid[0]), date.fromisoformat(valid[-1]))
+    years = []
+    for year in range(first.year, last.year + 1):
+        start, end = date(year, SEASON_MONTHS[0], 1), date(year, SEASON_MONTHS[-1], 31)
+        if start >= first and end <= last and season_dates(valid, year):
+            years.append(year)
+    if not years:
+        raise RuntimeError(f"no full June–August year in {valid[0]} .. {valid[-1]}")
+    return years[0], years[-1]
+
+
+def season_dates(valid, year):
+    months = {f"{year}-{m:02d}" for m in SEASON_MONTHS}
+    return [d for d in valid if d[:7] in months]
+
+
+def night_brightness(layer, table, day, region, offline):
+    """One night's stats, or None if any box is mostly missing or cloud-filled.
+
+    OfflineMiss is swallowed so a rebuild from only the nights already in space/cache/ can skip
+    dates that were never saved. Other fetch errors propagate.
+    """
     top = max(table.values())
-    for date in candidates[:MAX_DATE_STEPS]:
-        pixels, images, ok = [], [], True
-        for box_id, box in region["boxes"].items():
-            url = image_url(layer, date, box)
-            values = radiance(fetch(url, f"{layer}_{date}_{box_id}.png", offline), table)
-            if np.isfinite(values).mean() < MIN_VALID_SHARE:
-                ok = False
-                break
-            pixels.append(values[np.isfinite(values)])
-            images.append({"box": box_id, "bbox": list(box), "url": url})
-        if ok:
-            allpx = np.concatenate(pixels)
-            return {"date": date, "brightness": round(float(allpx.mean()), 3), "pixels": int(allpx.size),
-                    "saturated_share": round(float((allpx >= top).mean()), 3), "images": images}
-    raise RuntimeError(f"{region['id']}: no date among {candidates[:MAX_DATE_STEPS]} had enough valid pixels")
+    pixels, images, shares = [], [], []
+    for box_id, box in region["boxes"].items():
+        url = image_url(layer, day, box)
+        try:
+            values = radiance(fetch(url, f"{layer}_{day}_{box_id}.png", offline), table)
+        except (OfflineMiss, urllib.error.HTTPError, urllib.error.URLError):
+            return None
+        share = float(np.isfinite(values).mean())
+        if share < MIN_VALID_SHARE:
+            return None
+        pixels.append(values[np.isfinite(values)])
+        images.append({"box": box_id, "bbox": list(box), "url": url})
+        shares.append(share)
+    allpx = np.concatenate(pixels)
+    return {"date": day, "brightness": float(allpx.mean()), "pixels": int(allpx.size),
+            "saturated_share": float((allpx >= top).mean()), "valid_share": float(np.mean(shares)),
+            "images": images}
+
+
+def region_season_brightness(layer, table, valid, year, region, offline):
+    """Mean brightness over the clearest June–August nights of `year` (equal weight per night)."""
+    candidates = season_dates(valid, year)
+    nights = []
+    workers = 1 if offline else 8
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = [pool.submit(night_brightness, layer, table, day, region, offline) for day in candidates]
+        for fut in as_completed(futs):
+            night = fut.result()
+            if night:
+                nights.append(night)
+    if not nights:
+        raise RuntimeError(f"{region['id']}: no clear June–August night in {year} among {len(candidates)} dates")
+    print(f"  {region['id']} {year}: {len(nights)} clear nights of {len(candidates)}", flush=True)
+    # Highest valid-pixel share first; those nights are the least missing / cloud-filled.
+    nights.sort(key=lambda n: (-n["valid_share"], n["date"]))
+    brightness = float(np.mean([n["brightness"] for n in nights]))
+    saturated = float(np.mean([n["saturated_share"] for n in nights]))
+    pixels = int(round(float(np.mean([n["pixels"] for n in nights]))))
+    preview = nights[0]  # clearest night's GIBS URLs, for the API
+    return {
+        "date": f"{year}-{SEASON_MONTHS[0]:02d}/{year}-{SEASON_MONTHS[-1]:02d}",
+        "year": year,
+        "nights": len(nights),
+        "dates": [n["date"] for n in sorted(nights, key=lambda n: n["date"])],
+        "brightness": round(brightness, 3),
+        "pixels": pixels,
+        "saturated_share": round(saturated, 3),
+        "images": preview["images"],
+    }
 
 
 def build(offline=False):
@@ -196,23 +255,28 @@ def build(offline=False):
     layer = pick_layer(layers)
     valid = dates(layers[layer])
     table, units = colormap(layer, offline)
+    early_year, late_year = season_years(valid)
     regions = []
     for region in REGIONS:
-        early = region_brightness(layer, table, valid, region, offline)
-        late = region_brightness(layer, table, valid[::-1], region, offline)
+        early = region_season_brightness(layer, table, valid, early_year, region, offline)
+        late = region_season_brightness(layer, table, valid, late_year, region, offline)
         e, l = early["brightness"], late["brightness"]
         regions.append({"id": region["id"], "name": region["name"], "earliest": early, "latest": late,
                         "growth_pct": round(100 * (l - e) / e, 1) if e > 0 else None})
+    months = ", ".join(date(2000, m, 1).strftime("%B") for m in SEASON_MONTHS)
     return {
         "source": "NASA GIBS (gibs.earthdata.nasa.gov), WMS EPSG:4326 'best'",
         "layer": layer,
         "layer_dates": {"first": valid[0], "last": valid[-1]},
+        "season": {"months": list(SEASON_MONTHS), "first_year": early_year, "last_year": late_year},
         "brightness_units": f"mean radiance, {units}",
         "method": "Grey pixels mapped to radiance with the layer's GIBS colormap (bin midpoints; the "
                   "saturated top bin counts as its lower bound, so saturated_share of the pixels are "
                   "undercounted and growth in bright cores is understated), averaged over pixels with data. "
-                  "growth_pct = (latest - earliest) / earliest * 100. One night per end date, so "
-                  "season, snow, clouds and moonlight differences are not averaged out.",
+                  f"Each end is the mean of the clearest {months} nights in that year (nights with "
+                  f"under {MIN_VALID_SHARE:.0%} valid pixels in any box are skipped as missing or "
+                  "cloud-filled). nights is how many nights went into that average. "
+                  "growth_pct = (latest - earliest) / earliest * 100.",
         "caveat": "Night-light brightness growth is a proxy for data center growth, not a direct "
                   "measurement: homes, roads, warehouses and lighting changes brighten the same boxes.",
         "computed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -272,9 +336,12 @@ def main():
     args = ap.parse_args()
     results = load_or_build(args.offline)
     print(f"layer: {results['layer']} ({results['layer_dates']['first']} to {results['layer_dates']['last']})")
+    season = results.get("season") or {}
+    print(f"season: {season.get('first_year')} to {season.get('last_year')}, months {season.get('months')}")
     for r in results["regions"]:
         e, l = r["earliest"], r["latest"]
-        print(f"{r['name']}: {e['date']} {e['brightness']} -> {l['date']} {l['brightness']}  growth {r['growth_pct']}%")
+        print(f"{r['name']}: {e['date']} ({e['nights']} nights) {e['brightness']} -> "
+              f"{l['date']} ({l['nights']} nights) {l['brightness']}  growth {r['growth_pct']}%")
     return 0
 
 
