@@ -1,56 +1,88 @@
+import type { CSSProperties } from "react";
+
+/** Codex pet atlas: 8 cols × 9 rows (idle = 0, wave = 3). */
+const COLS = 8;
+const ROWS = 9;
+const CELL_W = 192;
+const CELL_H = 208;
+const SHEET = "/pets/muskie/spritesheet.webp";
+/** Ahead-style die-cut sticker (white rim, transparent ground). */
+const STICKER = "/pets/muskie/sticker-hello.png";
+
 type Props = {
   size?: number;
   talking?: boolean;
+  /** sticker = Ahead floating cutout; sprite = animated sheet */
+  variant?: "sticker" | "sprite";
+  /** slight sticker tilt in degrees */
+  tilt?: number;
   className?: string;
 };
 
-/** Codex-like rounded mascot. Fills only from Puddle tokens. */
-export function Pip({ size = 96, talking = false, className }: Props) {
-  const cheekOpacity = talking ? 0.95 : 0.55;
+/** Pip — Muskie sticker / Codex pet. */
+export function Pip({
+  size = 140,
+  talking = false,
+  variant = "sticker",
+  tilt = -6,
+  className,
+}: Props) {
+  if (variant === "sticker") {
+    return (
+      <img
+        src={STICKER}
+        alt="Pip"
+        height={size}
+        data-testid="pip"
+        data-pip-pet="muskie"
+        data-pip-variant="sticker"
+        data-talking={talking ? "true" : "false"}
+        className={["pip-sticker", className].filter(Boolean).join(" ")}
+        style={
+          {
+            height: size,
+            width: "auto",
+            objectFit: "contain",
+            transform: `rotate(${tilt}deg)`,
+            flexShrink: 0,
+            userSelect: "none",
+            pointerEvents: "none",
+          } as CSSProperties
+        }
+      />
+    );
+  }
+
+  const scale = size / CELL_H;
+  const width = Math.round(CELL_W * scale);
+  const height = size;
+  const row = talking ? 3 : 0;
+  const duration = talking ? "0.7s" : "1.2s";
+  const yPct = ROWS === 1 ? 0 : (row / (ROWS - 1)) * 100;
+
+  const style = {
+    display: "inline-block",
+    width,
+    height,
+    backgroundImage: `url(${SHEET})`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize: `${COLS * 100}% ${ROWS * 100}%`,
+    backgroundPosition: `0% ${yPct}%`,
+    "--pip-y": `${yPct}%`,
+    animation: `pip-sprite ${duration} steps(${COLS}) infinite`,
+    flexShrink: 0,
+  } as CSSProperties;
+
   return (
-    <svg
+    <span
       className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 96 96"
       role="img"
       aria-label="Pip"
       data-testid="pip"
-    >
-      {/* field glow */}
-      <ellipse cx="48" cy="88" rx="28" ry="5" fill="var(--pale-sky)" />
-      {/* body */}
-      <ellipse cx="48" cy="52" rx="30" ry="28" fill="var(--pacific-blue)" />
-      {/* belly */}
-      <ellipse cx="48" cy="58" rx="16" ry="14" fill="var(--frozen-water)" />
-      {/* cheeks */}
-      <circle
-        cx="30"
-        cy="52"
-        r="6"
-        fill="var(--fresh-sky)"
-        opacity={cheekOpacity}
-      />
-      <circle
-        cx="66"
-        cy="52"
-        r="6"
-        fill="var(--fresh-sky)"
-        opacity={cheekOpacity}
-      />
-      {/* eyes */}
-      <circle cx="38" cy="46" r="4" fill="var(--yale-blue)" />
-      <circle cx="58" cy="46" r="4" fill="var(--yale-blue)" />
-      <circle cx="39.2" cy="44.8" r="1.2" fill="var(--frozen-water)" />
-      <circle cx="59.2" cy="44.8" r="1.2" fill="var(--frozen-water)" />
-      {/* smile */}
-      <path
-        d="M40 58 Q48 64 56 58"
-        fill="none"
-        stroke="var(--yale-blue)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-    </svg>
+      data-pip-pet="muskie"
+      data-pip-variant="sprite"
+      data-talking={talking ? "true" : "false"}
+      style={style}
+    />
   );
 }

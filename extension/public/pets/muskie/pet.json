@@ -1,0 +1,7 @@
+{
+  "id": "muskie",
+  "displayName": "Muskie",
+  "description": "A tiny Codex-style digital pet inspired by Elon Musk, with a high forehead, swept-back dark hair, compact chibi body, dark jacket, black T-shirt, and recognizable Musk-like facial structure with a restrained skeptical mouth.",
+  "spritesheetPath": "spritesheet.webp",
+  "kind": "person"
+}
