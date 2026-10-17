@@ -24,16 +24,19 @@ Prompt Print tracks your AI usage, shows the energy, water, and CO₂ behind it,
 
 ## Where Droid works
 
-Each job is triggered by a user action or a failure, never by us. Droid will run inside a per-user Daytona sandbox through the Python Droid SDK. **No code calls the Droid SDK yet**: the planned single call site is `run_droid_job` in `sandbox_jobs/droid_runner.py`, which doesn't exist yet. Today, [`sandbox_jobs/run_jobs.py`](sandbox_jobs/run_jobs.py) runs inside the sandbox and calls the stand-ins in its place.
+Each job is triggered by a user action or a failure, never by us. Every Droid call goes through one function: `run_droid_job` in [`sandbox_jobs/droid_runner.py`](sandbox_jobs/droid_runner.py). It opens a Python Droid SDK `Session` in `work/droid`, streams the turn, writes each message to `work/logs/<job>.jsonl`, and returns success, Droid's text and structured output, duration, `factory_credits`, the log path, and any rejected actions. It never raises on a Droid error or timeout. [`sandbox_jobs/try_runner.py`](sandbox_jobs/try_runner.py) tests it: Droid writes and runs a hello script, and an attempt to write into `lib/` is blocked.
+
+Today the Droid jobs run on a laptop with `work/` as the work folder. Inside the Daytona sandbox, which Factory's domains can't reach yet, [`sandbox_jobs/run_jobs.py`](sandbox_jobs/run_jobs.py) runs hand-written stand-ins instead (planned: the same Droid jobs, unchanged).
 
 ### Job 1: The Ingestor
 
 - **Trigger:** the user uploads a chat export. Planned formats: ChatGPT `conversations.json`, Claude export, Gemini Takeout, CSV.
-- **What Droid does (planned):** inspects the export with small scripts (never reading the whole file into the conversation), writes `parser.py` to convert it to our fixed schema, writes a test, and fixes the parser until the test and our validator pass.
-- **Output:** `prompts.jsonl`, one line per exchange, with regenerations as separate exchanges. It never leaves the sandbox.
-- **Independent verification (implemented):** [`sandbox_jobs/lib/validate_prompts.py`](sandbox_jobs/lib/validate_prompts.py) checks every line against [`sandbox_jobs/lib/schema.json`](sandbox_jobs/lib/schema.json) and prints counts (exchanges, per model, regenerations, images). Its errors name the line and field, never the value. `run_jobs.py` runs it after ingest and stops the run unless it passes, whatever the parser claimed.
-- **Stand-in today:** [`sandbox_jobs/standin/parse_chatgpt.py`](sandbox_jobs/standin/parse_chatgpt.py), a hand-written parser for ChatGPT's tree format only. On the fake sample, its output matches the hand-written [`prompts_example.jsonl`](sandbox_jobs/samples/chatgpt_fake/prompts_example.jsonl) exactly.
-- **Planned:** the Droid version in [`sandbox_jobs/ingest.py`](sandbox_jobs/ingest.py) (currently a stub), and a parser cache keyed by export fingerprint.
+- **What Droid does (implemented, laptop):** [`sandbox_jobs/ingest.py`](sandbox_jobs/ingest.py) copies our schema and validator into `work/lib`, then calls `run_droid_job("ingest", PROMPT, output_model=IngestSummary)`. Droid inspects the export by writing small scripts that print its structure (never reading the whole file into the conversation), writes `work/droid/parser.py`, writes and runs `test_parser.py`, and fixes the parser until the tests and our validator pass. It replies with a structured summary: format, exchanges, models, regenerations, images, notes.
+- **Output:** `work/output/prompts.jsonl`, one line per exchange, with regenerations as separate exchanges. In the sandbox flow it never leaves the sandbox.
+- **Independent verification (implemented):** [`sandbox_jobs/lib/validate_prompts.py`](sandbox_jobs/lib/validate_prompts.py) checks every line against [`sandbox_jobs/lib/schema.json`](sandbox_jobs/lib/schema.json) and prints counts (exchanges, per model, regenerations, images). Its errors name the line and field, never the value. After Droid finishes, `ingest.py` runs the validator itself and reports success only if it passes, whatever Droid claimed. The sandbox's `run_jobs.py` does the same after the stand-in parser.
+- **Tested on the fake ChatGPT sample:** our validator passed with 8 exchanges (gpt-4o 5, gpt-4o-mini 2, o3 1), 1 regeneration and 1 image, which matches the sample. Droid's output also matches the hand-written [`prompts_example.jsonl`](sandbox_jobs/samples/chatgpt_fake/prompts_example.jsonl) field for field, except that it spells `provider` as `ChatGPT`. The run took about 4.4 minutes and 10,355 factory_credits.
+- **Stand-in in the sandbox today:** [`sandbox_jobs/standin/parse_chatgpt.py`](sandbox_jobs/standin/parse_chatgpt.py), a hand-written parser for ChatGPT's tree format only.
+- **Planned:** running the Droid Ingestor inside Daytona; a real ChatGPT export and other formats (Claude, Gemini, CSV); a parser cache keyed by export fingerprint (F3).
 
 ### Job 2: The Analyst
 
@@ -56,11 +59,12 @@ Each job is triggered by a user action or a failure, never by us. Droid will run
 
 | Guardrail | Status |
 | --- | --- |
-| Independent validation before anything is used or published | Implemented for Job 1 (the validator gates the analysis). The Job 3 checker is implemented; gating publication on it is planned |
-| Read-only `lib/` folder: our validators and schema, never Droid's | The files exist and are ours. Telling Droid never to edit them is planned with the Droid prompts |
+| Independent validation before anything is used or published | Implemented for Job 1: `ingest.py` and the sandbox's `run_jobs.py` both run our validator and fail unless it passes. The Job 3 checker is implemented; gating publication on it is planned |
+| Path-restricted permissions | Implemented in `droid_runner.py`. Our permission handler approves file writes only inside `work/droid` and `work/output`. It approves commands only if every part (split on `&&` or `;`) is `python`/`py`/`pytest` on files inside `work/`, or a `cd` into `work/`. `python -c`, pipes, redirects and other programs are refused, and the reason is logged. The session runs at autonomy `OFF` so every edit and command reaches the handler; higher levels let Droid run them without asking. Inside Daytona, the sandbox is the outer boundary |
+| Read-only `lib/` and `input/` folders | Implemented: Droid can't write there, the Ingestor prompt says never to modify them, and `droid_runner.py` fingerprints both folders before and after each job and fails the job if either changed. That catches a script Droid wrote and ran that writes there, which the per-action check can't see |
 | `footprint.py` never edited | Planned: hash check after each Analyst run |
-| Path-restricted permissions (Droid may only run Python inside the work folder) | Planned in `droid_runner.py`. Inside Daytona, the sandbox is the boundary |
-| No chat text in logs | Implemented for the stand-ins: log lines hold events and counts, with text fields capped at 200 characters. Redacting Droid's tool results is planned |
+| No chat text in logs | Implemented: `droid_runner.py` logs message types, tool names, file paths, commands and assistant text capped at 200 characters. Tool results are logged by name and error flag only, never their content. The stand-ins log only events and counts |
+| Unattended runs | Implemented: if Droid asks a question, `droid_runner.py` declines it and logs it, and Droid proceeds from the prompt |
 
 ## Where Daytona works
 
@@ -81,10 +85,16 @@ Measured on the fake sample with the stand-ins: sandbox creation about 0.8–0.9
 Requires Python 3.12+. On Windows, use `py` if `python` opens the Microsoft Store.
 
 ```
-py -m pip install daytona python-dotenv jsonschema beautifulsoup4
+py -m pip install daytona droid-sdk python-dotenv jsonschema beautifulsoup4 pytest
 ```
 
-Copy `.env.example` to `.env` and fill in the keys (`DAYTONA_API_KEY` for the sandbox flow).
+Install the droid CLI (`irm https://app.factory.ai/cli/windows | iex` on Windows) and open a new terminal so `droid` is on PATH. Copy `.env.example` to `.env` and fill in the keys: `FACTORY_API_KEY` for Droid, `DAYTONA_API_KEY` for the sandbox flow.
+
+```
+py sandbox_jobs/smoke_droid.py                # Droid answers "OK"
+py sandbox_jobs/try_runner.py                 # job runner: hello job works, write into lib/ is blocked
+py sandbox_jobs/ingest.py                     # Droid Ingestor on the one export in work/input/
+```
 
 ```
 py backend/try_sandbox_flow.py                # full sandbox run on the fake ChatGPT sample
