@@ -51,7 +51,7 @@ describe("findComposer", () => {
 });
 
 describe("content + background wiring", () => {
-  it("content matches all platforms and watches input", () => {
+  it("content matches all platforms and loads adapters", () => {
     const src = readFileSync(
       resolve(__dirname, "../entrypoints/content.ts"),
       "utf8",
@@ -59,6 +59,8 @@ describe("content + background wiring", () => {
     expect(src).toMatch(/allPlatformMatchPatterns/);
     expect(src).toMatch(/findComposer/);
     expect(src).toMatch(/needAnotherPlatform/);
+    expect(src).toMatch(/adapter-get/);
+    expect(src).toMatch(/holdSend/);
   });
 
   it("background rebinds on permission and message", () => {
@@ -68,6 +70,7 @@ describe("content + background wiring", () => {
     );
     expect(src).toMatch(/rebindCoachScripts/);
     expect(src).toMatch(/puddle\/coach-rebind/);
+    expect(src).toMatch(/adapter-repair/);
     expect(src).toMatch(/permissions\.onAdded/);
   });
 

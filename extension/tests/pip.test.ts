@@ -75,13 +75,15 @@ describe("coach bubble + hide", () => {
     expect(overlay).toMatch(/COACH_RIGHT/);
   });
 
-  it("content watches typing with debounce", () => {
+  it("content watches typing and holds Send when paired", () => {
     const content = readFileSync(
       resolve(__dirname, "../entrypoints/content.ts"),
       "utf8",
     );
     expect(content).toMatch(/COACH_TYPE_DEBOUNCE_MS/);
     expect(content).toMatch(/addEventListener\(["']input["']/);
+    expect(content).toMatch(/holdSend/);
+    expect(content).toMatch(/DraftCoach/);
   });
 
   it("hides for 10 minutes after lastCoachAt", () => {
