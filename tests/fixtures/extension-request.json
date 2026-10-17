@@ -1,0 +1,11 @@
+{
+  "request_id": "60b2d992-94ae-5724-9847-6c1996502bf4",
+  "draft_revision": 1,
+  "conversation_id": "synthetic-0",
+  "site": "chatgpt",
+  "current_model_label": "Mock Large",
+  "prompt_text": "Rewrite this email politely: Send me the schedule today.",
+  "opted_in": true,
+  "target_available": true,
+  "mock_fixture_id": "smoke-0"
+}

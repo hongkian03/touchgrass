@@ -1,0 +1,9 @@
+{
+  "version": "shadow-v1",
+  "status": "shadow",
+  "profile_fingerprint": "e51dfb98d6975cc50a8d11aafba47827e957a39435deba1010229931134bf5eb",
+  "threshold": 1.0,
+  "tuning_revision": null,
+  "evidence_revision": null,
+  "source_mode": "mock"
+}
