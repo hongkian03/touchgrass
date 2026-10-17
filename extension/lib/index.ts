@@ -2,6 +2,8 @@ export { classify } from "./classify";
 export { isAllowedAiHost } from "./aiSites";
 export { groqIsAiSite, grokIsAiSite } from "./groqClassify";
 export type { AiSiteVerdict, GrokAiVerdict } from "./groqClassify";
+export { groqRouteQuery, parseRouteQueryResponse } from "./groqRoute";
+export type { GroqRouteResult } from "./groqRoute";
 export {
   canContinueOnboarding,
   coreHostname,
