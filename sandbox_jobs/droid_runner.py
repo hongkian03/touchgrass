@@ -18,8 +18,8 @@ turns in the same session, telling Droid what was refused and to carry on.
 
 Session autonomy defaults to OFF so that every edit and command reaches the handler. At higher
 levels Droid runs those actions on its own and the path check never sees them. File reads never
-reach the handler, so disabled_tools can turn reading tools off entirely (the SDK has no per-path
-setting); see PRIVATE_DATA_DISABLED_TOOLS.
+reach the handler and the SDK can only turn a tool off entirely, so jobs on user data rely on the
+folder Droid works in holding no real data; see PRIVATE_DATA_DISABLED_TOOLS.
 
 Defense in depth: <root>/lib and <root>/input, plus WORK_DIR's input, lib, output and droid when
 Droid works elsewhere, are fingerprinted before and after the turn. A script Droid wrote could
@@ -70,16 +70,17 @@ WORK_DIR = Path(os.environ.get("WORK_DIR", "work")).resolve()
 # Where Droid works on jobs that touch user data: outside WORK_DIR, holding only redacted or fake data.
 DROID_VIEW_DIR = Path(os.environ.get("DROID_VIEW_DIR", WORK_DIR.parent / "droid_view")).resolve()
 SUBDIRS = ["input", "lib", "droid", "output", "logs"]
-# Tools that read file contents, which the permission handler never sees, plus the web tools the
-# jobs don't need. LS and Glob stay: they show file names only.
-# Task (subagents) too: a subagent's permission requests reach the handler in shapes it doesn't
-# expect, and delegating adds nothing for these jobs.
-PRIVATE_DATA_DISABLED_TOOLS = ["Read", "Grep", "FetchUrl", "WebSearch", "Task"]
-# Passing any disabled_tools also drops Droid's file-writing tools from the session (tested: the
-# session then has only LS, Glob and Execute, whichever tools are disabled), so jobs that disable
-# tools must enable the ones they need explicitly. With both set, the session has LS, Glob,
-# ApplyPatch and Execute, so Droid creates and edits files with ApplyPatch.
-PRIVATE_DATA_ENABLED_TOOLS = ["LS", "Glob", "Create", "Edit", "ApplyPatch", "Execute", "TodoWrite"]
+# Tools off for jobs on user data: the web tools, which the jobs don't need, and Task (subagents),
+# whose permission requests reach the handler in shapes it doesn't expect. Read and Grep stay on:
+# with them off, three end-to-end attempts failed (Droid worked blind and fell back on workarounds),
+# so Droid may read, but only ever works in a folder holding redacted or fake data. File reads
+# never reach the permission handler, so an absolute path could still open other files; the
+# privacy test (test_privacy.py) is what checks nothing real reached Droid.
+PRIVATE_DATA_DISABLED_TOOLS = ["FetchUrl", "WebSearch", "Task"]
+# Passing any disabled_tools also drops Droid's file-writing tools from the session (tested: with
+# only Grep, FetchUrl and WebSearch disabled, the session had just Read, LS, Glob and Execute), so
+# jobs that disable tools must enable the ones they need explicitly.
+PRIVATE_DATA_ENABLED_TOOLS = ["Read", "Grep", "LS", "Glob", "Create", "Edit", "ApplyPatch", "Execute", "TodoWrite"]
 PYTHON_EXES = {"python", "python3", "py", "python.exe", "python3.exe", "py.exe"}
 # && and ; (PowerShell's separator) split a command into parts that are each checked; pipes,
 # redirects, subshells and a lone & are not allowed.
@@ -311,13 +312,13 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
                 new_rejections = rejected[rejected_before:]
                 if result.success or not new_rejections or turn == max_followups:
                     break
-                tools = "LS and Glob" if disabled_tools else "LS, Glob, Read"
+                tools = "LS and Glob" if "Read" in (disabled_tools or []) else "LS, Glob, Read"
                 turn_prompt = (
                     "Your last action was refused by the job's permission rules, which ended your turn: "
                     + "; ".join(new_rejections)
                     + f". Continue the original task from where you left off, using only the allowed "
                     f"commands and your file tools ({tools}) for looking at files. Create and change "
-                    "files with your ApplyPatch tool (or Create, if you have it), never with shell "
+                    "files with your file tools (Create, Edit or ApplyPatch), never with shell "
                     "commands. Follow the original instructions about what not to read."
                 )
                 log("followup", turn=turn + 2, reason=new_rejections[-1])

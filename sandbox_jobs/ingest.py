@@ -1,8 +1,8 @@
 """F2/F3: Droid Job 1, the Ingestor, with a parser cache and an Eval 2 mode.
 
 Privacy: Droid never sees the user's text. It works in DROID_VIEW_DIR/ingest, which holds only a redacted
-copy of the export (lib/redact.py: same structure, text replaced by "<text N chars>"), with its
-Read and Grep tools turned off. There it writes parser.py, tests it, and fixes it until our
+copy of the export (lib/redact.py: same structure, text replaced by "<text N chars>"), with web
+tools and subagents turned off. There it writes parser.py, tests it, and fixes it until our
 validator passes on the redacted output. Then we copy parser.py into WORK_DIR and run it on the
 real export ourselves, without Droid, and only report success if our validator passes on the real
 output and its counts match the redacted run.
@@ -90,10 +90,11 @@ real export, where the placeholders are the real text, so it must never depend o
 text fields (never match on placeholder text or on words inside messages), only on structure and
 on the kept token fields.
 
-You have no Read or Grep tool. Use LS or Glob to list files, and look inside files only by
-writing small scripts that print keys, types, counts and the kept token values, never whole text
-fields. Create and change files with your ApplyPatch tool, which can add new files; never create
-or write files with shell commands such as Set-Content, echo or python -c.
+Only look at files inside this job's folders: ../input, ../lib, this folder and ../output. Never
+open, list or search any other path on this machine. You may use LS, Glob, Read and Grep there,
+or write small scripts that print keys, types and counts. Create and change files with your file
+tools (Create, Edit or ApplyPatch); never create or write files with shell commands such as
+Set-Content, echo or python -c.
 You are already in the droid folder, so don't cd anywhere. Run Python with `{PYTHON}` (for example
 `{PYTHON} parser.py`). Only run Python scripts that are in this folder or ../lib, or
 `{PYTHON} -m pytest` on tests in this folder, one command at a time with no pipes or redirects.
