@@ -107,7 +107,7 @@ The judge sees anonymous A/B answers, with deterministic randomized order and or
 
 `evals.run_chalk --help` is offline. Only `--execute` imports the deployment definitions. Decorated Functions intentionally deploy on import of `evals.chalk_functions`; do not import that module from the API or test discovery.
 
-The image packages importable `backend` and `evals` source and copies the chosen profile/policy to fixed remote paths. Gateway credentials are injected via a Chalk secret. The task receives only `request_json`; reference columns bind only to scorers. Nine deterministic scorers expose component counts. Compute ratios from the exported counts rather than treating a generic dashboard average as product accuracy.
+The image packages importable `backend` and `evals` source and mounts the chosen profile/policy in a versioned volume at `/config/prompt-print`. Do not bake these files under `/app`: the Function source volume mounts over that directory and hides image files there. Gateway credentials are injected via a Chalk secret. The task receives only `request_json`; reference columns bind only to scorers. Nine deterministic scorers expose component counts. Compute ratios from the exported counts rather than treating a generic dashboard average as product accuracy.
 
 ```sh
 uv run --extra eval --env-file .env python -m evals.run_chalk --execute --dataset artifacts/live-reviewed.jsonl --split dev --output artifacts/chalk-dev.json --provider-version-tag reviewed-pair-2026-10-17 --max-calls 10 --max-input-tokens 50000
