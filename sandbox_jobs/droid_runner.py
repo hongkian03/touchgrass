@@ -59,7 +59,10 @@ SUBDIRS = ["input", "lib", "droid", "output", "logs"]
 WRITABLE = [WORK_DIR / "droid", WORK_DIR / "output"]
 PROTECTED = [WORK_DIR / "lib", WORK_DIR / "input"]
 PYTHON_EXES = {"python", "python3", "py", "python.exe", "python3.exe", "py.exe"}
-SHELL_META = re.compile(r"[|;<>`]|\$\(|(?<!&)&(?!&)")  # && is split into parts; a lone & is not allowed
+# && and ; (PowerShell's separator) split a command into parts that are each checked; pipes,
+# redirects, subshells and a lone & are not allowed.
+SHELL_META = re.compile(r"[|<>`]|\$\(|(?<!&)&(?!&)")
+SEPARATORS = re.compile(r"&&|;")
 MAX_TEXT = 200
 
 
@@ -106,8 +109,8 @@ def _fingerprint(folder):
 def _check_command(command):
     """Return None if allowed, else the reason it's rejected."""
     if SHELL_META.search(command):
-        return "pipes, redirects and command chaining other than && are not allowed"
-    for part in (p.strip() for p in command.split("&&")):
+        return "pipes, redirects, subshells and background & are not allowed"
+    for part in (p.strip() for p in SEPARATORS.split(command)):
         try:
             tokens = shlex.split(part, posix=os.name != "nt")
         except ValueError:
@@ -183,7 +186,10 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
             for a, reason in denied:
                 rejected.append(f"{_describe(a)} ({reason})")
                 log("permission_rejected", action=_describe(a), reason=reason)
-            return PermissionResponse(selected_option=ToolConfirmationOutcome.CANCEL)
+            return PermissionResponse(
+                selected_option=ToolConfirmationOutcome.CANCEL,
+                comment="Refused by the job's permission rules: " + "; ".join(r for _, r in denied),
+            )
         for a, _ in reasons:
             log("permission_approved", action=_describe(a))
         choice = ToolConfirmationOutcome.PROCEED_ONCE
