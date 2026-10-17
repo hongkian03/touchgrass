@@ -1,7 +1,10 @@
-"""Entry point inside the sandbox: Job 1 (ingest), our validator, then Job 2 (analyze).
+"""Entry point for the jobs: Job 1 (ingest), our validator, then Job 2 (analyze).
 
-For now Jobs 1 and 2 are the hand-written stand-ins in standin/; the Droid jobs replace them
-once droid can run in the sandbox. Everything reads WORK_DIR from the environment.
+Default: the hand-written stand-ins in standin/, which is what the Daytona sandbox runs until droid
+can reach Factory from there. With --droid: the real Droid jobs, ingest.py then analyze.py, each
+with its own independent checks. Everything reads WORK_DIR from the environment.
+
+Usage: py sandbox_jobs/run_jobs.py [--droid]
 
 Writes WORK_DIR/output/prompts.jsonl (stays in the sandbox), WORK_DIR/output/insights.json,
 WORK_DIR/output/summary.json, and WORK_DIR/logs/run.jsonl. Log lines hold events and counts only,
@@ -80,5 +83,20 @@ def main():
     return 0 if summary["ok"] else 1
 
 
+def main_droid():
+    """The real jobs, the way the backend will run them: the Droid Ingestor, then the Droid Analyst.
+
+    Each job script runs our own checks and exits non-zero if they fail, so a failed ingest stops here.
+    """
+    for step in ("ingest.py", "analyze.py"):
+        print(f"\n######## {step} ########", flush=True)
+        code = subprocess.run([sys.executable, str(JOBS_DIR / step)]).returncode
+        if code != 0:
+            print(f"\n{step} failed (exit {code}); stopping.")
+            return code
+    return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    # Default: the stand-ins (what the Daytona sandbox runs until droid can reach Factory from there).
+    sys.exit(main_droid() if "--droid" in sys.argv[1:] else main())
