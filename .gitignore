@@ -30,3 +30,6 @@ sandbox_jobs/samples/chatgpt_snapshot.html
 .env
 .env.*
 !.env.example
+
+# NASA GIBS images and results for "Seen from space" (rebuilt by space/nasa_lights.py)
+space/cache/
