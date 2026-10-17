@@ -44,7 +44,14 @@ export {
   saplingsFromCo2G,
   weekSavings,
 } from "./savings";
-export { route, routeTargetHost } from "./route";
+export {
+  pickEnabledAlternate,
+  platformOpenUrl,
+  providerFromHostname,
+  route,
+  routeTargetHost,
+  urlForPlatformId,
+} from "./route";
 export {
   DASHBOARD_COLUMN_WIDTH,
   DASHBOARD_MAX_WIDTH,
