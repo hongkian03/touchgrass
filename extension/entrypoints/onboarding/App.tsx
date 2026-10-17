@@ -142,7 +142,7 @@ export function OnboardingApp() {
             data-testid="puddle-title"
             className="font-brand m-0 text-3xl font-semibold tracking-tight"
           >
-            Puddle
+            Touchgrass
           </h1>
           <p className="m-0 mt-1 text-sm text-muted-foreground">
             {step === 1
@@ -211,7 +211,7 @@ export function OnboardingApp() {
                 Easy asks switch to a lighter model.
               </p>
               <p className="m-0 mt-1 text-[11px] leading-snug text-muted-foreground">
-                If another chat site is needed, Puddle opens that tab and pastes
+                If another chat site is needed, Touchgrass opens that tab and pastes
                 your prompt.
               </p>
             </InfoCard>

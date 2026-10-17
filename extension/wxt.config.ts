@@ -14,7 +14,7 @@ const OPTIONAL_HOSTS = [
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: "Puddle",
+    name: "Touchgrass",
     description: "Track AI usage. Coach before you waste a prompt.",
     permissions: ["storage", "tabs", "scripting"],
     // Active at install: Groq only. Site access opted in during onboarding.
@@ -23,7 +23,7 @@ export default defineConfig({
     commands: {
       "pip-recap": {
         suggested_key: { default: "Alt+Shift+P" },
-        description: "Open Puddle weekly recap",
+        description: "Open Touchgrass weekly recap",
       },
     },
   },

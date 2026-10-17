@@ -4,7 +4,7 @@ type Props = {
 };
 
 export function PuddleStub({
-  title = "Puddle",
+  title = "Touchgrass",
   subtitle = "Shell ready.",
 }: Props) {
   return (
