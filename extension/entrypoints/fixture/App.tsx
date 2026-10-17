@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import coachCopy from "../../data/coach-copy.json";
+import platformsData from "../../data/platforms.json";
 import { shouldShowCoach } from "../../lib/coach";
 import { mountCoach, unmountCoach } from "../../lib/coachMount";
 import {
@@ -8,8 +9,11 @@ import {
   planCoachAuto,
 } from "../../lib/coachYes";
 import { classify } from "../../lib/classify";
+import { providerFromHostname } from "../../lib/route";
 import { readState, writeState } from "../../lib/storage";
+import type { Platform } from "../../lib/types";
 
+const platforms = platformsData as Platform[];
 const DEFAULT_DRAFT = "what's the weather in Boston";
 const REDIRECT_MS = 1600;
 const SWITCH_HOLD_MS = 1800;
@@ -36,15 +40,36 @@ export function FixtureApp() {
         return;
       }
 
+      const params = new URLSearchParams(location.search);
+      const forceRedirect = params.get("redirect") === "1";
+      if (forceRedirect && modelRef.current) {
+        modelRef.current.removeAttribute("id");
+      }
+
+      const providerParam = params.get("provider");
+      const provider =
+        (providerParam &&
+          platforms.some((p) => p.id === providerParam) &&
+          providerParam) ||
+        providerFromHostname(location.hostname, platforms) ||
+        "chatgpt";
+      const platform = platforms.find((p) => p.id === provider);
+      const modelLabel = forceRedirect ? null : modelRef.current;
+      const model =
+        modelLabel?.textContent?.trim() ||
+        platform?.defaultModel ||
+        "GPT-5";
+
       const plan = planCoachAuto({
         draft: text,
-        model: modelRef.current?.textContent?.trim() || "GPT-5",
-        provider: "chatgpt",
-        modelLabel: modelRef.current,
+        model,
+        provider,
+        modelLabel,
+        enabledPlatforms: state.enabledPlatforms,
       });
 
-      if (plan.kind === "switched" && modelRef.current) {
-        applyCoachSwitch(modelRef.current, plan.model);
+      if (plan.kind === "switched" && modelLabel) {
+        applyCoachSwitch(modelLabel, plan.model);
         setStatus(`Switched to ${plan.model}`);
         mountCoach({
           shadow: false,
@@ -55,6 +80,11 @@ export function FixtureApp() {
         timer = window.setTimeout(() => {
           if (alive) unmountCoach();
         }, SWITCH_HOLD_MS);
+        return;
+      }
+
+      if (plan.kind === "noop") {
+        setStatus("No other enabled platform to open");
         return;
       }
 
