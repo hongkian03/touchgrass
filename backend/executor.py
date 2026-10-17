@@ -104,19 +104,26 @@ class LocalExecutor(JobExecutor):
             "has_insights": self.insights_path(job_id).is_file(),
         }
 
+    def _clean_snapshot(self, snapshot_html, job_id):
+        """Leave the cleaned page in input/snapshot.html. Returns (ok, extra fields for the summary)."""
+        inp = self.work_dir(job_id) / "input"
+        raw = inp / "raw_snapshot.html"
+        raw.write_text(snapshot_html, encoding="utf-8")
+        cleaned = subprocess.run([sys.executable, str(JOBS / "samples" / "clean_snapshot.py"), str(raw),
+                                  str(inp / "snapshot.html")], capture_output=True, text=True)
+        raw.unlink()
+        return cleaned.returncode == 0, {}
+
     def run_repair(self, site, snapshot_html, broken_adapter, failed_keys, job_id,
                    expected_prompt=None, has_responses=True):
         work = self.work_dir(job_id)
         inp = work / "input"
         inp.mkdir(parents=True, exist_ok=True)
-        raw = inp / "raw_snapshot.html"
-        raw.write_text(snapshot_html, encoding="utf-8")
         # Droid reads the page, so it only ever gets the cleaned copy (no sidebar, scripts or emails).
-        cleaned = subprocess.run([sys.executable, str(JOBS / "samples" / "clean_snapshot.py"), str(raw),
-                                  str(inp / "snapshot.html")], capture_output=True, text=True)
-        raw.unlink()
-        if cleaned.returncode != 0:
-            return {"success": False, "error": "snapshot still has an email or conversation link after cleaning"}
+        cleaned, extra = self._clean_snapshot(snapshot_html, job_id)
+        if not cleaned:
+            return {"success": False, **extra,
+                    "error": extra.get("error") or "snapshot still has an email or conversation link after cleaning"}
         (inp / "expected.json").write_text(json.dumps({"prompt": expected_prompt, "model": None,
                                                        "has_responses": has_responses}), encoding="utf-8")
         (inp / "broken_adapter.json").write_text(json.dumps(broken_adapter, indent=2), encoding="utf-8")
@@ -126,7 +133,7 @@ class LocalExecutor(JobExecutor):
             args += ["--failed", *failed_keys]
         code = self._run(args, job_id, timeout=900)
         summary = self._read(work / "mechanic" / "output" / "repair_summary.json") or {}
-        return {**summary, "success": code == 0 and bool(summary.get("success")), "exit_code": code}
+        return {**summary, **extra, "success": code == 0 and bool(summary.get("success")), "exit_code": code}
 
 
 class DaytonaExecutor(LocalExecutor):
@@ -141,9 +148,36 @@ class DaytonaExecutor(LocalExecutor):
       3. the parser.py and analyze.py Droid wrote go into the sandbox, run_real.py runs them on the real
          export with our validator and checks, and only insights.json and summary.json come back
       4. the sandbox is deleted in finally
-    The export and its prompts.jsonl never reach this machine's disk. Repairs still run locally (D6 is
-    planned). Sandbox events go to logs/sandbox.jsonl, which /jobs/{id}/logs streams with Droid's logs.
+    The export and its prompts.jsonl never reach this machine's disk.
+
+    Repairs (D6, same hybrid): the raw page snapshot goes from memory into a short-lived sandbox,
+    clean_snapshot.py runs there, and only the cleaned page comes back (clean_snapshot_in_sandbox).
+    From there it's the local repair: repair_adapter.py has Droid fix the adapter here from the
+    cleaned page, runs our check_adapter.py here, and publishes only if it passes.
+
+    Sandbox events go to logs/sandbox.jsonl, which /jobs/{id}/logs streams with Droid's logs.
     """
+
+    def _sandbox_log(self, job_id):
+        path = self.log_dir(job_id) / "sandbox.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        def on_log(entry):  # events and counts only, never page or chat text
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+        return on_log
+
+    def _clean_snapshot(self, snapshot_html, job_id):
+        from backend.sandbox import clean_snapshot_in_sandbox
+
+        result = asyncio.run(clean_snapshot_in_sandbox(snapshot_html, job_id, on_log=self._sandbox_log(job_id)))
+        extra = {"executor": "daytona", "error": result.get("error"),
+                 **{k: result.get(k) for k in ("sandbox_id", "timings", "audit", "cleaner", "created_at",
+                                               "deleted_at")}}
+        if not result["ok"]:
+            return False, extra
+        (self.work_dir(job_id) / "input" / "snapshot.html").write_text(result["cleaned"], encoding="utf-8")
+        return True, extra
 
     def _droid_step(self, job_id):
         work = self.work_dir(job_id)
@@ -183,13 +217,8 @@ class DaytonaExecutor(LocalExecutor):
         work = self.work_dir(job_id)
         for name in ("input", "lib", "droid", "output", "logs"):
             (work / name).mkdir(parents=True, exist_ok=True)
-        sandbox_log = self.log_dir(job_id) / "sandbox.jsonl"
-
-        def on_log(entry):  # events and counts only; run_real.py never prints chat text
-            with sandbox_log.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
-
-        result = asyncio.run(run_hybrid_jobs(export_bytes, filename, job_id, self._droid_step(job_id), on_log=on_log))
+        result = asyncio.run(run_hybrid_jobs(export_bytes, filename, job_id, self._droid_step(job_id),
+                                             on_log=self._sandbox_log(job_id)))
         droid = result.get("droid") or {}
         ingest, analyze, real = droid.get("ingest") or {}, droid.get("analyze") or {}, result.get("summary") or {}
         if result["ok"]:
