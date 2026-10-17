@@ -1,27 +1,36 @@
 """F1: the shared Droid job runner. Every Droid job goes through run_droid_job.
 
-Runs one Droid turn in WORK_DIR/droid with a path-restricted permission handler, writes every
-message to WORK_DIR/logs/<job_name>.jsonl, prints a short version to stdout, and returns a
-JobResult instead of raising.
+Runs Droid in <root>/droid with a path-restricted permission handler, writes every message to
+WORK_DIR/logs/<job_name>.jsonl, prints a short version to stdout, and returns a JobResult instead
+of raising. <root> is WORK_DIR by default. Jobs that handle user data pass a separate Droid view
+folder as work_dir, holding only redacted or fake data; their own code then runs the scripts
+Droid wrote on the real data in WORK_DIR, without Droid. Logs always go to WORK_DIR/logs, which
+Droid can't write to.
 
 Permission rules (enforced by our handler, not by Droid):
-- file writes (create, edit, patch) only inside WORK_DIR/droid or WORK_DIR/output
-- commands only if every part runs python or pytest on files inside WORK_DIR (no python -c,
-  no pipes or redirects); `cd` into WORK_DIR is allowed between them
+- file writes (create, edit, patch) only inside <root>/droid or <root>/output
+- commands only if every part runs python or pytest on files inside <root> (no python -c,
+  no pipes or redirects); `cd` into <root> is allowed between them
 - everything else is cancelled and logged as rejected
 
 A refused action ends Droid's turn, so after a refusal the runner sends up to max_followups more
 turns in the same session, telling Droid what was refused and to carry on.
 
 Session autonomy defaults to OFF so that every edit and command reaches the handler. At higher
-levels Droid runs those actions on its own and the path check never sees them.
+levels Droid runs those actions on its own and the path check never sees them. File reads never
+reach the handler, so disabled_tools can turn reading tools off entirely (the SDK has no per-path
+setting); see PRIVATE_DATA_DISABLED_TOOLS.
 
-Defense in depth: lib/ and input/ are fingerprinted before and after the turn. A script Droid
-wrote could still write there when we run it, so a changed fingerprint fails the job.
+Defense in depth: <root>/lib and <root>/input, plus WORK_DIR's input, lib, output and droid when
+Droid works elsewhere, are fingerprinted before and after the turn. A script Droid wrote could
+still write there when we run it, so a changed fingerprint fails the job.
 
-Log lines hold the message type, tool names, file paths and commands, and short assistant text.
-Tool results are logged by name and error flag only, never their content, since they can hold
-text read from a user's export.
+Two records of each job:
+- logs/<job>.jsonl: message types, tool names, file paths, commands and assistant text capped at
+  200 characters; tool results by name and error flag only.
+- logs/<job>.transcript.jsonl: everything Droid sent and received in full (tool inputs, tool
+  results, messages, structured output). This is what the privacy test scans: anything Droid saw
+  is in here.
 """
 
 import hashlib
@@ -58,9 +67,19 @@ from droid_sdk import (
 )
 
 WORK_DIR = Path(os.environ.get("WORK_DIR", "work")).resolve()
+# Where Droid works on jobs that touch user data: outside WORK_DIR, holding only redacted or fake data.
+DROID_VIEW_DIR = Path(os.environ.get("DROID_VIEW_DIR", WORK_DIR.parent / "droid_view")).resolve()
 SUBDIRS = ["input", "lib", "droid", "output", "logs"]
-WRITABLE = [WORK_DIR / "droid", WORK_DIR / "output"]
-PROTECTED = [WORK_DIR / "lib", WORK_DIR / "input"]
+# Tools that read file contents, which the permission handler never sees, plus the web tools the
+# jobs don't need. LS and Glob stay: they show file names only.
+# Task (subagents) too: a subagent's permission requests reach the handler in shapes it doesn't
+# expect, and delegating adds nothing for these jobs.
+PRIVATE_DATA_DISABLED_TOOLS = ["Read", "Grep", "FetchUrl", "WebSearch", "Task"]
+# Passing any disabled_tools also drops Droid's file-writing tools from the session (tested: the
+# session then has only LS, Glob and Execute, whichever tools are disabled), so jobs that disable
+# tools must enable the ones they need explicitly. With both set, the session has LS, Glob,
+# ApplyPatch and Execute, so Droid creates and edits files with ApplyPatch.
+PRIVATE_DATA_ENABLED_TOOLS = ["LS", "Glob", "Create", "Edit", "ApplyPatch", "Execute", "TodoWrite"]
 PYTHON_EXES = {"python", "python3", "py", "python.exe", "python3.exe", "py.exe"}
 # && and ; (PowerShell's separator) split a command into parts that are each checked; pipes,
 # redirects, subshells and a lone & are not allowed.
@@ -80,11 +99,12 @@ class JobResult:
     log_path: Path
     rejected: list[str] = field(default_factory=list)
     error: str | None = None
+    transcript_path: Path | None = None
 
 
-def ensure_work_dirs():
+def ensure_work_dirs(root=None):
     for name in SUBDIRS:
-        (WORK_DIR / name).mkdir(parents=True, exist_ok=True)
+        (Path(root or WORK_DIR) / name).mkdir(parents=True, exist_ok=True)
 
 
 def _short(text, limit=MAX_TEXT):
@@ -92,16 +112,18 @@ def _short(text, limit=MAX_TEXT):
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _inside(path, roots):
+def _inside(path, roots, root=None):
     p = Path(path)
     if not p.is_absolute():
-        p = WORK_DIR / "droid" / p  # Droid's cwd
+        p = Path(root or WORK_DIR) / "droid" / p  # Droid's cwd
     p = p.resolve()
-    return any(p == root or p.is_relative_to(root) for root in roots)
+    return any(p == r or p.is_relative_to(r) for r in roots)
 
 
 def _fingerprint(folder):
     h = hashlib.sha256()
+    if not folder.exists():
+        return h.hexdigest()
     for p in sorted(folder.rglob("*")):
         # Importing a module from lib/ makes Python write __pycache__ there; that isn't a change to our files.
         if "__pycache__" in p.parts or p.suffix == ".pyc":
@@ -112,8 +134,9 @@ def _fingerprint(folder):
     return h.hexdigest()
 
 
-def _check_command(command):
+def _check_command(command, root=None):
     """Return None if allowed, else the reason it's rejected."""
+    root = Path(root or WORK_DIR)
     if SHELL_META.search(command):
         return "pipes, redirects, subshells and background & are not allowed"
     for part in (p.strip() for p in SEPARATORS.split(command)):
@@ -126,13 +149,13 @@ def _check_command(command):
             continue
         exe = Path(tokens[0]).name.lower()
         if exe in ("cd", "set-location") and len(tokens) == 2:
-            if not _inside(tokens[1], [WORK_DIR]):
-                return f"cd outside WORK_DIR: {tokens[1]}"
+            if not _inside(tokens[1], [root], root):
+                return f"cd outside the work folder: {tokens[1]}"
             continue
         args = tokens[1:]
         if exe in PYTHON_EXES:
             if "-c" in args:
-                return "python -c is not allowed; write a script inside WORK_DIR instead"
+                return "python -c is not allowed; write a script in the droid folder instead"
             if args[:2] == ["-m", "pytest"]:
                 args = args[2:]
             elif args[:1] == ["-m"]:
@@ -143,22 +166,24 @@ def _check_command(command):
             return f"only python or pytest may run, not {tokens[0]!r}"
         files = [a for a in args if not a.startswith("-")]
         for a in files:
-            if not _inside(a, [WORK_DIR]):
-                return f"file outside WORK_DIR: {a}"
+            if not _inside(a, [root], root):
+                return f"file outside the work folder: {a}"
     return None
 
 
-def _check_action(action):
+def _check_action(action, root=None):
     """Return None if allowed, else the reason it's rejected."""
+    root = Path(root or WORK_DIR)
     if isinstance(action, (CreateFile, EditAction)):
         paths = [action.file_path]
     elif isinstance(action, ApplyPatchAction):
         paths = [action.file_path] + [p for f in (action.files or ()) for p in (f.file_path, f.move_to) if p]
     elif isinstance(action, ExecuteAction):
-        return _check_command(action.full_command or action.command)
+        return _check_command(action.full_command or action.command, root)
     else:
         return f"{type(action).__name__} is not allowed"
-    outside = list(dict.fromkeys(p for p in paths if not _inside(p, WRITABLE)))
+    writable = [root / "droid", root / "output"]
+    outside = list(dict.fromkeys(p for p in paths if not _inside(p, writable, root)))
     return f"write outside droid/ or output/: {', '.join(outside)}" if outside else None
 
 
@@ -170,10 +195,21 @@ def _describe(action):
     return type(action).__name__
 
 
+def _jsonable(value):
+    try:
+        json.dumps(value)
+        return value
+    except TypeError:
+        return str(value)
+
+
 async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autonomy=Autonomy.OFF,
-                        max_followups=2) -> JobResult:
-    ensure_work_dirs()
+                        max_followups=2, work_dir=None, disabled_tools=None, enabled_tools=None) -> JobResult:
+    root = Path(work_dir).resolve() if work_dir else WORK_DIR
+    ensure_work_dirs(root)
+    ensure_work_dirs(WORK_DIR)
     log_path = WORK_DIR / "logs" / f"{job_name}.jsonl"
+    transcript_path = WORK_DIR / "logs" / f"{job_name}.transcript.jsonl"
     rejected = []
     start = time.monotonic()
 
@@ -185,8 +221,21 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
         detail = " ".join(f"{k}={v}" for k, v in line.items() if k not in ("ts", "job", "type"))
         print(f"[{job_name}] {kind} {detail}".rstrip(), flush=True)
 
+    def record(kind, **fields):
+        line = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), "job": job_name,
+                "type": kind, **{k: _jsonable(v) for k, v in fields.items()}}
+        with transcript_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+    def check(action):
+        # The handler must never raise (an exception here stalls Droid): anything we can't check is refused.
+        try:
+            return _check_action(action, root)
+        except Exception as e:
+            return f"could not check {type(action).__name__} ({type(e).__name__})"
+
     def on_permission(request: PermissionRequest) -> PermissionResponse:
-        reasons = [(a, _check_action(a)) for a in request.actions]
+        reasons = [(a, check(a)) for a in request.actions]
         offered = {o.value for o in request.options}
         denied = [(a, r) for a, r in reasons if r]
         if denied:
@@ -208,14 +257,20 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
     def on_question(request: QuestionRequest) -> QuestionResponse:
         # Jobs run unattended: nobody can answer, so decline and let Droid decide from the prompt.
         log("question_declined", questions=" | ".join(q.question for q in request.questions))
+        record("question", questions=[q.question for q in request.questions])
         return request.cancel()
 
-    before = {p.name: _fingerprint(p) for p in PROTECTED}
-    log("job_start", cwd=str(WORK_DIR / "droid"), autonomy=autonomy.value, timeout=timeout)
+    protected = [root / "lib", root / "input"]
+    if root != WORK_DIR:
+        protected += [WORK_DIR / name for name in ("input", "lib", "output", "droid")]
+    before = {p: _fingerprint(p) for p in protected}
+    log("job_start", cwd=str(root / "droid"), autonomy=autonomy.value, timeout=timeout,
+        disabled_tools=",".join(disabled_tools or []))
+    record("prompt", text=prompt)
     session = Session(
-        cwd=WORK_DIR / "droid",
+        cwd=root / "droid",
         model="auto",
-        config=SessionConfig(autonomy=autonomy),
+        config=SessionConfig(autonomy=autonomy, disabled_tools=disabled_tools, enabled_tools=enabled_tools),
         interactions=InteractionHandlers(on_permission=on_permission, on_question=on_question),
     )
     result = None
@@ -233,39 +288,47 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
                 async for event in stream:
                     if isinstance(event, AssistantMessage) and event.text:
                         log("assistant", text=event.text)
+                        record("assistant", text=event.text)
                     elif isinstance(event, ToolCall):
                         inp = event.input or {}
                         target = inp.get("file_path") or inp.get("command") or inp.get("path") or ""
                         log("tool_call", tool=event.name, target=str(target))
+                        record("tool_call", tool=event.name, input=inp)
                     elif isinstance(event, ToolResult):
                         log("tool_result", tool=event.tool_name, is_error=event.is_error)
+                        record("tool_result", tool=event.tool_name, is_error=event.is_error, content=event.content)
                     elif isinstance(event, ErrorEvent):
                         log("error", text=event.message)
+                        record("error", text=event.message)
                 result = stream.result
                 credits_now = result.usage.factory_credits if result.usage else None
                 turn_credits.append(credits_now)
                 log("turn_end", turn=turn + 1, success=result.success, subtype=result.subtype,
                     factory_credits=credits_now)
+                record("turn_end", text=result.text, output=result.output)
                 # A refused action ends Droid's turn. Tell it why and let it carry on in the same
                 # session (it keeps its context), a limited number of times.
                 new_rejections = rejected[rejected_before:]
                 if result.success or not new_rejections or turn == max_followups:
                     break
+                tools = "LS and Glob" if disabled_tools else "LS, Glob, Read"
                 turn_prompt = (
                     "Your last action was refused by the job's permission rules, which ended your turn: "
                     + "; ".join(new_rejections)
-                    + ". Continue the original task from where you left off, using only the allowed "
-                    "commands and your file tools (LS, Glob, Read) for looking at files. Follow the "
-                    "original instructions about what not to read."
+                    + f". Continue the original task from where you left off, using only the allowed "
+                    f"commands and your file tools ({tools}) for looking at files. Create and change "
+                    "files with your ApplyPatch tool (or Create, if you have it), never with shell "
+                    "commands. Follow the original instructions about what not to read."
                 )
                 log("followup", turn=turn + 2, reason=new_rejections[-1])
+                record("prompt", text=turn_prompt)
     except RunTimeoutError:
         error = f"timed out after {timeout}s"
     except DroidError as e:
         error = f"{type(e).__name__}: {e}"
 
     duration = round(time.monotonic() - start, 2)
-    changed = [name for name, digest in before.items() if _fingerprint(WORK_DIR / name) != digest]
+    changed = [str(p) for p, digest in before.items() if _fingerprint(p) != digest]
     if changed:
         error = f"protected folder changed during the job: {', '.join(changed)}"
 
@@ -282,6 +345,7 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
         log_path=log_path,
         rejected=rejected,
         error=error,
+        transcript_path=transcript_path,
     )
     log("job_end", success=job.success, subtype=job.subtype, seconds=duration, turns=len(turn_credits),
         factory_credits=credits, rejected=len(rejected), error=error)

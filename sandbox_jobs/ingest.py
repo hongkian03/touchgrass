@@ -1,8 +1,11 @@
 """F2/F3: Droid Job 1, the Ingestor, with a parser cache and an Eval 2 mode.
 
-Droid inspects the chat export in WORK_DIR/input, writes WORK_DIR/droid/parser.py to turn it into
-WORK_DIR/output/prompts.jsonl, tests it, and fixes it until our validator passes. Afterwards we run
-the validator ourselves and only report success if it passes, whatever Droid claimed.
+Privacy: Droid never sees the user's text. It works in DROID_VIEW_DIR/ingest, which holds only a redacted
+copy of the export (lib/redact.py: same structure, text replaced by "<text N chars>"), with its
+Read and Grep tools turned off. There it writes parser.py, tests it, and fixes it until our
+validator passes on the redacted output. Then we copy parser.py into WORK_DIR and run it on the
+real export ourselves, without Droid, and only report success if our validator passes on the real
+output and its counts match the redacted run.
 
 Cache: the export's structure fingerprint (lib/fingerprint.py, no values) keys a cache of
 Droid-written parsers. On a hit we run the cached parser.py and our validator, and skip Droid if
@@ -35,11 +38,21 @@ from pydantic import BaseModel
 REPO = Path(__file__).resolve().parents[1]
 load_dotenv(REPO / ".env")
 
-from droid_runner import WORK_DIR, ensure_work_dirs, run_droid_job  # noqa: E402
+from droid_runner import (  # noqa: E402
+    DROID_VIEW_DIR,
+    PRIVATE_DATA_DISABLED_TOOLS,
+    PRIVATE_DATA_ENABLED_TOOLS,
+    WORK_DIR,
+    ensure_work_dirs,
+    run_droid_job,
+)
+
+VIEW = DROID_VIEW_DIR / "ingest"  # the only folder Droid works in for this job
 
 LIB_SRC = Path(__file__).resolve().parent / "lib"
 sys.path.insert(0, str(LIB_SRC))
 from fingerprint import fingerprint  # noqa: E402
+from redact import redact_file  # noqa: E402
 
 PARSER_CACHE = Path(os.environ.get("PARSER_CACHE", REPO / "parser_cache"))
 EVAL2_CSV = REPO / "evals" / "eval2_runs.csv"
@@ -68,7 +81,19 @@ Folders (relative to your current directory, which is the droid folder):
 - . (this folder) is where you write your code.
 - ../output/ is where your parser writes its result.
 
-To list, search or read files, use your file tools (LS, Glob, Read), never shell commands.
+The export is a REDACTED copy of the user's real export, for privacy. It has exactly the real
+structure (same keys, nesting, list lengths and value types), but every text value has been
+replaced by a placeholder like "<text 42 chars>". Kept as-is: numbers, booleans, nulls, keys,
+timestamps, empty strings, and fields whose values are all short single tokens (roles such as
+"user", content types, model names, IDs that link messages). Your parser.py will later run on the
+real export, where the placeholders are the real text, so it must never depend on the content of
+text fields (never match on placeholder text or on words inside messages), only on structure and
+on the kept token fields.
+
+You have no Read or Grep tool. Use LS or Glob to list files, and look inside files only by
+writing small scripts that print keys, types, counts and the kept token values, never whole text
+fields. Create and change files with your ApplyPatch tool, which can add new files; never create
+or write files with shell commands such as Set-Content, echo or python -c.
 You are already in the droid folder, so don't cd anywhere. Run Python with `{PYTHON}` (for example
 `{PYTHON} parser.py`). Only run Python scripts that are in this folder or ../lib, or
 `{PYTHON} -m pytest` on tests in this folder, one command at a time with no pipes or redirects.
@@ -99,9 +124,9 @@ Don't ask questions; nobody is there to answer. Decide from these instructions.
 """
 
 
-def copy_lib():
-    for name in ("schema.json", "validate_prompts.py", "fingerprint.py"):
-        shutil.copy2(LIB_SRC / name, WORK_DIR / "lib" / name)
+def copy_lib(root=WORK_DIR, names=("schema.json", "validate_prompts.py", "fingerprint.py", "redact.py")):
+    for name in names:
+        shutil.copy2(LIB_SRC / name, root / "lib" / name)
 
 
 def clear(folder):
@@ -109,12 +134,42 @@ def clear(folder):
         shutil.rmtree(p) if p.is_dir() else p.unlink()
 
 
-def validate():
+def validate(root=WORK_DIR):
     proc = subprocess.run(
-        [sys.executable, str(WORK_DIR / "lib" / "validate_prompts.py"), str(WORK_DIR / "output" / "prompts.jsonl")],
+        [sys.executable, str(root / "lib" / "validate_prompts.py"), str(root / "output" / "prompts.jsonl")],
         capture_output=True, text=True,
     )
     return proc.returncode == 0, proc.stdout
+
+
+def counts(prompts):
+    rows = [json.loads(line) for line in prompts.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return {"exchanges": len(rows), "regenerations": sum(r["regenerated"] for r in rows),
+            "images": sum(r["kind"] == "image" for r in rows)}
+
+
+def run_parser_on_real():
+    """Run WORK_DIR/droid/parser.py on the real export, without Droid. Returns (ok, why)."""
+    try:
+        proc = subprocess.run([sys.executable, "parser.py"], cwd=WORK_DIR / "droid",
+                              capture_output=True, text=True, timeout=CACHED_PARSER_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return False, "parser timed out"
+    if proc.returncode != 0:
+        return False, f"parser exited {proc.returncode}"
+    return True, "ran"
+
+
+def build_droid_view(export):
+    """A fresh Droid view holding only the redacted export and our schema and validator."""
+    ensure_work_dirs(VIEW)
+    for name in ("input", "lib", "droid", "output"):
+        clear(VIEW / name)
+    stats = redact_file(export, VIEW / "input" / f"export{export.suffix.lower()}")
+    copy_lib(VIEW, ("schema.json", "validate_prompts.py"))
+    print(f"redacted copy for Droid: replaced {stats['replaced']} strings, kept {stats['kept']} "
+          f"(fields kept: {len(stats['kept_fields'])})")
+    return stats
 
 
 def normalize_and_count(prompts):
@@ -151,13 +206,9 @@ def try_cache(fp):
         return False, "no cached parser"
     clear(WORK_DIR / "droid")
     shutil.copy2(cached, WORK_DIR / "droid" / "parser.py")
-    try:
-        proc = subprocess.run([sys.executable, "parser.py"], cwd=WORK_DIR / "droid",
-                              capture_output=True, text=True, timeout=CACHED_PARSER_TIMEOUT)
-    except subprocess.TimeoutExpired:
-        return False, "cached parser timed out"
-    if proc.returncode != 0:
-        return False, f"cached parser exited {proc.returncode}"
+    ran, why = run_parser_on_real()
+    if not ran:
+        return False, f"cached {why}"
     passed, _ = validate()
     return passed, "validator passed" if passed else "validator failed on cached parser output"
 
@@ -185,7 +236,10 @@ async def ingest_once(no_cache=False):
         prompts.unlink(missing_ok=True)
 
     clear(WORK_DIR / "droid")
-    job = await run_droid_job("ingest", PROMPT, output_model=IngestSummary, timeout=900)
+    build_droid_view(exports[0])
+    job = await run_droid_job("ingest", PROMPT, output_model=IngestSummary, timeout=900,
+                              work_dir=VIEW, disabled_tools=PRIVATE_DATA_DISABLED_TOOLS,
+                              enabled_tools=PRIVATE_DATA_ENABLED_TOOLS)
     print(f"\nDroid: success={job.success} subtype={job.subtype} seconds={job.duration} "
           f"factory_credits={job.factory_credits}")
     if job.error:
@@ -195,10 +249,24 @@ async def ingest_once(no_cache=False):
     print(f"Droid's summary: {job.structured}")
     result.update(credits=job.factory_credits or 0.0, droid_error=job.error, **count_attempts(job.log_path))
 
-    passed, report = validate() if prompts.exists() else (False, "no prompts.jsonl\n")
-    print("\nOur validator (run by ingest.py, not Droid):")
-    print(report.rstrip())
-    result["success"] = job.success and passed
+    view_prompts = VIEW / "output" / "prompts.jsonl"
+    view_passed, _ = validate(VIEW) if view_prompts.exists() else (False, "")
+    print(f"\nOur validator on Droid's redacted output: {'PASS' if view_passed else 'FAIL'}")
+
+    # Now the real export, without Droid: our copy of its parser, our validator.
+    droid_parser = VIEW / "droid" / "parser.py"
+    passed, report, why = False, "", "no parser.py from Droid"
+    if job.success and view_passed and droid_parser.is_file():
+        shutil.copy2(droid_parser, WORK_DIR / "droid" / "parser.py")
+        ran, why = run_parser_on_real()
+        if ran and prompts.exists():
+            passed, report = validate()
+    print("\nOur validator on the real export (parser run by ingest.py, not Droid):")
+    print(report.rstrip() or f"not run ({why})")
+    same = passed and counts(prompts) == counts(view_prompts)
+    if passed and not same:
+        print(f"counts differ: real {counts(prompts)} vs redacted {counts(view_prompts)}")
+    result["success"] = job.success and view_passed and passed and same
     if result["success"]:
         result.update(normalize_and_count(prompts))
         parser = WORK_DIR / "droid" / "parser.py"

@@ -87,7 +87,11 @@ def main_droid():
     """The real jobs, the way the backend will run them: the Droid Ingestor, then the Droid Analyst.
 
     Each job script runs our own checks and exits non-zero if they fail, so a failed ingest stops here.
+    Old logs and transcripts for both jobs are removed first, so they describe this run only.
     """
+    for job in ("ingest", "analyze"):
+        for suffix in (".jsonl", ".transcript.jsonl"):
+            (LOGS / f"{job}{suffix}").unlink(missing_ok=True)
     for step in ("ingest.py", "analyze.py"):
         print(f"\n######## {step} ########", flush=True)
         code = subprocess.run([sys.executable, str(JOBS_DIR / step)]).returncode

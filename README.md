@@ -68,10 +68,32 @@ Today the Droid jobs run on a laptop with `work/` as the work folder. Inside the
 | Path-restricted permissions | Implemented in `droid_runner.py`. Our permission handler approves file writes only inside `work/droid` and `work/output`. It approves commands only if every part (split on `&&` or `;`) is `python`/`py`/`pytest` on files inside `work/`, or a `cd` into `work/`. `python -c`, pipes, redirects and other programs are refused, and the reason is logged. The session runs at autonomy `OFF` so every edit and command reaches the handler; higher levels let Droid run them without asking. Inside Daytona, the sandbox is the outer boundary |
 | Read-only `lib/` and `input/` folders | Implemented: Droid can't write there, the Ingestor prompt says never to modify them, and `droid_runner.py` fingerprints both folders before and after each job and fails the job if either changed. That catches a script Droid wrote and ran that writes there, which the per-action check can't see |
 | `footprint.py` never edited, and the only source of numbers | Implemented: SHA-256 checked after each Analyst run, a scan for hard-coded energy, water and carbon constants in Droid's script, and a doubling test showing the savings follow `footprint.py` |
-| Droid reading private data | Known gap: Droid's Read tool doesn't go through the permission handler, so the prompt's "read the data only from your scripts" can't be enforced. In the F4 run Droid read the whole `prompts.jsonl` into its conversation. On real data, that text goes to the model provider |
+| Droid never sees real chat text | Built, end-to-end Droid run not yet passing: see [Privacy](#privacy) |
 | No chat text in logs | Implemented: `droid_runner.py` logs message types, tool names, file paths, commands and assistant text capped at 200 characters. Tool results are logged by name and error flag only, never their content. The stand-ins log only events and counts |
 | Unattended runs | Implemented: if Droid asks a question, `droid_runner.py` declines it and logs it, and Droid proceeds from the prompt. A refused action ends Droid's turn, so the runner sends up to 2 follow-up turns in the same session saying what was refused, and Droid carries on |
 | Scripts Droid runs | Known gap: a Python script Droid wrote can do anything the user running it can. The `lib/` and `input/` fingerprint check catches writes there after the fact; the sandbox is the real boundary |
+
+### Privacy
+
+**Goal:** Droid never sees a user's real chat text. Droid sends what it reads to a model provider, so anything it sees leaves the machine.
+
+**Status: built and tested without Droid; the end-to-end Droid run has not passed yet.** The results quoted for Jobs 1 and 2 above came from earlier runs, before this change, where Droid worked directly on the fake samples.
+
+How it works (all in `sandbox_jobs/`):
+
+- **Droid works only in its own folder,** `droid_view/ingest` or `droid_view/analyze`, outside `work/`. Its permission rules only allow writes and Python commands inside that folder. Our code then copies the script Droid wrote into `work/` and runs it on the real data itself, without Droid.
+- **Ingestor:** Droid gets a redacted copy of the export ([`lib/redact.py`](sandbox_jobs/lib/redact.py)). The copy has the same structure, and therefore the same fingerprint, but every text value is replaced by `"<text N chars>"`. Kept: numbers, booleans, keys, timestamps, empty strings, and fields whose every value is a short single token (roles, content types, model names, IDs that link messages). Anything with a space, `@` or `://` is replaced. Tested on all four samples: the fingerprint was unchanged, no marker word survived, and the existing parsers produced identical counts, kinds, models and timestamps on the redacted copy and the real file. `ingest.py` then runs Droid's `parser.py` on the real export, runs our validator, and requires the counts to match the redacted run.
+- **Analyst:** Droid gets our schemas, `footprint.py`, the fake sample's `prompts.jsonl` and an `aggregates.json` of the real data (counts per model, day and kind, regenerations, prompt and response lengths). It never gets the real prompts. `analyze.py` runs Droid's script on the real `prompts.jsonl` and applies its four checks there.
+- **Reading tools off:** for these jobs the runner turns off Read, Grep, FetchUrl, WebSearch and Task (subagents). File reads never reach the permission handler, and the SDK can only turn a tool off entirely. We found that turning off any tool also drops Droid's file-writing tools, so the runner lists the tools it needs (LS, Glob, ApplyPatch, Execute and so on) explicitly.
+- **Full transcripts:** `work/logs/<job>.transcript.jsonl` records everything Droid sent and received: prompts, messages, tool inputs, tool results and its final output.
+- **Privacy test:** [`test_privacy.py`](sandbox_jobs/test_privacy.py). The planted sample contains marker words ([`markers.txt`](sandbox_jobs/samples/chatgpt_planted/markers.txt)) that appear nowhere in the data Droid may see. After an end-to-end run, the test first checks that the markers are in the real data (a control). It then fails if any marker appears in Droid's logs, transcripts or folders, or if Droid used Read or Grep. Run it with `py -m pytest sandbox_jobs/test_privacy.py`.
+
+**Why the end-to-end run hasn't passed:** without Read, Droid has to work through scripts and a single patch tool. In three attempts it fell back on workarounds that failed. First it wrote files with shell commands, which our rules refuse. Then it had no file-writing tools at all, before the explicit tool list fixed that. Then it delegated to subagents, whose permission requests crashed our handler and timed the job out. The handler now refuses anything it can't check instead of crashing, and subagents are off. These attempts cost at least 62,000 factory_credits; the third timed out without reporting its cost.
+
+**Limits, stated plainly:**
+- Nothing stops a Python script Droid writes, or a file tool given an absolute path, from opening other files on this laptop. The separate folder, the prompt and the privacy test reduce and detect that; they don't prevent it. Inside a Daytona sandbox that only holds the redacted data, the sandbox would prevent it.
+- Redaction keeps fields whose every value is one short word, so a one-word title in every conversation would get through. Lengths of replaced text are visible.
+- `aggregates.json` and the kept token fields reveal model names, dates and volumes. They reveal no text.
 
 ## Where Daytona works
 

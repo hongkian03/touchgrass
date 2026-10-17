@@ -1,0 +1,6 @@
+# Marker words planted in chatgpt_planted/conversations.json (prompts, a response, and titles).
+# They never appear in chatgpt_fake, the fake data Droid is allowed to see, so
+# sandbox_jobs/test_privacy.py fails if any of them shows up in what Droid saw or wrote.
+ZEBRAQUARTZ
+MANGOVELVET
+PLUMTANGERINE
