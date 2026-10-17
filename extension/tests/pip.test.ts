@@ -62,7 +62,17 @@ describe("coach bubble + hide", () => {
     expect(overlay).toMatch(/COACH_BUBBLE_MAX|maxWidth:\s*COACH_BUBBLE_MAX/);
   });
 
-  it("No hides for 10 minutes", () => {
+  it("overlay has no Yes/No buttons", () => {
+    const overlay = readFileSync(
+      resolve(__dirname, "../components/CoachOverlay.tsx"),
+      "utf8",
+    );
+    expect(overlay).not.toMatch(/coach-yes/);
+    expect(overlay).not.toMatch(/coach-no/);
+    expect(overlay).toMatch(/coach-redirect-chip/);
+  });
+
+  it("hides for 10 minutes after lastCoachAt", () => {
     const now = 1_700_000_000_000;
     expect(shouldShowCoach(0, now)).toBe(true);
     expect(shouldShowCoach(now - 1000, now)).toBe(false);
@@ -70,12 +80,12 @@ describe("coach bubble + hide", () => {
   });
 
   it("lifts overlay when composer would intersect", () => {
-    // jsdom may lack layout — function with null stays default
+    // jsdom may lack layout. function with null stays default
     expect(coachBottomPx(null)).toBe(16);
   });
 });
 
-describe("Yes never DeepSeek", () => {
+describe("auto coach never DeepSeek", () => {
   it("weather draft on chatgpt switches model, not DeepSeek", () => {
     const s = buildCoachSuggestion({
       draft: "what's the weather in Boston",
@@ -89,7 +99,7 @@ describe("Yes never DeepSeek", () => {
 });
 
 describe("fixture + Try Pip wiring", () => {
-  it("fixture has composer + model-label", () => {
+  it("fixture has composer + model-label and auto coach", () => {
     const app = readFileSync(
       resolve(__dirname, "../entrypoints/fixture/App.tsx"),
       "utf8",
@@ -97,6 +107,7 @@ describe("fixture + Try Pip wiring", () => {
     expect(app).toMatch(/id=["']composer["']/);
     expect(app).toMatch(/id=["']model-label["']/);
     expect(app).toMatch(/what's the weather in Boston/);
+    expect(app).toMatch(/planCoachAuto/);
   });
 
   it("dashboard exposes Try Pip", () => {
