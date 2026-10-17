@@ -7,6 +7,8 @@ Routes:
   GET  /jobs/{job_id}/logs     Server-Sent Events: the job's Droid log lines as they're written
   GET  /insights/latest        the latest successful analysis's insights.json
   POST /adapter-failure        {site, failed_keys, adapter_version, snapshot_html, ...} -> {job_id}
+  GET  /space/insight          night-lights growth over 3 data center regions (NASA GIBS, cached in
+                               space/cache/) and an estimated "your_share" from the latest insights
 
 Mode (logged at startup; see executor.active_mode): Daytona when DAYTONA_API_KEY is set, local when
 it isn't, replay when DEMO_REPLAY=1; EXECUTOR=local|daytona overrides. One Droid job runs at a time
@@ -34,6 +36,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from backend.executor import REPO, active_mode, get_executor, sandbox_mode  # noqa: E402
 from backend.jobs import DONE, JobStore  # noqa: E402
+from space import nasa_lights  # noqa: E402
 
 ADAPTERS_DIR = REPO / "backend" / "adapters"
 LOG_POLL_SECONDS = 0.5
@@ -193,6 +196,20 @@ async def insights_latest():
     if path is None or not path.is_file():
         raise HTTPException(404, "no insights yet")
     return {"job_id": job_id, "insights": json.loads(path.read_text(encoding="utf-8"))}
+
+
+@app.get("/space/insight")
+async def space_insight():
+    try:  # from space/cache/; NASA is called only for files missing there
+        results = await asyncio.to_thread(nasa_lights.load_or_build)
+    except Exception as e:
+        raise HTTPException(503, f"night-lights data unavailable: {type(e).__name__}: {e}")
+    job_id = store.latest_succeeded("ingest")
+    path = executor.insights_path(job_id) if job_id else None
+    share = None
+    if path is not None and path.is_file():
+        share = nasa_lights.your_share(json.loads(path.read_text(encoding="utf-8")), job_id)
+    return {**results, "your_share": share}
 
 
 @app.post("/adapter-failure")
