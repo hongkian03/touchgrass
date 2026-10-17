@@ -5,9 +5,10 @@ JobExecutor has two calls, and the backend only ever talks to it:
   run_repair(site, snapshot_html, broken_adapter, failed_keys, job_id, ...) -> summary dict
 LocalExecutor runs the existing sandbox_jobs scripts on this machine, each job in its own folder
 work/jobs/<job_id>/ (and Droid's view in droid_view/jobs/<job_id>/). DaytonaExecutor keeps the real
-export in a Daytona sandbox and runs Droid here on a redacted copy (see its docstring). EXECUTOR
-picks one: "local" (default) or "daytona". DEMO_REPLAY=1 swaps in ReplayExecutor, which replays a
-saved successful run (see below) for when Wi-Fi or Droid fails.
+export in a Daytona sandbox and runs Droid here on a redacted copy (see its docstring). The mode
+(active_mode): DEMO_REPLAY=1 replays a saved successful run (ReplayExecutor, for when Wi-Fi or
+Droid fails); otherwise EXECUTOR=local or EXECUTOR=daytona if set; otherwise Daytona when
+DAYTONA_API_KEY is set, and local when it isn't.
 
 Each method blocks for minutes, so the backend calls it from a worker thread. The job scripts'
 console output isn't kept: it can include insight titles about the user's data, and the
@@ -263,14 +264,14 @@ class ReplayExecutor(LocalExecutor):
     summary says "replayed": true, so the dashboard can label it. Save runs with
     backend/save_demo_run.py. REPLAY_SPEED speeds it up (2 = twice as fast); default 1 (real speed).
 
-    With EXECUTOR=daytona too, uploads replay demo_runs/upload_daytona (if saved): the sandbox log
+    In Daytona mode (see sandbox_mode), uploads replay demo_runs/upload_daytona (if saved): the sandbox log
     alongside Droid's, and the saved summary with its sandbox id, timings and audit.
     """
 
     def __init__(self, runs=DEMO_RUNS, speed=None, daytona=None):
         self.runs = Path(runs)
         self.speed = float(speed or os.environ.get("REPLAY_SPEED", "1"))
-        self.daytona = os.environ.get("EXECUTOR", "local").lower() == "daytona" if daytona is None else daytona
+        self.daytona = sandbox_mode()[0] == "daytona" if daytona is None else daytona
 
     def _replay_logs(self, run, job_id):
         """Write every saved line, from all the run's log files, in timestamp order at the original pace."""
@@ -316,12 +317,28 @@ class ReplayExecutor(LocalExecutor):
                 "replayed": True, "replayed_from": saved["saved_from_job"]}
 
 
-def get_executor():
+def sandbox_mode():
+    """(mode, reason) for where jobs run: "daytona" or "local". EXECUTOR overrides the default."""
+    name = os.environ.get("EXECUTOR", "").strip().lower()
+    if name:
+        if name not in ("local", "daytona"):
+            raise ValueError(f"EXECUTOR={name!r} isn't available (use 'local' or 'daytona')")
+        return name, f"EXECUTOR={name}"
+    if os.environ.get("DAYTONA_API_KEY"):
+        return "daytona", "DAYTONA_API_KEY is set"
+    return "local", "DAYTONA_API_KEY is not set"
+
+
+def active_mode():
+    """(mode, reason): "replay", "daytona" or "local"."""
+    mode, reason = sandbox_mode()
     if os.environ.get("DEMO_REPLAY") == "1":
+        return "replay", f"DEMO_REPLAY=1; replaying saved {mode}-mode runs, since {reason}"
+    return mode, reason
+
+
+def get_executor():
+    mode, _ = active_mode()
+    if mode == "replay":
         return ReplayExecutor()
-    name = os.environ.get("EXECUTOR", "local").lower()
-    if name == "local":
-        return LocalExecutor()
-    if name == "daytona":
-        return DaytonaExecutor()
-    raise ValueError(f"EXECUTOR={name!r} isn't available (use 'local' or 'daytona')")
+    return DaytonaExecutor() if mode == "daytona" else LocalExecutor()

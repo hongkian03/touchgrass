@@ -4,21 +4,93 @@
 
 Prompt Print tracks your AI usage, shows the energy, water, and CO₂ behind it, and coaches you before you send a wasteful prompt. Factory's Droid does the heavy lifting inside the running app: it writes the code that reads each user's chat history, writes each user's analysis, and repairs the browser extension when ChatGPT changes its page. We independently verify everything it produces.
 
+## How it all fits together
+
+One backend ([`backend/main.py`](backend/main.py)) turns two kinds of product events into Droid jobs. Start it with `py start.py`. It runs in **Daytona mode** when `DAYTONA_API_KEY` is set, **local mode** when it isn't, and **replay mode** (saved runs, for bad Wi-Fi) with `--replay`; it logs which one at startup. The flows below are Daytona mode, the default for the demo.
+
+**A user uploads their ChatGPT export** (`POST /upload`):
+
+1. **Backend:** reads the upload into memory, never to disk.
+2. **Daytona sandbox (one per upload):** the export goes in from memory. [`redact.py`](sandbox_jobs/lib/redact.py) replaces every piece of text with a placeholder like `<text 42 chars>` and keeps the structure. Only this redacted copy comes back out.
+3. **Backend, Droid Ingestor:** from the redacted copy, Droid writes `parser.py`, a parser for this export format. A format we've seen before reuses the cached parser instead.
+4. **Backend, Droid Analyst:** from fake prompts and counts of the real data, Droid writes `analyze.py`, the user's waste analysis.
+5. **Same sandbox:** both scripts run on the real export, next to our validator and checks. Only `insights.json` and a counts-only `summary.json` come out.
+6. **Sandbox deleted.** The dashboard reads `GET /insights/latest`, watches `GET /jobs/{id}/logs` live, and can show `GET /jobs/{id}/audit`: every file that went into or out of the sandbox.
+
+**ChatGPT changes its page and the extension's capture breaks** (`POST /adapter-failure`, with a snapshot of the page):
+
+1. **Daytona sandbox (short-lived):** the raw page goes in from memory. [`clean_snapshot.py`](sandbox_jobs/samples/clean_snapshot.py) removes scripts, the sidebar, conversation links and email addresses, and refuses the page if anything private is left. Only the cleaned page comes out, and the sandbox is deleted.
+2. **Backend, Droid Mechanic:** from the cleaned page, Droid finds new selectors and writes the next adapter version.
+3. **Backend, our checker:** [`check_adapter.py`](sandbox_jobs/lib/check_adapter.py) tests the adapter against the page. It's published to [`backend/adapters/`](backend/adapters/) only if it passes. The extension is meant to load the new version from there; that part isn't built yet (see [Honest limits](#honest-limits)).
+
+## Where and how Droid is used
+
+**Droid runs at runtime, inside the product, not as a developer tool.** Every job is triggered by a user's upload or a live failure. It runs unattended through the Python Droid SDK, and its output reaches users only after our own code has checked it. All three jobs go through one function, [`run_droid_job`](sandbox_jobs/droid_runner.py#L229) in `sandbox_jobs/droid_runner.py`. It opens a Droid SDK `Session` in the job's own folder with a permission handler that allows file writes and Python commands only inside that folder. It also logs every message and tool call, adds the same tool and folder rules to every prompt, and never raises on a Droid error.
+
+| Job | Trigger in the product | What Droid does | Output | How we verify it | Code that calls Droid |
+| --- | --- | --- | --- | --- | --- |
+| **Ingestor** | `POST /upload` with an export format we haven't seen (a known format uses the cached parser, 0 credits) | Inspects the **redacted** export with small scripts, writes `parser.py` and its own tests, and runs our validator until it passes | `parser.py`, which turns the export into `prompts.jsonl` (our fixed schema) | Our [validator](sandbox_jobs/lib/validate_prompts.py) on the redacted output, then in the sandbox on the real export, where the counts must match. The parser is cached only after both pass | [`ingest_once`](sandbox_jobs/ingest.py#L227), Droid call at [`ingest.py#L257`](sandbox_jobs/ingest.py#L257) |
+| **Analyst** | Every upload, right after the Ingestor | Writes `analyze.py`, a pandas analysis that finds the user's 3 biggest sources of wasted energy, from **fake** prompts plus counts of the real data. Every energy, water and CO₂ number must come from [`footprint.py`](backend/footprint.py) | `insights.json`: totals and 3 tips with real counts, examples and a fix | [Four checks](sandbox_jobs/analyze.py#L265): `footprint.py` unchanged, schema valid, re-run identical, no hard-coded footprint numbers. Run on the redacted data, then again on the real data in the sandbox ([`run_real.py`](sandbox_jobs/run_real.py)) | [`analyze.py` `main`](sandbox_jobs/analyze.py#L315), Droid call at [`analyze.py#L334`](sandbox_jobs/analyze.py#L334) |
+| **Mechanic** | `POST /adapter-failure`: the extension's selectors stopped matching ChatGPT's page | Searches the **cleaned** page for stable attributes, writes the fixed adapter with the version bumped, and runs our checker until it passes | A new adapter JSON for the extension | [`check_adapter.py`](sandbox_jobs/lib/check_adapter.py) runs on the backend, the keys must be unchanged, and the version must be exactly one up. [`publish`](sandbox_jobs/repair_adapter.py#L97) runs only if all of that passes | [`repair_adapter.py` `main`](sandbox_jobs/repair_adapter.py#L121), Droid call at [`repair_adapter.py#L151`](sandbox_jobs/repair_adapter.py#L151) |
+
+**Measured in Daytona mode:** the Ingestor took 131–158 s and 32,250–39,403 factory_credits per new format (0 on a cache hit), and the Analyst took about 217–270 s and 56,577–60,434 credits. A full upload rehearsal cost 99,837 credits; a repair took 62 s and 5,610 credits. Droid's success never decides anything on its own: a turn that ends in an error still passes if our checks pass on what it wrote, and a turn that "succeeds" still fails if they don't.
+
+## Where and how Daytona is used
+
+**Why:** two things should never live on our server: users' private chat history, and code an AI agent just wrote. The sandbox holds both, and only checked results come out. *"Untrusted, agent-written code running on private data is exactly the problem sandboxes solve."*
+
+| Sandbox | What goes in | What comes out | What never comes out | Measured |
+| --- | --- | --- | --- | --- |
+| **Upload** (one per user upload) | Our job code (41 KB), the user's export (from memory), and later the `parser.py` and `analyze.py` Droid wrote | The redacted copy, `insights.json`, and `summary.json` (counts, check results, timings) | The export and the parsed `prompts.jsonl` | create 0.7–0.9 s, redact 0.2–0.3 s, real-data run 3.5–3.7 s, delete 0.1 s. About 8 s of work in total; it lives about 7 minutes while Droid works on the backend |
+| **Repair** (one per capture failure) | `clean_snapshot.py` and the raw page snapshot (800 KB in our test, from memory) | The cleaned page (41 KB) | The raw snapshot | 2–9 s from create to delete across runs, mostly sandbox creation (0.9–6.1 s); cleaning 0.2–0.4 s |
+
+- **Code:** [`run_hybrid_jobs`](backend/sandbox.py#L276) and [`clean_snapshot_in_sandbox`](backend/sandbox.py#L402) in `backend/sandbox.py`, called by [`DaytonaExecutor`](backend/executor.py#L141). [`run_real.py`](sandbox_jobs/run_real.py) is what runs inside the upload sandbox.
+- **Proof, not promises:** [`GET /jobs/{id}/audit`](backend/main.py#L134) lists every file that went into or out of a job's sandbox, by name and size. With `PRIVACY_MODE=daytona`, [`test_privacy.py`](sandbox_jobs/test_privacy.py) fails if any planted marker word from the sample is anywhere on the backend outside the returned insights.
+- **No leftovers:** each sandbox is deleted in a `finally`. As a backstop it's ephemeral, auto-stops and has a time limit, and it's labeled so [`cleanup_sandboxes.py`](backend/cleanup_sandboxes.py) (run by `start.py`) can delete leftovers. Tested by killing the backend mid-job: the cleanup found and deleted the sandbox.
+- **No keys inside:** the sandboxes get no API keys at all; Droid's key stays on the backend.
+- **Why Droid itself isn't in the sandbox:** our Daytona tier blocks outbound traffic to Factory's domains (and refuses custom snapshots). So Droid works on the backend with redacted or fake data, and the sandbox runs what it wrote on the real data. Details in [Where Daytona works](#where-daytona-works).
+
+## Honest limits
+
+- **Droid runs on our backend, not in Daytona,** because of the network block above. It only ever gets redacted or fake data. But Droid and the scripts it tests while working run on the backend, and file reads never reach our permission handler. Our privacy test can detect an out-of-folder read; nothing prevents one. In the last full run, Droid's `LS` tool was pointed at three folders just outside its own: they don't exist and nothing was read, but the privacy test flagged it (7 of 8 checks passed). Every prompt now gives Droid its folder as absolute paths and says to stay inside it. That fix hasn't been tested with a live Droid run yet.
+- **The redacted copy leaves the sandbox.** It reveals the export's structure, text lengths, timestamps and short single-word fields such as model names. A field whose every value is one short word, such as one-word chat titles, would get through.
+- **`insights.json` quotes up to 3 example prompts** (80 characters each) on the backend. That's the product.
+- **We haven't restricted the sandbox's outbound network ourselves.** Droid-written code runs there on real data. Our tier blocks some domains, and we haven't checked what else it allows.
+- **`footprint.py` has placeholder numbers,** clearly marked, until the real footprint model lands. No energy, water or CO₂ figure shown today is a real estimate.
+- **The Chrome extension and the dashboard are placeholders on this branch.** Both flows are driven through the API, by the smoke test or by hand. The extension doesn't send `/adapter-failure` yet.
+- **Only fake data:** every run used fake or planted exports and a cleaned test page. No real user's export has been through the system.
+- **Droid's cost and reliability vary:** one Analyst run cost about 158,000 credits, some turns end on connection errors, and droid-sdk 0.5.0 can't handle Droid's `Script` tool (see [Known issues](#known-issues)). The demo has a replay fallback.
+- **Each sandbox pip-installs its dependencies** (about 1 s), because our tier refuses custom snapshots.
+- **No authentication** on the API; it's meant for one machine at a hackathon.
+
+## Run it
+
+```powershell
+# first: install the packages and the droid CLI, and fill in .env (see Setup below)
+py start.py                 # Daytona mode if DAYTONA_API_KEY is in .env, else local mode
+py start.py --replay        # demo fallback: replay saved runs
+py smoke_test.py            # the whole flow for both jobs, free (Droid's saved outputs), about 30 s
+py smoke_test.py --live     # the same with real Droid calls (about 100,000 credits)
+```
+
+`smoke_test.py` starts the backend with `start.py` and runs the upload flow (upload → sandbox redact → Droid → sandbox real-data run → insights → audit) and the repair flow (break adapter → sandbox clean → Droid repair → checker → publish). Without `--live` it sets `DROID_SAVED_DIR` to [`backend/demo_runs/droid_outputs/`](backend/demo_runs/droid_outputs/): the `parser.py` and `analyze.py` Droid wrote in the Daytona rehearsal and the adapter it wrote in a saved repair stand in for Droid's calls. Everything else runs for real, including the sandboxes, redaction, our checks and publishing. It restores the published adapter afterwards. Latest result: 15/15 checks in Daytona mode and 11/11 in local mode, 0 credits.
+
 ## Status
 
-**All three Droid jobs run on a laptop, triggered through the backend; Droid itself never runs inside Daytona.** The FastAPI backend ([`backend/main.py`](backend/main.py)) starts the Ingestor and Analyst when a user uploads an export, and the Mechanic when the extension reports a capture failure. Each run is checked by our own code. Inside a Daytona sandbox Droid can't run: our tier blocks outbound traffic to Factory's domains (`app.factory.ai`, `api.factory.ai`, `downloads.factory.ai`) and refuses custom snapshots (403). So `EXECUTOR=daytona` runs a **hybrid**: the real export stays in a sandbox, Droid works on the backend with a redacted copy, and the code Droid wrote runs on the real export back in the sandbox (see [Where Daytona works](#where-daytona-works)). Below, anything not yet working is marked **planned**.
+**All three Droid jobs run on a laptop, triggered through the backend; Droid itself never runs inside Daytona.** The FastAPI backend ([`backend/main.py`](backend/main.py)) starts the Ingestor and Analyst when a user uploads an export, and the Mechanic when the extension reports a capture failure. Each run is checked by our own code. Inside a Daytona sandbox Droid can't run: our tier blocks outbound traffic to Factory's domains (`app.factory.ai`, `api.factory.ai`, `downloads.factory.ai`) and refuses custom snapshots (403). So Daytona mode (the default whenever `DAYTONA_API_KEY` is set) runs a **hybrid**: the real export stays in a sandbox, Droid works on the backend with a redacted copy, and the code Droid wrote runs on the real export back in the sandbox (see [Where Daytona works](#where-daytona-works)). Below, anything not yet working is marked **planned**.
 
 ## Repo layout
 
 | Path | What lives there |
 | --- | --- |
+| `start.py`, `smoke_test.py` | Start the backend in the right mode; run both flows end to end |
 | `backend/` | FastAPI API and job executors, placeholder footprint model, published adapters, saved demo runs, Daytona sandbox flow and cleanup; planned: real footprint model, xAI voice recap |
 | `sandbox_jobs/` | Job code, uploaded fresh into each sandbox at the start of every run |
 | `sandbox_jobs/lib/` | Our own schema, validator, and adapter checker. Never written by Droid |
 | `sandbox_jobs/standin/` | Hand-written stand-ins for Jobs 1 and 2 while Droid can't run |
 | `sandbox_jobs/samples/` | Fake exports (ChatGPT, Claude-style, CSV, planted), a cleaned real ChatGPT page, `break_adapter.py`, `clean_snapshot.py`. Never uploaded to a sandbox |
-| `extension/` | Chrome Manifest V3 extension (TypeScript) and per-site adapters |
-| `web/` | React + Vite dashboard |
+| `extension/` | Chrome extension: per-site adapters; the TypeScript code is a placeholder on this branch |
+| `web/` | Dashboard (placeholder on this branch) |
 | `evals/` | Chalk evals: coaching safety and parser accuracy |
 | `space/` | Precomputed data center time-lapses and GRACE charts |
 
@@ -90,7 +162,7 @@ Droid can't reach Factory from inside a Daytona sandbox, so in Daytona mode Droi
 | `GET /insights/latest` | The latest successful analysis's `insights.json` |
 | `POST /adapter-failure` | `{site, failed_keys, adapter_version, snapshot_html}`, plus optional `adapter`, `expected_prompt` and `has_responses`. Starts a repair. A report for an adapter older than the published one is ignored, and a report while a repair for that site is queued or running returns that job's id instead of starting another (tested with two simultaneous reports) |
 
-- **Jobs sit behind an executor interface** ([`backend/executor.py`](backend/executor.py)): `JobExecutor` with `run_ingest_and_analyze` and `run_repair`. `LocalExecutor` runs the `sandbox_jobs` scripts in a fresh `work/jobs/<job_id>/` per job. `EXECUTOR` picks one: `local` (default) or `daytona`, the hybrid `DaytonaExecutor` (see [Where Daytona works](#where-daytona-works)).
+- **Jobs sit behind an executor interface** ([`backend/executor.py`](backend/executor.py)): `JobExecutor` with `run_ingest_and_analyze` and `run_repair`. `LocalExecutor` runs the `sandbox_jobs` scripts in a fresh `work/jobs/<job_id>/` per job. The hybrid `DaytonaExecutor` is used when `DAYTONA_API_KEY` is set and `LocalExecutor` when it isn't; `EXECUTOR=local` or `EXECUTOR=daytona` overrides, and `DEMO_REPLAY=1` picks `ReplayExecutor` (`active_mode` in `executor.py`; see [Where Daytona works](#where-daytona-works)).
 - **Job records** are kept in SQLite ([`backend/jobs.py`](backend/jobs.py), `backend/jobs.sqlite`, gitignored).
 - **One Droid job at a time,** using an asyncio lock; others wait as `queued`. Jobs run in a worker thread, so requests are still answered while Droid works (`GET /jobs` took 0.01 s during a run).
 - **Privacy in local mode:** when an upload job finishes, its export and its extracted `prompts.jsonl` are deleted. A repair's raw page snapshot goes through `clean_snapshot.py` before Droid sees it, and is then deleted. The job scripts' console output isn't kept, since it can include insight titles about the user's data.
@@ -102,7 +174,7 @@ Droid jobs take minutes and, as above, sometimes end on a connection error. So e
 - **Saved runs:** [`backend/demo_runs/upload/`](backend/demo_runs/upload/) holds a successful upload: the Analyst's log, `insights.json`, and the `prompts.jsonl` rebuilt from the fake sample. [`backend/demo_runs/repair/`](backend/demo_runs/repair/) holds a successful repair: its log, the broken and fixed adapters, and the job summary. Both came from fake data. [`backend/save_demo_run.py`](backend/save_demo_run.py) saves any succeeded job.
 - **Replay mode:** start the backend with `DEMO_REPLAY=1`. `/upload` and `/adapter-failure` then replay a saved run instead of calling Droid: the saved log lines are written into the new job's log at their original pace, so `/jobs/{id}/logs` streams exactly as it would live. The saved insights or adapter are then put in place, and the repaired adapter is published one version above the current one, so the extension picks it up. The job summary says `"replayed": true`. `REPLAY_SPEED=10` speeds it up.
 - **Tested:** the repair replay streamed in 34.2 s, against 33.8 s for the original run. The upload replay at 10× streamed 155 lines in 22.1 s (about 221 s at real speed, against 219.5 s originally), and `/insights/latest` served the saved tips.
-- **Daytona mode:** with `EXECUTOR=daytona` as well, uploads replay the saved Daytona run, including its sandbox log and audit (see [Audit, replay and cleanup](#audit-replay-and-cleanup-d7)).
+- **Daytona mode:** when `DAYTONA_API_KEY` is set too, uploads replay the saved Daytona run, including its sandbox log and audit (see [Audit, replay and cleanup](#audit-replay-and-cleanup-d7)).
 - **Pre-cached ingest:** the demo's ChatGPT export format is in `parser_cache/`, so ingest takes under a second and costs no credits.
 - **For judges:** "Droid isn't a dev tool here, it's the runtime engine: it writes a parser for every new export format, writes each user's analysis, and repairs our extension when ChatGPT changes its page, and we independently verify everything it produces."
 
@@ -138,7 +210,7 @@ How it works (all in `sandbox_jobs/`):
 - **Droid works only in its own folder,** `droid_view/ingest` or `droid_view/analyze`, outside `work/`. Its permission rules only allow writes and Python commands inside that folder. Our code then copies the script Droid wrote into `work/` and runs it on the real data itself, without Droid.
 - **Ingestor:** Droid gets a redacted copy of the export ([`lib/redact.py`](sandbox_jobs/lib/redact.py)). The copy has the same structure, and therefore the same fingerprint, but every text value is replaced by `"<text N chars>"`. Kept: numbers, booleans, keys, timestamps, empty strings, and fields whose every value is a short single token (roles, content types, model names, IDs that link messages). Anything with a space, `@` or `://` is replaced. Tested on all four samples: the fingerprint was unchanged, no marker word survived, and the existing parsers produced identical counts, kinds, models and timestamps on the redacted copy and the real file. `ingest.py` then runs Droid's `parser.py` on the real export, runs our validator, and requires the counts to match the redacted run.
 - **Analyst:** Droid gets our schemas, `footprint.py`, the fake sample's `prompts.jsonl` and an `aggregates.json` of the real data (counts per model, day and kind, regenerations, prompt and response lengths). It never gets the real prompts. `analyze.py` runs Droid's script on the real `prompts.jsonl` and applies its four checks there.
-- **Droid's default tools:** these jobs use the same tool settings as F2 and F3, with no tool lists. Droid may use Read and Grep, but the folder it works in holds only redacted or fake data. File reads never reach the permission handler, so a Read given an absolute path could still open another file on the machine; the privacy test is what checks that nothing real reached Droid. The permission handler refuses anything it can't check, such as a subagent's request, instead of crashing.
+- **Droid's default tools:** these jobs use the same tool settings as F2 and F3, with no tool lists. Droid may use Read and Grep, but the folder it works in holds only redacted or fake data, and every prompt ends with a rule giving that folder as absolute paths and saying to list, search or read only inside it (`FOLDER_RULES` in `droid_runner.py`, added after Droid listed folders just outside its own in one run). File reads never reach the permission handler, so a Read given an absolute path could still open another file on the machine; the privacy test is what checks that nothing real reached Droid. The permission handler refuses anything it can't check, such as a subagent's request, instead of crashing.
 - **Our checks decide success:** each job judges the files Droid wrote with our own checks, not by how Droid's turn ended, because a turn can end in a connection error after the work already passes. A changed protected folder still always fails.
 - **Full transcripts:** `work/logs/<job>.transcript.jsonl` records everything Droid sent and received: prompts, messages, tool inputs, tool results and its final output.
 - **Privacy test:** [`test_privacy.py`](sandbox_jobs/test_privacy.py). The planted sample contains marker words ([`markers.txt`](sandbox_jobs/samples/chatgpt_planted/markers.txt)) that appear nowhere in the data Droid may see. After an end-to-end run, the test first checks that the markers are in the real data (a control). It then fails if any marker appears in Droid's logs, transcripts or folders, or if Droid's file tools (Read, Grep, LS, Glob) were pointed outside its folder. Run it with `py -m pytest sandbox_jobs/test_privacy.py`. For a Daytona-mode job, set `PRIVACY_MODE=daytona`, `WORK_DIR=work/jobs/<id>` and `DROID_VIEW_DIR=droid_view/jobs/<id>`. It then checks the uploaded planted sample as the control, and also fails if any marker is anywhere in the job's backend folder other than the returned `insights.json`.
@@ -152,9 +224,9 @@ How it works (all in `sandbox_jobs/`):
 
 ## Where Daytona works
 
-**Droid itself does not run in Daytona.** Our tier blocks Factory's domains from inside a sandbox, so `EXECUTOR=daytona` runs a **hybrid**: the sandbox holds the user's real export and runs the code Droid wrote on it, and Droid runs on the backend machine with only a redacted copy. This is the fallback the plan describes, not the original "Droid in every sandbox" design.
+**Droid itself does not run in Daytona.** Our tier blocks Factory's domains from inside a sandbox, so Daytona mode (the default when `DAYTONA_API_KEY` is set, or `EXECUTOR=daytona`) runs a **hybrid**: the sandbox holds the user's real export and runs the code Droid wrote on it, and Droid runs on the backend machine with only a redacted copy. This is the fallback the plan describes, not the original "Droid in every sandbox" design.
 
-### The hybrid upload flow (`EXECUTOR=daytona`)
+### The hybrid upload flow (Daytona mode)
 
 [`DaytonaExecutor`](backend/executor.py) calls `run_hybrid_jobs` in [`backend/sandbox.py`](backend/sandbox.py). For each upload:
 
@@ -173,7 +245,7 @@ An earlier test run found and fixed a bug: `analyze.py` clears `droid/`, deletin
 
 **What this does and doesn't prove.** The user's real chat text never touches the backend's disk; the planted-marker test checks that (`PRIVACY_MODE=daytona`, see [Privacy](#privacy)). It does **not** keep Droid's code off the backend: Droid and its test runs work here, on redacted data. In the sandbox, the untrusted code Droid wrote runs on the real data, which is the part the sandbox is for. The redacted copy does leave the sandbox, and it reveals structure, lengths, timestamps and short token fields such as model names (see the limits under [Privacy](#privacy)). The `insights.json` that comes back quotes up to 3 example prompts (80 characters each), because that's the product.
 
-### The hybrid repair flow (`EXECUTOR=daytona`)
+### The hybrid repair flow (Daytona mode)
 
 The same split as uploads. The page snapshot the extension sends with `POST /adapter-failure` is a raw capture, which can hold the account's email, sidebar chat titles and data in `<script>` tags. In local mode the backend writes it to disk briefly to clean it; in Daytona mode it never touches the backend's disk. `DaytonaExecutor.run_repair` calls `clean_snapshot_in_sandbox` in [`backend/sandbox.py`](backend/sandbox.py):
 
@@ -181,12 +253,12 @@ The same split as uploads. The page snapshot the extension sends with `POST /ada
 2. **Delete.** The sandbox is deleted in `finally`, before Droid starts.
 3. **Droid on the backend, cleaned page only.** From here it's the local repair: [`repair_adapter.py`](sandbox_jobs/repair_adapter.py) has Droid fix the adapter from the cleaned page, then runs **our** [`check_adapter.py`](sandbox_jobs/lib/check_adapter.py) on the backend. It publishes only if the checker passes, the keys are unchanged, and the version is one higher than the broken one and above what's published.
 
-**Tested** with the raw saved ChatGPT capture (800 KB, gitignored, with one email-like string) and the published v2 adapter broken by [`break_adapter.py`](sandbox_jobs/samples/break_adapter.py) (`prompt_box` and `send_button`). The sandbox cleaned the page to 41,486 characters, with 0 email-like strings and 0 conversation links left, and only that page was downloaded. Droid fixed both selectors in 62.5 s and 5,610 factory_credits, our checker passed, and v3 was published (then reset to v2 in the repo). Sandbox timings: create 0.86 s, `pip install beautifulsoup4` 0.65 s, upload 0.20 s, clean 0.26 s, download 0.08 s, delete 0.05 s: about 2 s of sandbox life in a 69 s job. Afterwards, no email-like string and no raw snapshot was in any file in the job's backend folders. **Failure path, tested at no cost:** the cleaner removes conversation links only from `<a>` tags, so a snapshot with one on an `<area>` tag still has it after cleaning. Its final check caught it and exited 1. Nothing was downloaded, Droid didn't run, nothing was published, the sandbox was deleted, and the only file the job left on the backend was its sandbox log. Not done from the D6 plan: running Droid itself in the sandbox (blocked, as above) and the warm-sandbox option, which matters less here since the sandbox's part takes about 2 s.
+**Tested** with the raw saved ChatGPT capture (800 KB, gitignored, with one email-like string) and the published v2 adapter broken by [`break_adapter.py`](sandbox_jobs/samples/break_adapter.py) (`prompt_box` and `send_button`). The sandbox cleaned the page to 41,486 characters, with 0 email-like strings and 0 conversation links left, and only that page was downloaded. Droid fixed both selectors in 62.5 s and 5,610 factory_credits, our checker passed, and v3 was published (then reset to v2 in the repo). Sandbox timings: create 0.86 s, `pip install beautifulsoup4` 0.65 s, upload 0.20 s, clean 0.26 s, download 0.08 s, delete 0.05 s: about 2 s of sandbox life in a 69 s job. Afterwards, no email-like string and no raw snapshot was in any file in the job's backend folders. **Failure path, tested at no cost:** a first version of the cleaner removed conversation links only from `<a>` tags, so a link on an `<area>` tag survived cleaning. The final check caught it and failed closed. The cleaner now removes any attribute, on any tag, whose value holds a conversation or project link: rerun in the sandbox, the `<area>` link was stripped and cleaning passed. Text isn't rewritten, so a conversation URL in plain text still fails the final check. Rerun as a full repair, nothing was downloaded, Droid didn't run, nothing was published, the sandbox was deleted, and the only file the job left on the backend was its sandbox log. The raw ChatGPT capture still cleans to the same 41,486 characters. Not done from the D6 plan: running Droid itself in the sandbox (blocked, as above) and the warm-sandbox option, which matters less here since the sandbox's part takes about 2 s.
 
 ### Audit, replay and cleanup (D7)
 
 - **`GET /jobs/{job_id}/audit`:** for a Daytona-mode job, the sandbox id, when it was created and deleted, and every file uploaded into it and downloaded from it, by name and size only. For a local job these fields are null. For a replayed job they're the saved run's, with `"replayed": true`.
-- **Replay in Daytona mode:** with `DEMO_REPLAY=1` and `EXECUTOR=daytona`, `/upload` still reads the upload into memory, and the job replays [`demo_runs/upload_daytona/`](backend/demo_runs/upload_daytona/): the sandbox, Ingestor and Analyst logs, interleaved by timestamp at their original pace, then the saved insights, summary and audit. Tested at `REPLAY_SPEED=50`: 368 lines in 10 s (7.3 minutes live). `/jobs/{id}`, `/jobs/{id}/audit` and `/insights/latest` served the saved run. Save a Daytona upload with `py backend/save_demo_run.py upload_daytona JOB_ID`. It saves no `prompts.jsonl`, since the backend never had one. Repairs replay the existing `demo_runs/repair/`.
+- **Replay in Daytona mode:** with `DEMO_REPLAY=1` (`py start.py --replay`) and `DAYTONA_API_KEY` set, `/upload` still reads the upload into memory, and the job replays [`demo_runs/upload_daytona/`](backend/demo_runs/upload_daytona/): the sandbox, Ingestor and Analyst logs, interleaved by timestamp at their original pace, then the saved insights, summary and audit. Tested at `REPLAY_SPEED=50`: 368 lines in 10 s (7.3 minutes live). `/jobs/{id}`, `/jobs/{id}/audit` and `/insights/latest` served the saved run. Save a Daytona upload with `py backend/save_demo_run.py upload_daytona JOB_ID`. It saves no `prompts.jsonl`, since the backend never had one. Repairs replay the existing `demo_runs/repair/`.
 - **Crash test:** a backend process killed mid-job (`os._exit`, so no `finally` ran) left its sandbox, with the export inside, running. `py backend/cleanup_sandboxes.py --max-age-minutes 0` found it by its label, deleted it, and then listed none left. Without the cleanup script, the sandbox's own auto-stop (30 minutes; it's ephemeral, so stopping deletes it) and its 60-minute time limit would remove it.
 
 ### Shared by every sandbox
@@ -217,10 +289,11 @@ Install the droid CLI (`irm https://app.factory.ai/cli/windows | iex` on Windows
 py sandbox_jobs/smoke_droid.py                # Droid answers "OK"
 py sandbox_jobs/try_runner.py                 # job runner: hello job works, write into lib/ is blocked
 py sandbox_jobs/ingest.py                     # Droid Ingestor on the one export in work/input/
-py -m uvicorn backend.main:app                # the backend; API docs at http://localhost:8000/docs
+py start.py                                   # the backend; API docs at http://localhost:8000/docs
+py smoke_test.py                              # both flows end to end, no Factory credits
 ```
 
-Demo fallback (PowerShell): `$env:DEMO_REPLAY = "1"; py -m uvicorn backend.main:app` replays the saved runs instead of calling Droid.
+Demo fallback: `py start.py --replay` (or `DEMO_REPLAY=1`) replays the saved runs instead of calling Droid.
 
 ```
 py backend/try_sandbox_flow.py                # full sandbox run on the fake ChatGPT sample

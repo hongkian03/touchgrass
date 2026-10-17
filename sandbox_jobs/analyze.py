@@ -46,10 +46,12 @@ REPO = Path(__file__).resolve().parents[1]
 load_dotenv(REPO / ".env")
 
 from droid_runner import (  # noqa: E402
+    DROID_SAVED_DIR,
     DROID_VIEW_DIR,
     WORK_DIR,
     ensure_work_dirs,
     run_droid_job,
+    saved_droid_job,
 )
 
 VIEW = DROID_VIEW_DIR / "analyze"  # the only folder Droid works in for this job
@@ -326,8 +328,11 @@ async def main():
     view_footprint = VIEW / "lib" / "footprint.py"
     footprint_hash = sha256(view_footprint)
 
-    job = await run_droid_job("analyze", PROMPT, output_model=AnalystSummary, timeout=900,
-                              work_dir=VIEW)
+    if DROID_SAVED_DIR:  # smoke test: the analyze.py Droid wrote in an earlier run, no Droid call
+        job = saved_droid_job("analyze", {"analyze.py": "droid/analyze.py"}, work_dir=VIEW)
+    else:
+        job = await run_droid_job("analyze", PROMPT, output_model=AnalystSummary, timeout=900,
+                                  work_dir=VIEW)
     print(f"\nDroid: success={job.success} subtype={job.subtype} seconds={job.duration} "
           f"factory_credits={job.factory_credits}")
     if job.error:

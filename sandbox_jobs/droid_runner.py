@@ -87,6 +87,15 @@ PYTHON_EXES = {"python", "python3", "py", "python.exe", "python3.exe", "py.exe"}
 # can't be switched off without losing the file tools.
 TOOL_RULES = ("Don't use the Script tool, and don't delegate to subagents (Task). Create and change files "
               "with Create, Edit or ApplyPatch, and run commands with Execute.")
+# Also appended to every prompt. File reads and listings never reach the permission handler, so the
+# only guard on where they go is the prompt (and test_privacy.py, which checks afterwards). Relative
+# paths went wrong once: Droid listed lib, input and output one level above its folder.
+FOLDER_RULES = ("Your working folder is {root}. Only list, search or read paths inside it: {root}{sep}input, "
+                "{root}{sep}lib, {root}{sep}droid and {root}{sep}output. When you call LS, Glob, Grep or "
+                "Read, use those absolute paths (or paths under them), never a folder above {root}.")
+# Reuse files Droid wrote in an earlier run instead of calling Droid (saved_droid_job): a smoke test
+# of everything around Droid that costs no Factory credits. Unset in normal runs.
+DROID_SAVED_DIR = Path(os.environ["DROID_SAVED_DIR"]).resolve() if os.environ.get("DROID_SAVED_DIR") else None
 # && and ; (PowerShell's separator) split a command into parts that are each checked; pipes,
 # redirects, subshells and a lone & are not allowed.
 SHELL_META = re.compile(r"[|<>`]|\$\(|(?<!&)&(?!&)")
@@ -220,7 +229,7 @@ def _jsonable(value):
 async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autonomy=Autonomy.OFF,
                         max_followups=2, work_dir=None, disabled_tools=None, enabled_tools=None) -> JobResult:
     root = Path(work_dir).resolve() if work_dir else WORK_DIR
-    prompt = f"{prompt.rstrip()}\n\n{TOOL_RULES}\n"
+    prompt = f"{prompt.rstrip()}\n\n{TOOL_RULES}\n\n{FOLDER_RULES.format(root=root, sep=os.sep)}\n"
     ensure_work_dirs(root)
     ensure_work_dirs(WORK_DIR)
     log_path = WORK_DIR / "logs" / f"{job_name}.jsonl"
@@ -369,3 +378,35 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
     log("job_end", success=job.success, subtype=job.subtype, seconds=duration, turns=len(turn_credits),
         factory_credits=credits, rejected=len(rejected), error=error)
     return job
+
+
+def saved_droid_job(job_name, files, work_dir=None) -> JobResult:
+    """Stand in for run_droid_job when DROID_SAVED_DIR is set: no Droid call, no credits.
+
+    files maps a file name in DROID_SAVED_DIR to where this job's Droid would have written it
+    (relative to <root>). Everything after Droid (our validator, checks, sandbox runs, publishing)
+    runs as usual on those files. The log says plainly that Droid wasn't called.
+    """
+    root = Path(work_dir).resolve() if work_dir else WORK_DIR
+    ensure_work_dirs(root)
+    ensure_work_dirs(WORK_DIR)
+    log_path = WORK_DIR / "logs" / f"{job_name}.jsonl"
+
+    def log(kind, **fields):
+        line = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), "job": job_name,
+                "type": kind, **fields}
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+        print(f"[{job_name}] {kind} {fields}", flush=True)
+
+    log("job_start", cwd=str(root / "droid"), saved_from=str(DROID_SAVED_DIR))
+    missing = [name for name in files if not (DROID_SAVED_DIR / name).is_file()]
+    for name, dst in files.items():
+        if name not in missing:
+            (root / dst).parent.mkdir(parents=True, exist_ok=True)
+            (root / dst).write_bytes((DROID_SAVED_DIR / name).read_bytes())
+            log("saved_output", file=dst)
+    error = f"saved Droid output missing: {', '.join(missing)}" if missing else None
+    log("job_end", success=not missing, subtype="saved", seconds=0, factory_credits=0.0, error=error)
+    return JobResult(success=not missing, subtype="saved", text=None, structured=None, duration=0.0,
+                     factory_credits=0.0, log_path=log_path, error=error)
