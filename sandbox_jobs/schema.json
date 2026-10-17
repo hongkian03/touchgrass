@@ -1,3 +1,0 @@
-{
-  "_todo": "Fixed prompts.jsonl schema: ts, provider, model, kind (text/image/video), prompt_text, response_text, regenerated (bool)"
-}

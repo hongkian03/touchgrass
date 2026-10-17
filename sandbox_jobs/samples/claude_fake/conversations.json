@@ -1,0 +1,129 @@
+[
+  {
+    "uuid": "0b6f0c2e-3d0a-4a51-9a51-6d2b1c9e7a01",
+    "name": "Explain recursion",
+    "created_at": "2026-09-23T10:02:11.482915Z",
+    "updated_at": "2026-09-23T10:04:40.118204Z",
+    "account": {"uuid": "6e0f1a77-5c2b-4c1d-8a3e-2f9b7d4c1e00"},
+    "chat_messages": [
+      {
+        "uuid": "a1f0c9d2-1111-4a8e-9b10-000000000001",
+        "text": "Explain recursion like I'm new to programming.",
+        "content": [{"type": "text", "text": "Explain recursion like I'm new to programming."}],
+        "sender": "human",
+        "created_at": "2026-09-23T10:02:11.900213Z",
+        "updated_at": "2026-09-23T10:02:11.900213Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "a1f0c9d2-1111-4a8e-9b10-000000000002",
+        "text": "Recursion is when a function solves a problem by calling itself on a smaller piece of the same problem, until it reaches a case simple enough to answer directly.",
+        "content": [{"type": "text", "text": "Recursion is when a function solves a problem by calling itself on a smaller piece of the same problem, until it reaches a case simple enough to answer directly."}],
+        "sender": "assistant",
+        "created_at": "2026-09-23T10:02:19.441087Z",
+        "updated_at": "2026-09-23T10:02:19.441087Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "a1f0c9d2-1111-4a8e-9b10-000000000003",
+        "text": "Show a tiny example in Python.",
+        "content": [{"type": "text", "text": "Show a tiny example in Python."}],
+        "sender": "human",
+        "created_at": "2026-09-23T10:04:30.002918Z",
+        "updated_at": "2026-09-23T10:04:30.002918Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "a1f0c9d2-1111-4a8e-9b10-000000000004",
+        "text": "def countdown(n):\n    if n == 0:\n        return\n    print(n)\n    countdown(n - 1)",
+        "content": [{"type": "text", "text": "def countdown(n):\n    if n == 0:\n        return\n    print(n)\n    countdown(n - 1)"}],
+        "sender": "assistant",
+        "created_at": "2026-09-23T10:04:40.118204Z",
+        "updated_at": "2026-09-23T10:04:40.118204Z",
+        "attachments": [],
+        "files": []
+      }
+    ]
+  },
+  {
+    "uuid": "0b6f0c2e-3d0a-4a51-9a51-6d2b1c9e7a02",
+    "name": "Summarize meeting notes",
+    "created_at": "2026-10-01T16:20:05.300112Z",
+    "updated_at": "2026-10-01T16:20:31.775210Z",
+    "account": {"uuid": "6e0f1a77-5c2b-4c1d-8a3e-2f9b7d4c1e00"},
+    "chat_messages": [
+      {
+        "uuid": "b2e1d8c3-2222-4b9f-8c21-000000000001",
+        "text": "Summarize: we agreed to ship the beta on Friday, Sam owns the docs, and the launch email waits for legal.",
+        "content": [{"type": "text", "text": "Summarize: we agreed to ship the beta on Friday, Sam owns the docs, and the launch email waits for legal."}],
+        "sender": "human",
+        "created_at": "2026-10-01T16:20:05.880003Z",
+        "updated_at": "2026-10-01T16:20:05.880003Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "b2e1d8c3-2222-4b9f-8c21-000000000002",
+        "text": "Beta ships Friday. Sam owns the docs. The launch email is on hold until legal signs off.",
+        "content": [{"type": "text", "text": "Beta ships Friday. Sam owns the docs. The launch email is on hold until legal signs off."}],
+        "sender": "assistant",
+        "created_at": "2026-10-01T16:20:31.775210Z",
+        "updated_at": "2026-10-01T16:20:31.775210Z",
+        "attachments": [],
+        "files": []
+      }
+    ]
+  },
+  {
+    "uuid": "0b6f0c2e-3d0a-4a51-9a51-6d2b1c9e7a03",
+    "name": "Haiku about autumn",
+    "created_at": "2026-10-09T08:45:00.010101Z",
+    "updated_at": "2026-10-09T08:46:12.660120Z",
+    "account": {"uuid": "6e0f1a77-5c2b-4c1d-8a3e-2f9b7d4c1e00"},
+    "chat_messages": [
+      {
+        "uuid": "c3d2e7f4-3333-4c0a-9d32-000000000001",
+        "text": "Write a haiku about autumn in Cambridge.",
+        "content": [{"type": "text", "text": "Write a haiku about autumn in Cambridge."}],
+        "sender": "human",
+        "created_at": "2026-10-09T08:45:00.511200Z",
+        "updated_at": "2026-10-09T08:45:00.511200Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "c3d2e7f4-3333-4c0a-9d32-000000000002",
+        "text": "Red leaves on brick paths\nthe Charles holds a colder sky\nbikes hum toward the Square",
+        "content": [{"type": "text", "text": "Red leaves on brick paths\nthe Charles holds a colder sky\nbikes hum toward the Square"}],
+        "sender": "assistant",
+        "created_at": "2026-10-09T08:45:09.204417Z",
+        "updated_at": "2026-10-09T08:45:09.204417Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "c3d2e7f4-3333-4c0a-9d32-000000000003",
+        "text": "Make it about the river only.",
+        "content": [{"type": "text", "text": "Make it about the river only."}],
+        "sender": "human",
+        "created_at": "2026-10-09T08:46:01.100230Z",
+        "updated_at": "2026-10-09T08:46:01.100230Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "c3d2e7f4-3333-4c0a-9d32-000000000004",
+        "text": "Slow gray water bends\nrowers stitch the morning mist\none gull keeps the time",
+        "content": [{"type": "text", "text": "Slow gray water bends\nrowers stitch the morning mist\none gull keeps the time"}],
+        "sender": "assistant",
+        "created_at": "2026-10-09T08:46:12.660120Z",
+        "updated_at": "2026-10-09T08:46:12.660120Z",
+        "attachments": [],
+        "files": []
+      }
+    ]
+  }
+]

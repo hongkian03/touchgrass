@@ -17,7 +17,27 @@ npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Droid work folder: can hold real chat history
+work/
+# Droid-written parsers, cached by export fingerprint
+parser_cache/
+# The only folders Droid works in for jobs on user data (redacted or fake data only)
+droid_view/
+# Raw ChatGPT page snapshot: can hold account data until it's cleaned
+sandbox_jobs/samples/chatgpt_snapshot.html
+
 # Env
 .env
 .env.*
 !.env.example
+
+# Private evaluation checkpoints, reports, pairing database and SQLite sidecars
+artifacts/
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# docs
+prompt-print-chalk-architecture.md
+prompt-print-coding-agent-handoff.md

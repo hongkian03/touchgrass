@@ -1,0 +1,9 @@
+timestamp,model,user_message,assistant_message
+2026-09-20 09:15:02,gpt-4o,What's a good name for a coffee shop?,"How about ""Daily Grind"", ""Bean There"", or ""Steam & Story""?"
+2026-09-20 09:16:40,gpt-4o,Shorter please.,"""Brew"" or ""Pour""."
+2026-09-27 21:03:11,claude-sonnet-4-5,Convert 5 km to miles.,5 km is about 3.11 miles.
+2026-10-02 13:45:59,gemini-3-flash,"Fix the grammar: me and him goes to class, then we eats lunch.","He and I go to class, then we eat lunch."
+2026-10-05 18:30:27,gpt-4o-mini,List three stretches for desk workers.,"1. Neck tilts
+2. Seated spinal twist
+3. Wrist flexor stretch"
+2026-10-12 07:58:03,claude-sonnet-4-5,Is it going to rain in Boston today?,I can't check live weather. A forecast site or app will have today's outlook for Boston.

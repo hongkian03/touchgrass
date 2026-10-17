@@ -1,0 +1,53 @@
+{
+ "saved_from_job": "589c11293872",
+ "created_at": "2026-10-17T17:31:32+00:00",
+ "finished_at": "2026-10-17T17:35:14+00:00",
+ "log_order": [
+  "analyze.jsonl"
+ ],
+ "job_summary": {
+  "success": true,
+  "exit_code": 0,
+  "ingest": {
+   "success": true,
+   "cache_hit": true,
+   "exchanges": 8,
+   "regenerations": 1,
+   "images": 1,
+   "models": {
+    "gpt-4o": 5,
+    "o3": 1,
+    "gpt-4o-mini": 2
+   },
+   "duration": 0.4,
+   "credits": 0.0
+  },
+  "analyze": {
+   "success": true,
+   "droid_subtype": "success",
+   "seconds": 217.01,
+   "credits": 31149.0,
+   "error": null,
+   "checks": {
+    "footprint_unchanged": {
+     "ok": true,
+     "detail": "sha256 2e12d0add436"
+    },
+    "schema_valid": {
+     "ok": true,
+     "detail": "PASS"
+    },
+    "rerun_identical": {
+     "ok": true,
+     "detail": "identical output"
+    },
+    "no_hardcoded_constants": {
+     "ok": true,
+     "detail": "imports footprint, no footprint constants"
+    }
+   }
+  },
+  "factory_credits": 31149.0,
+  "has_insights": true
+ }
+}
