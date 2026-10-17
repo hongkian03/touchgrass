@@ -33,9 +33,9 @@ export function parseVoiceIntent(
           action: "open_paste",
           targetUrl: "https://chat.mistral.ai/",
           targetModel: "mistral-small",
-          reason: "Simple weather ask — small model is enough",
+          reason: "Simple weather ask. A small model is enough",
         },
-        reason: "Simple weather ask — small model is enough",
+        reason: "Simple weather ask. A small model is enough",
       };
     }
     return {

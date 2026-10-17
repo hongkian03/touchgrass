@@ -1,6 +1,6 @@
 {
   "name": "puddle",
-  "description": "Puddle — AI usage coach Chrome extension",
+  "description": "Puddle: AI usage coach Chrome extension",
   "private": true,
   "version": "0.1.0",
   "type": "module",
