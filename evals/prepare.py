@@ -297,7 +297,7 @@ def main():
         os.getenv("EVAL_MAX_COST_USD") or None,
     )
     try:
-        asyncio.run(
+        prepared = asyncio.run(
             prepare(
                 load_dataset(args.dataset),
                 settings,
@@ -305,6 +305,23 @@ def main():
                 args.provider_version_tag,
                 args.output,
                 args.concurrency,
+            )
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "preparation_finished",
+                    "mode": settings.mode,
+                    "rows": len(prepared),
+                    "small_adequacy_resolved": sum(
+                        row.reference.small_adequate is not None for row in prepared
+                    ),
+                    "small_adequacy_unresolved": sum(
+                        row.reference.small_adequate is None for row in prepared
+                    ),
+                    "dataset": args.output,
+                    "details": str(args.output) + ".manifest.json",
+                }
             )
         )
     finally:

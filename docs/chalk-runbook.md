@@ -71,6 +71,15 @@ Use the returned bearer token for `POST /classify`, `POST /coaching/events`, `DE
 
 ## Live local preparation and evaluation
 
+Local and Chalk evaluation tasks classify against the frozen model pair without requiring
+a website model label or switch target. They bypass only the website/site matching and
+target-availability checks, and always return shadow actions (no UI suggestion or target).
+Candidate actions remain available for evaluation metrics and threshold tuning. Consent,
+context, capability, deadline, model-version and policy checks still apply. The ordinary
+API path retains its website checks; clients cannot enable evaluation through a request field.
+Leave `switch_supported=false` and `website_equivalence_verified=false` for offline-only
+profiles. Use fresh run artifacts after this change to evaluation eligibility.
+
 Finish `chalk-setup.md` first. The following commands explicitly authorize billed calls and are not part of the mock walkthrough:
 
 ```sh

@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "attempt_id": {
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "parser_hash": {
+      "title": "Parser Hash",
+      "type": "string"
+    },
+    "cache_used": {
+      "title": "Cache Used",
+      "type": "boolean"
+    },
+    "success_first_attempt": {
+      "title": "Success First Attempt",
+      "type": "boolean"
+    },
+    "repair_iterations": {
+      "minimum": 0,
+      "title": "Repair Iterations",
+      "type": "integer"
+    },
+    "records": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Records",
+      "type": "array"
+    }
+  },
+  "required": [
+    "attempt_id",
+    "parser_hash",
+    "cache_used",
+    "success_first_attempt",
+    "repair_iterations",
+    "records"
+  ],
+  "title": "IngestAttempt",
+  "type": "object"
+}
