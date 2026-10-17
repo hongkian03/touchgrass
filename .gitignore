@@ -21,6 +21,8 @@ pnpm-debug.log*
 work/
 # Droid-written parsers, cached by export fingerprint
 parser_cache/
+# The only folders Droid works in for jobs on user data (redacted or fake data only)
+droid_view/
 
 # Env
 .env
