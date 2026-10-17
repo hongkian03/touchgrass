@@ -6,7 +6,7 @@ Prompt Print tracks your AI usage, shows the energy, water, and CO₂ behind it,
 
 ## Status
 
-**Droid is not running yet.** Our Daytona tier blocks outbound traffic to Factory's domains (`app.factory.ai`, `api.factory.ai`, `downloads.factory.ai`), so the droid CLI can't install or authenticate inside a sandbox, and the tier refuses custom snapshots (403). Until that's lifted, the sandbox flow runs **hand-written stand-in jobs** in place of Droid, so everything around Droid (sandboxing, upload, validation, log streaming, cleanup) can be built and tested for real. Below, anything Droid does is marked **planned**; everything else is implemented and tested.
+**Droid works locally, but not yet inside Daytona.** On a laptop, the droid CLI and the Python Droid SDK both run and answer ([`sandbox_jobs/smoke_droid.py`](sandbox_jobs/smoke_droid.py)). Inside a Daytona sandbox they can't: our tier blocks outbound traffic to Factory's domains (`app.factory.ai`, `api.factory.ai`, `downloads.factory.ai`), so droid can't install or authenticate there, and the tier also refuses custom snapshots (403). Until that's lifted, the sandbox flow runs **hand-written stand-in jobs** in place of Droid, so everything around Droid (sandboxing, upload, validation, log streaming, cleanup) can be built and tested for real. Below, anything Droid does is marked **planned** until it runs; everything else is implemented and tested.
 
 ## Repo layout
 
