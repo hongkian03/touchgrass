@@ -1,0 +1,10 @@
+{
+  "site": "chatgpt",
+  "version": 3,
+  "selectors": {
+    "prompt_box": "div[contenteditable='true'][role='textbox']",
+    "send_button": "button[aria-label='Send']",
+    "model_name": "button[aria-label='Select ChatGPT model']",
+    "response": "[data-markdown-text-style='assistant-message']"
+  }
+}

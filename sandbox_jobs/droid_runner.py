@@ -82,6 +82,11 @@ PRIVATE_DATA_DISABLED_TOOLS = ["FetchUrl", "WebSearch", "Task"]
 # jobs that disable tools must enable the ones they need explicitly.
 PRIVATE_DATA_ENABLED_TOOLS = ["Read", "Grep", "LS", "Glob", "Create", "Edit", "ApplyPatch", "Execute", "TodoWrite"]
 PYTHON_EXES = {"python", "python3", "py", "python.exe", "python3.exe", "py.exe"}
+# run_droid_job appends this to every prompt. droid-sdk 0.5.0 can't turn a permission request from the newer
+# Script tool into an action ("unsupported permission action"), which kills the turn, and the tool
+# can't be switched off without losing the file tools.
+TOOL_RULES = ("Don't use the Script tool, and don't delegate to subagents (Task). Create and change files "
+              "with Create, Edit or ApplyPatch, and run commands with Execute.")
 # && and ; (PowerShell's separator) split a command into parts that are each checked; pipes,
 # redirects, subshells and a lone & are not allowed.
 SHELL_META = re.compile(r"[|<>`]|\$\(|(?<!&)&(?!&)")
@@ -202,16 +207,20 @@ def _describe(action):
 
 
 def _jsonable(value):
-    try:
-        json.dumps(value)
+    """Plain JSON for the transcript; the SDK's frozen mappings and sequences become dicts and lists."""
+    if isinstance(value, (str, int, float, bool)) or value is None:
         return value
-    except TypeError:
-        return str(value)
+    if hasattr(value, "items"):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_jsonable(v) for v in value]
+    return str(value)
 
 
 async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autonomy=Autonomy.OFF,
                         max_followups=2, work_dir=None, disabled_tools=None, enabled_tools=None) -> JobResult:
     root = Path(work_dir).resolve() if work_dir else WORK_DIR
+    prompt = f"{prompt.rstrip()}\n\n{TOOL_RULES}\n"
     ensure_work_dirs(root)
     ensure_work_dirs(WORK_DIR)
     log_path = WORK_DIR / "logs" / f"{job_name}.jsonl"
@@ -248,8 +257,12 @@ async def run_droid_job(job_name, prompt, output_model=None, timeout=600, autono
             for a, reason in denied:
                 rejected.append(f"{_describe(a)} ({reason})")
                 log("permission_rejected", action=_describe(a), reason=reason)
+            # The SDK rejects a response with an option Droid didn't offer, so refuse with an offered one.
+            refuse = ToolConfirmationOutcome.CANCEL
+            if refuse not in offered:
+                refuse = next((o for o in offered if not o.name.startswith("PROCEED")), refuse)
             return PermissionResponse(
-                selected_option=ToolConfirmationOutcome.CANCEL,
+                selected_option=refuse,
                 comment="Refused by the job's permission rules: " + "; ".join(r for _, r in denied),
             )
         for a, _ in reasons:

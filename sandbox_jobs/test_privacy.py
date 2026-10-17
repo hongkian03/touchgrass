@@ -11,6 +11,7 @@ folders, and if Droid's file tools (Read, Grep, LS, Glob) were pointed outside i
 control test first checks the markers really are in the real data, so the test can't pass by accident.
 """
 
+import ast
 import json
 from pathlib import Path
 
@@ -67,6 +68,9 @@ def test_no_marker_in_droid_view():
 
 def _paths_in(tool_input):
     """Path-like values a file tool was called with (keys such as file_path, path, directory)."""
+    if isinstance(tool_input, str):
+        # Transcripts written before the runner stored inputs as JSON hold them as Python reprs.
+        tool_input = ast.literal_eval(tool_input)
     return [v for k, v in tool_input.items()
             if isinstance(v, str) and any(w in k.lower() for w in ("path", "dir", "folder", "file"))]
 

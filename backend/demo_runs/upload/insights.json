@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-10-10T20:07:28+00:00",
+  "period": {
+    "start": "2026-09-22T14:04:14+00:00",
+    "end": "2026-10-10T20:07:28+00:00"
+  },
+  "totals": {
+    "exchanges": 8,
+    "energy_wh": {
+      "low": 2.075238,
+      "high": 8.30095
+    },
+    "water_ml": {
+      "low": 4.150475,
+      "high": 16.6019
+    },
+    "co2_g": {
+      "low": 0.830095,
+      "high": 3.32038
+    }
+  },
+  "tips": [
+    {
+      "id": "media-spike",
+      "title": "Your 1 image/video generation (1 image, 0 video) = 96% of your estimated energy: 1.99-7.98 Wh if text would have done",
+      "pattern": "media_spike",
+      "evidence": {
+        "counts": {
+          "media_exchanges": 1,
+          "image_exchanges": 1,
+          "video_exchanges": 0,
+          "media_energy_share_pct": 96,
+          "busiest_media_day_count": 1,
+          "exchanges": 8
+        },
+        "examples": [
+          "Make a simple logo for a bakery called Crumb & Co, flat style, warm colors."
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 1.99475,
+          "high": 7.979
+        }
+      },
+      "how_to_fix": "Use text for anything a description can cover, and ask for one image instead of several: 1 media exchange cost far more each than your 7 text exchanges."
+    },
+    {
+      "id": "regenerate-loops",
+      "title": "1 of your 8 asks were regenerated or repeated within 15 minutes: 0.00682-0.0273 Wh of re-runs",
+      "pattern": "regenerate_loops",
+      "evidence": {
+        "counts": {
+          "regenerated_exchanges": 1,
+          "instant_repeat_exchanges": 0,
+          "wasted_exchanges": 1,
+          "exchanges": 8
+        },
+        "examples": [
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.006825,
+          "high": 0.0273
+        }
+      },
+      "how_to_fix": "When an answer misses, say what to change in the same thread instead of re-running: 1 regenerate and 0 instant repeats each paid for a full generation again."
+    },
+    {
+      "id": "repeated-questions",
+      "title": "1 of your 8 asks repeated a question you had already asked (same ask up to 2x): 0.00682-0.0273 Wh avoidable",
+      "pattern": "repeated_questions",
+      "evidence": {
+        "counts": {
+          "duplicate_groups": 1,
+          "duplicate_exchanges": 1,
+          "exchanges": 8,
+          "most_times_same_prompt": 2
+        },
+        "examples": [
+          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.006825,
+          "high": 0.0273
+        }
+      },
+      "how_to_fix": "Check the earlier thread before re-asking: you sent 1 prompt up to 2 times, so reuse the first answer or reply in the same conversation with the changed part only."
+    }
+  ]
+}

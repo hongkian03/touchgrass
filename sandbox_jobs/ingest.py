@@ -326,6 +326,9 @@ async def main():
         reset_work(args.input)
     result = await ingest_once(no_cache=args.no_cache)
     show(result)
+    # For the backend: counts, timings and credits only, no text.
+    (WORK_DIR / "output" / "ingest_summary.json").write_text(json.dumps(result, indent=1, default=str),
+                                                            encoding="utf-8")
     return 0 if result.get("success") else 1
 
 

@@ -249,8 +249,12 @@ def scan_constants(script):
 def checks(footprint_ok):
     insights = WORK_DIR / "output" / "insights.json"
     results = {}
-    real = sha256(WORK_DIR / "lib" / "footprint.py")
-    results["footprint_unchanged"] = (footprint_ok and real == sha256(FOOTPRINT_SRC), f"sha256 {real[:12]}")
+    real_path = WORK_DIR / "lib" / "footprint.py"
+    if real_path.is_file():
+        real = sha256(real_path)
+        results["footprint_unchanged"] = (footprint_ok and real == sha256(FOOTPRINT_SRC), f"sha256 {real[:12]}")
+    else:  # nothing was copied in, because Droid wrote no analyze.py
+        results["footprint_unchanged"] = (False, "footprint.py not in the work folder")
     if not insights.is_file():
         results["schema_valid"] = (False, "no insights.json")
         results["rerun_identical"] = (False, "no insights.json")
@@ -329,9 +333,15 @@ async def main():
     else:
         print("\nDroid did not write analyze.py")
     # Our checks decide, not how Droid's turn ended; a changed protected folder always fails.
-    ok = report(checks(view_footprint_ok)) and not job.tampered
+    results = checks(view_footprint_ok)
+    ok = report(results) and not job.tampered
     if ok and not job.success:
         print(f"note: Droid's turn ended as {job.subtype}, but the analyze.py it wrote passes our checks")
+    # For the backend: check results, timings and credits only, no text.
+    summary = {"success": ok, "droid_subtype": job.subtype, "seconds": job.duration,
+               "credits": job.factory_credits or 0.0, "error": job.error,
+               "checks": {name: {"ok": passed, "detail": detail} for name, (passed, detail) in results.items()}}
+    (WORK_DIR / "output" / "analyze_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print(f"\nANALYZE {'PASSED' if ok else 'FAILED'}")
     return 0 if ok else 1
 
