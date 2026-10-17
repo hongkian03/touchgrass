@@ -16,6 +16,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from daytona import CreateSandboxFromSnapshotParams, Daytona  # noqa: E402
 
+FACTORY_DOMAINS = ["app.factory.ai", "downloads.factory.ai", "api.factory.ai"]
+
 FIND_DROID = (
     "for p in $HOME/.local/bin/droid $(command -v droid 2>/dev/null); do "
     '[ -x "$p" ] && echo "$p" && exit 0; done; '
@@ -36,7 +38,16 @@ def run(sandbox, label, command, timeout=300):
     return resp.result.strip()
 
 
+def probe_domains(sandbox):
+    # Informational only: shows which Factory domains are reachable, without stopping the run.
+    for domain in FACTORY_DOMAINS:
+        cmd = f"curl -sS -o /dev/null -w 'http %{{http_code}}' --max-time 15 https://{domain}/ 2>&1; echo \" (curl exit $?)\""
+        resp = sandbox.process.exec(f"sh -c {shlex.quote(cmd)}", timeout=30)
+        print(f"probe {domain}: {resp.result.strip()}")
+
+
 def steps(sandbox):
+    probe_domains(sandbox)
     if run(sandbox, "a", "curl -sI https://app.factory.ai") is None:
         return False
     if run(sandbox, "b", "curl -fsSL https://app.factory.ai/cli | sh") is None:
@@ -58,7 +69,9 @@ def main():
     ok = False
     try:
         t = time.perf_counter()
-        sandbox = daytona.create(CreateSandboxFromSnapshotParams(language="python"))
+        sandbox = daytona.create(
+            CreateSandboxFromSnapshotParams(language="python", domain_allow_list=",".join(FACTORY_DOMAINS))
+        )
         print(f"sandbox id: {sandbox.id} (created in {time.perf_counter() - t:.2f}s)")
 
         t = time.perf_counter()
