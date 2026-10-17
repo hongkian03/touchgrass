@@ -1,7 +1,11 @@
 (() => {
+  const params = new URLSearchParams(location.search);
+  const enabled =
+    params.get("enabled")?.split(",").filter(Boolean) ??
+    ["chatgpt", "gemini"];
   const store = {
     onboarded: !location.pathname.endsWith("/onboarding.html"),
-    enabledPlatforms: ["chatgpt"],
+    enabledPlatforms: enabled,
     usage: [
       {
         id: "1",
@@ -45,6 +49,7 @@
     lastCoachAt: 0,
   };
   window.__openedTabs = [];
+  window.__pastedDrafts = [];
   const api = {
     storage: {
       local: {
@@ -57,7 +62,20 @@
     runtime: {
       id: "puddle-verify7",
       getURL: (p) => new URL(p, location.origin).href,
-      sendMessage: async () => ({ isAi: false }),
+      sendMessage: async (message) => {
+        if (message?.type === "puddle/coach-open-paste") {
+          const url = String(message.url ?? "");
+          const draft = String(message.draft ?? "");
+          if (/deepseek/i.test(url)) return { ok: false, error: "bad route" };
+          window.__openedTabs.push({ url, draft });
+          window.__pastedDrafts.push(draft);
+          return { ok: true };
+        }
+        if (message?.type === "puddle/classify-ai-site") {
+          return { isAi: false };
+        }
+        return { isAi: false };
+      },
       onMessage: { addListener() {}, removeListener() {} },
     },
     tabs: {
