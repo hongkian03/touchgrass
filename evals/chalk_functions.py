@@ -28,11 +28,13 @@ env = {
     "CLASSIFY_DEADLINE_MS": str(settings.deadline_ms),
 }
 for source, var, destination in [
-    (settings.profile_path, "COACHING_PROFILE_PATH", "/app/profile.json"),
-    (settings.policy_path, "COACHING_POLICY_PATH", "/app/policy.json"),
+    (settings.profile_path, "COACHING_PROFILE_PATH", "/config/prompt-print/profile.json"),
+    (settings.policy_path, "COACHING_POLICY_PATH", "/config/prompt-print/policy.json"),
 ]:
     if source:
-        image = image.add_local_file(source, destination, strategy="copy")
+        # The Function runtime mounts its source volume over /app. Keep
+        # configuration in a separate versioned volume so it stays visible.
+        image = image.add_local_file(source, destination)
         env[var] = destination
 secrets = (
     [c.Secret.from_chalk_env("CHALK_ROUTER_API_KEY")] if settings.mode == "live" else []

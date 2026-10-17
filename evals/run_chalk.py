@@ -163,7 +163,7 @@ def execute(args, sdk=None, definitions=None):
             },
         )
     try:
-        run.wait(timeout=args.timeout, raise_on_failure=True)
+        run = run.wait(timeout=args.timeout, raise_on_failure=True)
     except Exception as exc:
         # Persist lifecycle status; raw SDK messages may contain private row data.
         write_json(
