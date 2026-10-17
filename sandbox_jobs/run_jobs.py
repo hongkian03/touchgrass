@@ -19,6 +19,9 @@ from pathlib import Path
 JOBS_DIR = Path(__file__).resolve().parent
 WORK = Path(os.environ.get("WORK_DIR", "work"))
 INPUT, OUTPUT, LOGS = WORK / "input", WORK / "output", WORK / "logs"
+# Seconds each stand-in step sleeps, to imitate Droid's run time when testing streaming and timeouts.
+STANDIN_DELAY = float(os.environ.get("STANDIN_DELAY", "0"))
+MAX_FIELD = 200
 
 sys.path.insert(0, str(JOBS_DIR / "standin"))
 import analyze  # noqa: E402
@@ -26,6 +29,7 @@ import parse_chatgpt  # noqa: E402
 
 
 def log(event, **fields):
+    fields = {k: v[:MAX_FIELD] if isinstance(v, str) else v for k, v in fields.items()}
     line = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), "event": event, **fields}
     with (LOGS / "run.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(line) + "\n")
@@ -35,6 +39,8 @@ def log(event, **fields):
 def timed(summary, name, fn):
     t = time.perf_counter()
     log(f"{name}_start")
+    if STANDIN_DELAY:
+        time.sleep(STANDIN_DELAY)
     result = fn()
     summary["timings"][name] = round(time.perf_counter() - t, 3)
     log(f"{name}_done", seconds=summary["timings"][name])
