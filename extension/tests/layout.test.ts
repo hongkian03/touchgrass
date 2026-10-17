@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  DASHBOARD_MAX_WIDTH,
+  DASHBOARD_MIN_WIDTH,
   ONBOARDING_MAX_WIDTH,
   POPUP_HEIGHT,
   POPUP_WIDTH,
@@ -36,5 +38,10 @@ describe("layout constants (issue #4)", () => {
     );
     expect(src).toMatch(/ONBOARDING_MAX_WIDTH/);
     expect(src).not.toMatch(/maxWidth:\s*460\b/);
+  });
+
+  it("dashboard column 720–880", () => {
+    expect(DASHBOARD_MIN_WIDTH).toBe(720);
+    expect(DASHBOARD_MAX_WIDTH).toBe(880);
   });
 });
