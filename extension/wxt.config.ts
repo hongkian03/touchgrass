@@ -8,6 +8,12 @@ export default defineConfig({
     permissions: ["storage", "tabs", "scripting"],
     // Site hosts stay empty until onboarding. Groq = AI-site check.
     host_permissions: ["https://api.groq.com/*"],
+    commands: {
+      "pip-recap": {
+        suggested_key: { default: "Alt+Shift+P" },
+        description: "Open Puddle weekly recap",
+      },
+    },
   },
   hooks: {
     "build:manifestGenerated": (_wxt, manifest) => {
