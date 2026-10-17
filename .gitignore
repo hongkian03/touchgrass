@@ -17,6 +17,9 @@ npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Droid work folder: can hold real chat history
+work/
+
 # Env
 .env
 .env.*
