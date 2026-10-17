@@ -21,41 +21,15 @@
   },
   "tips": [
     {
-      "id": "model_mix",
-      "title": "9 text ask(s) on gpt-4o, o3 would cost 0.203313-0.81325 Wh less on gpt-4o-mini (86% of their energy)",
-      "pattern": "other",
-      "evidence": {
-        "counts": {
-          "heavy_model_exchanges": 9,
-          "text_exchanges": 11,
-          "exchanges_on_gpt-4o-mini": 2,
-          "total_exchanges": 12,
-          "exchanges_on_gpt-4o": 8,
-          "exchanges_on_o3": 1
-        },
-        "examples": [
-          "How do I square every number in a Python list?",
-          "And only keep the even ones?",
-          "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
-        ]
-      },
-      "estimated_savings": {
-        "energy_wh": {
-          "low": 0.203313,
-          "high": 0.81325
-        }
-      },
-      "how_to_fix": "Send short asks like those 9 to gpt-4o-mini instead of gpt-4o, o3; your history shows it keeps the same answers at 86% less energy."
-    },
-    {
       "id": "repeated_questions",
-      "title": "4 duplicate ask(s) across 2 repeated question(s) cost 0.12945-0.5178 Wh",
+      "title": "3 of 12 exchanges retyped a question you had already asked (2 repeated question(s), one sent 3 times): about 0.089 to 0.354 Wh was spent re-answering them",
       "pattern": "repeated_questions",
       "evidence": {
         "counts": {
-          "repeated_questions": 2,
-          "duplicate_asks": 4,
-          "total_exchanges": 12
+          "total_exchanges": 12,
+          "repeated_question_groups": 2,
+          "repeat_exchanges": 3,
+          "largest_repeat_group": 3
         },
         "examples": [
           "How do I center a div in CSS on my ZEBRAQUARTZ page?",
@@ -64,21 +38,22 @@
       },
       "estimated_savings": {
         "energy_wh": {
-          "low": 0.12945,
-          "high": 0.5178
+          "low": 0.088575,
+          "high": 0.3543
         }
       },
-      "how_to_fix": "Ask each of those 2 question(s) once and reuse the answer; the 4 re-typed ask(s) bought nothing new."
+      "how_to_fix": "Keep the first answer of each repeated question in a saved snippet or note, and edit or continue that same thread instead of sending the question again."
     },
     {
       "id": "regenerate_loops",
-      "title": "1 regenerated response(s) wasted 0.006825-0.0273 Wh; 1 of them re-asked a question you had already asked",
+      "title": "1 answers were retried (1 flagged regenerated, 1 questions resent within 30 minutes), burning about 0.007 to 0.027 Wh",
       "pattern": "regenerate_loops",
       "evidence": {
         "counts": {
+          "total_exchanges": 12,
           "regenerated_exchanges": 1,
-          "regenerate_loops": 1,
-          "total_exchanges": 12
+          "same_question_retries": 1,
+          "retry_exchanges": 1
         },
         "examples": [
           "Rewrite this to sound friendlier: 'Send me the report by Friday.'"
@@ -90,7 +65,30 @@
           "high": 0.0273
         }
       },
-      "how_to_fix": "Put length, tone and format in the first prompt so its answer is usable: 1 of 12 responses here were regenerations."
+      "how_to_fix": "Before regenerating, tell the model what was wrong with the previous answer and ask for a targeted edit, so one reply replaces a retry."
+    },
+    {
+      "id": "model_choice",
+      "title": "1 of 2 short asks (50%) ran on gpt-4o, where gpt-4o-mini would use 83 to 83% less energy: about 0.003 to 0.014 Wh recoverable",
+      "pattern": "other",
+      "evidence": {
+        "counts": {
+          "total_exchanges": 12,
+          "short_text_exchanges": 2,
+          "short_asks_on_heaviest_model": 1,
+          "share_of_short_asks_pct": 50
+        },
+        "examples": [
+          "And only keep the even ones?"
+        ]
+      },
+      "estimated_savings": {
+        "energy_wh": {
+          "low": 0.003438,
+          "high": 0.01375
+        }
+      },
+      "how_to_fix": "Route simple lookups, rewrites and short questions to gpt-4o-mini and keep gpt-4o for the hard problems that actually need it."
     }
   ]
 }

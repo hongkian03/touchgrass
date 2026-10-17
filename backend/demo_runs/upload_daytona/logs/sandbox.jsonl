@@ -1,26 +1,26 @@
-{"ts": "2026-10-17T19:28:23.442+00:00", "source": "backend", "event": "sandbox_created", "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f"}
-{"ts": "2026-10-17T19:28:23.444+00:00", "source": "backend", "event": "step_done", "step": "create", "seconds": 0.87}
-{"ts": "2026-10-17T19:28:24.468+00:00", "source": "backend", "event": "step_done", "step": "install", "seconds": 1.02}
-{"ts": "2026-10-17T19:28:24.824+00:00", "source": "backend", "event": "step_done", "step": "upload_code", "seconds": 0.35}
-{"ts": "2026-10-17T19:28:24.984+00:00", "source": "backend", "event": "step_done", "step": "upload_export", "seconds": 0.16}
-{"ts": "2026-10-17T19:28:25.317+00:00", "source": "backend", "event": "step_done", "step": "redact", "seconds": 0.33}
-{"ts": "2026-10-17T19:28:25.318+00:00", "source": "backend", "event": "droid_start"}
-{"ts": "2026-10-17T19:35:33.429+00:00", "source": "backend", "event": "step_done", "step": "droid", "seconds": 428.11}
-{"ts": "2026-10-17T19:35:33.853+00:00", "source": "backend", "event": "step_done", "step": "upload_scripts", "seconds": 0.42}
-{"ts": "2026-10-17T19:35:34.859+00:00", "source": "sandbox", "event": "parse_start"}
-{"ts": "2026-10-17T19:35:34.891+00:00", "source": "sandbox", "event": "parse_done", "seconds": 0.031}
-{"ts": "2026-10-17T19:35:34.891+00:00", "source": "sandbox", "event": "validate_start"}
-{"ts": "2026-10-17T19:35:34.988+00:00", "source": "sandbox", "event": "validate_done", "seconds": 0.097}
-{"ts": "2026-10-17T19:35:34.989+00:00", "source": "sandbox", "event": "analyze_start"}
-{"ts": "2026-10-17T19:35:35.635+00:00", "source": "sandbox", "event": "analyze_done", "seconds": 0.646}
-{"ts": "2026-10-17T19:35:35.635+00:00", "source": "sandbox", "event": "checks_start"}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "checks_done", "seconds": 0.611}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "footprint_unchanged", "ok": true}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "schema_valid", "ok": true}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "rerun_identical", "ok": true}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "check", "name": "no_hardcoded_constants", "ok": true}
-{"ts": "2026-10-17T19:35:36.246+00:00", "source": "sandbox", "event": "finished", "ok": true}
-{"ts": "2026-10-17T19:35:37.469+00:00", "source": "backend", "event": "step_done", "step": "run_real", "seconds": 3.62}
-{"ts": "2026-10-17T19:35:37.693+00:00", "source": "backend", "event": "step_done", "step": "download", "seconds": 0.22}
-{"ts": "2026-10-17T19:35:37.787+00:00", "source": "backend", "event": "step_done", "step": "delete", "seconds": 0.09}
-{"ts": "2026-10-17T19:35:37.788+00:00", "source": "backend", "event": "sandbox_deleted", "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f"}
+{"ts": "2026-10-17T20:00:26.151+00:00", "source": "backend", "event": "sandbox_created", "sandbox_id": "1e01f783-8e22-48b6-9010-a7f871cb9316"}
+{"ts": "2026-10-17T20:00:26.153+00:00", "source": "backend", "event": "step_done", "step": "create", "seconds": 1.34}
+{"ts": "2026-10-17T20:00:27.036+00:00", "source": "backend", "event": "step_done", "step": "install", "seconds": 0.88}
+{"ts": "2026-10-17T20:00:27.225+00:00", "source": "backend", "event": "step_done", "step": "upload_code", "seconds": 0.19}
+{"ts": "2026-10-17T20:00:27.300+00:00", "source": "backend", "event": "step_done", "step": "upload_export", "seconds": 0.07}
+{"ts": "2026-10-17T20:00:27.521+00:00", "source": "backend", "event": "step_done", "step": "redact", "seconds": 0.22}
+{"ts": "2026-10-17T20:00:27.522+00:00", "source": "backend", "event": "droid_start"}
+{"ts": "2026-10-17T20:06:17.411+00:00", "source": "backend", "event": "step_done", "step": "droid", "seconds": 349.89}
+{"ts": "2026-10-17T20:06:17.638+00:00", "source": "backend", "event": "step_done", "step": "upload_scripts", "seconds": 0.23}
+{"ts": "2026-10-17T20:06:18.479+00:00", "source": "sandbox", "event": "parse_start"}
+{"ts": "2026-10-17T20:06:18.506+00:00", "source": "sandbox", "event": "parse_done", "seconds": 0.027}
+{"ts": "2026-10-17T20:06:18.506+00:00", "source": "sandbox", "event": "validate_start"}
+{"ts": "2026-10-17T20:06:18.604+00:00", "source": "sandbox", "event": "validate_done", "seconds": 0.098}
+{"ts": "2026-10-17T20:06:18.605+00:00", "source": "sandbox", "event": "analyze_start"}
+{"ts": "2026-10-17T20:06:19.205+00:00", "source": "sandbox", "event": "analyze_done", "seconds": 0.6}
+{"ts": "2026-10-17T20:06:19.205+00:00", "source": "sandbox", "event": "checks_start"}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "checks_done", "seconds": 0.694}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "check", "name": "footprint_unchanged", "ok": true}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "check", "name": "schema_valid", "ok": true}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "check", "name": "rerun_identical", "ok": true}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "check", "name": "no_hardcoded_constants", "ok": true}
+{"ts": "2026-10-17T20:06:19.899+00:00", "source": "sandbox", "event": "finished", "ok": true}
+{"ts": "2026-10-17T20:06:21.090+00:00", "source": "backend", "event": "step_done", "step": "run_real", "seconds": 3.45}
+{"ts": "2026-10-17T20:06:21.249+00:00", "source": "backend", "event": "step_done", "step": "download", "seconds": 0.16}
+{"ts": "2026-10-17T20:06:21.386+00:00", "source": "backend", "event": "step_done", "step": "delete", "seconds": 0.14}
+{"ts": "2026-10-17T20:06:21.387+00:00", "source": "backend", "event": "sandbox_deleted", "sandbox_id": "1e01f783-8e22-48b6-9010-a7f871cb9316"}

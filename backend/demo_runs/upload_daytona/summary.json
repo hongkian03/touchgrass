@@ -1,7 +1,7 @@
 {
- "saved_from_job": "c5c4c69552e3",
- "created_at": "2026-10-17T19:28:19+00:00",
- "finished_at": "2026-10-17T19:35:37+00:00",
+ "saved_from_job": "e10e975fe052",
+ "created_at": "2026-10-17T20:00:21+00:00",
+ "finished_at": "2026-10-17T20:06:21+00:00",
  "log_order": [
   "sandbox.jsonl",
   "ingest.jsonl",
@@ -15,8 +15,8 @@
   "ingest": {
    "success": true,
    "cache_hit": false,
-   "duration": 158.4,
-   "credits": 39403.0,
+   "duration": 169.45,
+   "credits": 31832.0,
    "exchanges": 12,
    "regenerations": 1,
    "images": 1,
@@ -29,8 +29,8 @@
   "analyze": {
    "success": true,
    "droid_subtype": "success",
-   "seconds": 265.36,
-   "credits": 60434.0,
+   "seconds": 176.05,
+   "credits": 28237.0,
    "error": null,
    "checks": {
     "footprint_unchanged": {
@@ -73,33 +73,33 @@
     }
    },
    "timings": {
-    "parse": 0.031,
-    "validate": 0.097,
-    "analyze": 0.646,
-    "checks": 0.611
+    "parse": 0.027,
+    "validate": 0.098,
+    "analyze": 0.6,
+    "checks": 0.694
    },
    "error": null
   },
-  "factory_credits": 99837.0,
+  "factory_credits": 60069.0,
   "has_insights": true,
-  "sandbox_id": "59888d4f-0aff-449d-afa0-e29cd0e9360f",
+  "sandbox_id": "1e01f783-8e22-48b6-9010-a7f871cb9316",
   "timings": {
-   "create": 0.87,
-   "install": 1.02,
-   "upload_code": 0.35,
-   "upload_export": 0.16,
-   "redact": 0.33,
-   "droid": 428.11,
-   "upload_scripts": 0.42,
-   "run_real": 3.62,
-   "download": 0.22,
-   "delete": 0.09
+   "create": 1.34,
+   "install": 0.88,
+   "upload_code": 0.19,
+   "upload_export": 0.07,
+   "redact": 0.22,
+   "droid": 349.89,
+   "upload_scripts": 0.23,
+   "run_real": 3.45,
+   "download": 0.16,
+   "delete": 0.14
   },
   "audit": {
    "uploaded": [
     {
      "name": "jobs.tar.gz",
-     "bytes": 40855
+     "bytes": 42015
     },
     {
      "name": "input/conversations.json",
@@ -107,11 +107,11 @@
     },
     {
      "name": "droid/parser.py",
-     "bytes": 23300
+     "bytes": 14805
     },
     {
      "name": "droid/analyze.py",
-     "bytes": 31399
+     "bytes": 24466
     }
    ],
    "downloaded": [
@@ -121,15 +121,15 @@
     },
     {
      "name": "output/insights.json",
-     "bytes": 2851
+     "bytes": 2930
     },
     {
      "name": "output/summary.json",
-     "bytes": 923
+     "bytes": 921
     }
    ]
   },
-  "created_at": "2026-10-17T19:28:23+00:00",
-  "deleted_at": "2026-10-17T19:35:37+00:00"
+  "created_at": "2026-10-17T20:00:26+00:00",
+  "deleted_at": "2026-10-17T20:06:21+00:00"
  }
 }
