@@ -137,7 +137,7 @@ export function DashboardApp() {
         }
       ).webkitSpeechRecognition;
     if (!SR) {
-      setVoiceNote("Mic API missing — type below.");
+      setVoiceNote("Mic API missing. Type below.");
       return;
     }
     const rec = new SR();
@@ -151,7 +151,7 @@ export function DashboardApp() {
     };
     rec.onerror = () => {
       setListening(false);
-      setVoiceNote("Mic failed — type below.");
+      setVoiceNote("Mic failed. Type below.");
     };
     rec.onend = () => setListening(false);
     rec.start();
@@ -227,21 +227,24 @@ export function DashboardApp() {
           className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
           <Stat
-            label="energy"
+            label="power used"
+            hint="Electricity these prompts burned, in watt-hours."
             value={week.Wh}
             decimals={1}
             suffix=" Wh"
             art={<EnergyBolt size={72} />}
           />
           <Stat
-            label="water"
+            label="water used"
+            hint="Water used to cool the servers, in liters."
             value={week.water_L}
             decimals={2}
             suffix=" L"
             art={<WaterDrop size={72} />}
           />
           <Stat
-            label="CO₂"
+            label="carbon out"
+            hint="CO₂ from the power those prompts used, in grams."
             value={week.co2_g}
             decimals={1}
             suffix=" g"
@@ -249,6 +252,7 @@ export function DashboardApp() {
           />
           <Stat
             label="trees planted"
+            hint="Trees equal to the CO₂ you skipped vs the big default model."
             value={saplings}
             decimals={1}
             suffix=""
@@ -283,7 +287,7 @@ export function DashboardApp() {
           <p className="mt-1 mb-0 text-sm" data-testid="eval-accuracy">
             {/* Hand: {HAND_EVAL.correct}/{HAND_EVAL.total}={HAND_EVAL.accuracy}. Live recompute below. */}
             Accuracy {Math.round(evalResult.accuracy * 100)}% (
-            {evalResult.correct}/{evalResult.total}) — recomputed
+            {evalResult.correct}/{evalResult.total}), recomputed
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Hand check: {HAND_EVAL.correct}/{HAND_EVAL.total} ={" "}
@@ -406,19 +410,24 @@ export function DashboardApp() {
 
 function Stat({
   label,
+  hint,
   value,
   decimals,
   suffix,
   art,
 }: {
   label: string;
+  hint: string;
   value: number;
   decimals: number;
   suffix: string;
   art: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-border px-3 py-3 text-center">
+    <div
+      title={hint}
+      className="flex cursor-help flex-col items-center rounded-lg border border-border px-3 py-3 text-center"
+    >
       {art}
       <CountUp
         value={value}
