@@ -9,15 +9,25 @@ export function localDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Last 7 local calendar dates ending at `now` (inclusive). */
-export function weekWindow(now: Date): string[] {
+/** Last `n` local calendar dates ending at `now` (inclusive). */
+export function lastNDays(now: Date, n: number): string[] {
   const keys: string[] = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < n; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     keys.push(localDateKey(d));
   }
   return keys;
+}
+
+/** Last 7 local calendar dates ending at `now` (inclusive). */
+export function weekWindow(now: Date): string[] {
+  return lastNDays(now, 7);
+}
+
+/** Last 30 local calendar dates — Health-style “Month”. */
+export function monthWindow(now: Date): string[] {
+  return lastNDays(now, 30);
 }
 
 function smallModelFor(
