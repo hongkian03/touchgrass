@@ -3,8 +3,16 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
+import {
+  Co2Cloud,
+  EnergyBolt,
+  TreeGrove,
+  WaterDrop,
+} from "../../components/FootprintCartoons";
+import { CountUp } from "../../components/ScoreCountUp";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import evalsData from "../../data/evals.json";
@@ -13,6 +21,7 @@ import insights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
 import { recomputeAccuracy } from "../../lib/evalAccuracy";
 import {
+  DASHBOARD_COLUMN_WIDTH,
   DASHBOARD_MAX_WIDTH,
   DASHBOARD_MIN_WIDTH,
 } from "../../lib/layout";
@@ -20,6 +29,7 @@ import { readState, writeState, type PuddleState } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
 import { parseExport } from "../../lib/upload";
 import { parseVoiceIntent } from "../../lib/voiceIntent";
+import { saplingsFromCo2G, weekSavings } from "../../lib/savings";
 import { weekTotals } from "../../lib/weekTotals";
 import type { FootprintModel } from "../../lib/totals";
 import type { Platform, UsageRow } from "../../lib/types";
@@ -66,6 +76,10 @@ export function DashboardApp() {
   const week = state
     ? weekTotals(state.usage, today, models)
     : { Wh: 0, water_L: 0, co2_g: 0, days: 0 };
+  const saved = state
+    ? weekSavings(state.usage, today, platforms, models)
+    : { Wh: 0, water_L: 0, co2_g: 0 };
+  const saplings = saplingsFromCo2G(saved.co2_g);
   const streak = state
     ? computeStreak(state.usage, today, platforms)
     : 0;
@@ -149,8 +163,9 @@ export function DashboardApp() {
         data-testid="dashboard"
         className="mx-auto min-h-screen bg-white p-8 font-sans text-foreground"
         style={{
+          width: DASHBOARD_COLUMN_WIDTH,
           maxWidth: DASHBOARD_MAX_WIDTH,
-          minWidth: Math.min(DASHBOARD_MIN_WIDTH, DASHBOARD_MAX_WIDTH),
+          minWidth: DASHBOARD_MIN_WIDTH,
         }}
       />
     );
@@ -163,15 +178,17 @@ export function DashboardApp() {
       style={{
         width: "100%",
         maxWidth: DASHBOARD_MAX_WIDTH,
-        minWidth: 0,
+        minWidth: DASHBOARD_MIN_WIDTH,
       }}
     >
       <div
         data-testid="dashboard-column"
+        data-column-width={DASHBOARD_COLUMN_WIDTH}
         className="mx-auto flex w-full flex-col gap-8"
         style={{
+          width: DASHBOARD_COLUMN_WIDTH,
           maxWidth: DASHBOARD_MAX_WIDTH,
-          minWidth: `min(100%, ${DASHBOARD_MIN_WIDTH}px)`,
+          minWidth: DASHBOARD_MIN_WIDTH,
         }}
       >
         <header className="flex flex-wrap items-end justify-between gap-4">
@@ -205,10 +222,38 @@ export function DashboardApp() {
           </div>
         </header>
 
-        <section data-testid="week-totals" className="grid grid-cols-3 gap-4">
-          <Stat label="energy" value={`${week.Wh.toFixed(1)} Wh`} />
-          <Stat label="water" value={`${week.water_L.toFixed(2)} L`} />
-          <Stat label="CO₂" value={`${week.co2_g.toFixed(1)} g`} />
+        <section
+          data-testid="week-totals"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <Stat
+            label="energy"
+            value={week.Wh}
+            decimals={1}
+            suffix=" Wh"
+            art={<EnergyBolt size={72} />}
+          />
+          <Stat
+            label="water"
+            value={week.water_L}
+            decimals={2}
+            suffix=" L"
+            art={<WaterDrop size={72} />}
+          />
+          <Stat
+            label="CO₂"
+            value={week.co2_g}
+            decimals={1}
+            suffix=" g"
+            art={<Co2Cloud size={72} />}
+          />
+          <Stat
+            label="trees planted"
+            value={saplings}
+            decimals={1}
+            suffix=""
+            art={<TreeGrove size={72} count={saplings} />}
+          />
         </section>
 
         <section data-testid="streak-card">
@@ -323,18 +368,34 @@ export function DashboardApp() {
           className="scroll-mt-8 rounded-xl border border-border p-4"
         >
           <h2 className="m-0 text-lg font-semibold">Weekly recap</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <RecapCard
               title="Energy"
-              body={`${week.Wh.toFixed(1)} Wh across the week`}
+              value={week.Wh}
+              decimals={1}
+              suffix=" Wh"
+              art={<EnergyBolt size={56} />}
             />
             <RecapCard
               title="Water"
-              body={`${week.water_L.toFixed(2)} L estimated`}
+              value={week.water_L}
+              decimals={2}
+              suffix=" L"
+              art={<WaterDrop size={56} />}
             />
             <RecapCard
-              title="Streak"
-              body={`${streak} day habit · keep score ≥ 60`}
+              title="CO₂"
+              value={week.co2_g}
+              decimals={1}
+              suffix=" g"
+              art={<Co2Cloud size={56} />}
+            />
+            <RecapCard
+              title="Trees"
+              value={saplings}
+              decimals={1}
+              suffix=""
+              art={<TreeGrove size={56} count={saplings} />}
             />
           </div>
         </section>
@@ -343,23 +404,61 @@ export function DashboardApp() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  decimals,
+  suffix,
+  art,
+}: {
+  label: string;
+  value: number;
+  decimals: number;
+  suffix: string;
+  art: ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-border px-3 py-3">
+    <div className="flex flex-col items-center rounded-lg border border-border px-3 py-3 text-center">
+      {art}
+      <CountUp
+        value={value}
+        decimals={decimals}
+        suffix={suffix}
+        durationMs={900}
+        className="mt-1 block text-lg tabular-nums"
+      />
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-lg tabular-nums">{value}</div>
     </div>
   );
 }
 
-function RecapCard({ title, body }: { title: string; body: string }) {
+function RecapCard({
+  title,
+  value,
+  decimals,
+  suffix,
+  art,
+}: {
+  title: string;
+  value: number;
+  decimals: number;
+  suffix: string;
+  art: ReactNode;
+}) {
   return (
     <div
       data-testid={`recap-${title.toLowerCase()}`}
-      className="rounded-lg bg-[var(--pale-sky)] px-3 py-3"
+      className="flex flex-col items-center rounded-lg bg-[var(--pale-sky)] px-3 py-3 text-center"
     >
-      <div className="text-sm font-semibold">{title}</div>
-      <div className="mt-1 text-sm">{body}</div>
+      {art}
+      <div className="mt-1 text-sm font-semibold">{title}</div>
+      <CountUp
+        value={value}
+        decimals={decimals}
+        suffix={suffix}
+        durationMs={900}
+        className="mt-1 block text-sm tabular-nums"
+      />
     </div>
   );
 }
