@@ -1,8 +1,8 @@
-# Prompt Print
+# touchgrass
 
 > Everyone here used AI today. Nobody knows what it cost. We built the app that tells you, and helps you cut it.
 
-Prompt Print tracks your AI usage, shows the energy, water, and CO₂ behind it, and coaches you before you send a wasteful prompt. Factory's Droid does the heavy lifting inside the running app: it writes the code that reads each user's chat history, writes each user's analysis, and repairs the browser extension when ChatGPT changes its page. We independently verify everything it produces.
+touchgrass tracks your AI usage, shows the energy, water, and CO₂ behind it, and coaches you before you send a wasteful prompt. Factory's Droid does the heavy lifting inside the running app: it writes the code that reads each user's chat history, writes each user's analysis, and repairs the browser extension when ChatGPT changes its page. We independently verify everything it produces.
 
 ## How it all fits together
 
