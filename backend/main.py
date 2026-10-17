@@ -3,6 +3,7 @@
 Routes:
   POST /upload                 chat export (multipart) -> {job_id}; runs ingest then analyze
   GET  /jobs/{job_id}          status and summary
+  GET  /jobs/{job_id}/audit    Daytona mode: the job's sandbox and every file in and out (names, sizes)
   GET  /jobs/{job_id}/logs     Server-Sent Events: the job's Droid log lines as they're written
   GET  /insights/latest        the latest successful analysis's insights.json
   POST /adapter-failure        {site, failed_keys, adapter_version, snapshot_html, ...} -> {job_id}
@@ -16,6 +17,7 @@ Droid works. In Daytona mode /upload reads the body into memory itself (multipar
 import asyncio
 import email.policy
 import json
+import os
 from email.parser import BytesParser
 from pathlib import Path
 
@@ -33,7 +35,8 @@ LOG_POLL_SECONDS = 0.5
 app = FastAPI(title="PromptPrint")
 store = JobStore()
 executor = get_executor()
-DAYTONA = isinstance(executor, DaytonaExecutor)
+# Also true with DEMO_REPLAY=1, so a replayed Daytona demo still takes uploads in memory.
+DAYTONA = isinstance(executor, DaytonaExecutor) or os.environ.get("EXECUTOR", "local").lower() == "daytona"
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 # Local mode: one job at a time. Daytona mode: each job has its own sandbox, so up to 3 at once.
 droid_lock = asyncio.Semaphore(3 if DAYTONA else 1)
@@ -118,6 +121,27 @@ async def job_status(job_id: str):
     if job is None:
         raise HTTPException(404, "no such job")
     return job
+
+
+@app.get("/jobs/{job_id}/audit")
+async def job_audit(job_id: str):
+    """Privacy evidence for one job: its sandbox, and every file that went in or came out of it,
+    by name and size only. Local jobs have no sandbox, so those fields are null."""
+    job = store.get(job_id)
+    if job is None:
+        raise HTTPException(404, "no such job")
+    summary = job["summary"] or {}
+    audit = summary.get("audit") or {}
+    return {
+        "job_id": job_id, "type": job["type"], "status": job["status"],
+        "executor": summary.get("executor") or ("pending" if job["status"] not in DONE else "local"),
+        "replayed": bool(summary.get("replayed")),
+        "sandbox_id": summary.get("sandbox_id"),
+        "created_at": summary.get("created_at"),
+        "deleted_at": summary.get("deleted_at"),
+        "uploaded": [{"name": f["name"], "bytes": f["bytes"]} for f in audit.get("uploaded", [])],
+        "downloaded": [{"name": f["name"], "bytes": f["bytes"]} for f in audit.get("downloaded", [])],
+    }
 
 
 @app.get("/jobs/{job_id}/logs")

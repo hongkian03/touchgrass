@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -163,6 +164,8 @@ class DaytonaExecutor(LocalExecutor):
         path.parent.mkdir(parents=True, exist_ok=True)
 
         def on_log(entry):  # events and counts only, never page or chat text
+            # Every line gets a ts (stderr lines from the sandbox have none), so replay can pace them.
+            entry = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), **entry}
             with path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
         return on_log
@@ -259,33 +262,38 @@ class ReplayExecutor(LocalExecutor):
     (insights.json, or the repaired adapter) are put where a live run would leave them. The job
     summary says "replayed": true, so the dashboard can label it. Save runs with
     backend/save_demo_run.py. REPLAY_SPEED speeds it up (2 = twice as fast); default 1 (real speed).
+
+    With EXECUTOR=daytona too, uploads replay demo_runs/upload_daytona (if saved): the sandbox log
+    alongside Droid's, and the saved summary with its sandbox id, timings and audit.
     """
 
-    def __init__(self, runs=DEMO_RUNS, speed=None):
+    def __init__(self, runs=DEMO_RUNS, speed=None, daytona=None):
         self.runs = Path(runs)
         self.speed = float(speed or os.environ.get("REPLAY_SPEED", "1"))
+        self.daytona = os.environ.get("EXECUTOR", "local").lower() == "daytona" if daytona is None else daytona
 
     def _replay_logs(self, run, job_id):
-        from datetime import datetime
-
+        """Write every saved line, from all the run's log files, in timestamp order at the original pace."""
         logs = self.log_dir(job_id)
         logs.mkdir(parents=True, exist_ok=True)
-        previous = None
+        lines = []
         for name in json.loads((run / "summary.json").read_text(encoding="utf-8"))["log_order"]:
-            src = run / "logs" / name
+            for line in (run / "logs" / name).read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    lines.append((datetime.fromisoformat(json.loads(line)["ts"]), name, line))
+        lines.sort(key=lambda item: item[0])  # stable: same-ts lines keep their file order
+        previous = None
+        for at, name, line in lines:
+            if previous is not None:
+                time.sleep(max(0.0, (at - previous).total_seconds()) / self.speed)
+            previous = at
             with (logs / name).open("a", encoding="utf-8") as out:
-                for line in src.read_text(encoding="utf-8").splitlines():
-                    if not line.strip():
-                        continue
-                    at = datetime.fromisoformat(json.loads(line)["ts"])
-                    if previous is not None:
-                        time.sleep(max(0.0, (at - previous).total_seconds()) / self.speed)
-                    previous = at
-                    out.write(line + "\n")
-                    out.flush()
+                out.write(line + "\n")
 
     def run_ingest_and_analyze(self, export_bytes, filename, job_id):
         run = self.runs / "upload"
+        if self.daytona and (self.runs / "upload_daytona").is_dir():
+            run = self.runs / "upload_daytona"
         self._replay_logs(run, job_id)
         out = self.insights_path(job_id)
         out.parent.mkdir(parents=True, exist_ok=True)
