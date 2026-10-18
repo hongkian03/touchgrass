@@ -1,0 +1,7 @@
+{
+  "fallbacks": [
+    { "action": "open_paste", "targetUrl": "https://chat.mistral.ai/", "targetModel": "mistral-small", "reason": "French nuclear-heavy grid chat for simple asks" },
+    { "action": "open_paste", "targetUrl": "https://gemini.google.com/app", "targetModel": "gemini-flash", "reason": "Flash is enough for lookup questions" }
+  ],
+  "neverGreenDefault": ["chat.deepseek.com", "deepseek"]
+}

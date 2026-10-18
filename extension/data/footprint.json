@@ -1,0 +1,21 @@
+{
+  "_note": "Labeled estimates for demo. Not live metering. Ranges inspired by public Google/OpenAI-style inference estimates.",
+  "models": {
+    "gpt-5": { "kind": "text", "Wh": 2.4, "water_L": 0.04, "co2_g": 1.1 },
+    "gpt-4o-mini": { "kind": "text", "Wh": 0.3, "water_L": 0.005, "co2_g": 0.14 },
+    "claude-opus": { "kind": "text", "Wh": 2.1, "water_L": 0.035, "co2_g": 0.95 },
+    "claude-haiku": { "kind": "text", "Wh": 0.25, "water_L": 0.004, "co2_g": 0.11 },
+    "gemini-pro": { "kind": "text", "Wh": 1.8, "water_L": 0.03, "co2_g": 0.8 },
+    "gemini-flash": { "kind": "text", "Wh": 0.22, "water_L": 0.003, "co2_g": 0.1 },
+    "grok-3": { "kind": "text", "Wh": 2.0, "water_L": 0.032, "co2_g": 0.9 },
+    "grok-mini": { "kind": "text", "Wh": 0.28, "water_L": 0.004, "co2_g": 0.12 },
+    "sonar-pro": { "kind": "text", "Wh": 1.2, "water_L": 0.02, "co2_g": 0.55 },
+    "sonar": { "kind": "text", "Wh": 0.35, "water_L": 0.006, "co2_g": 0.16 },
+    "deepseek-chat": { "kind": "text", "Wh": 0.9, "water_L": 0.015, "co2_g": 0.5 },
+    "dall-e-3": { "kind": "image", "Wh": 40, "water_L": 0.6, "co2_g": 18 },
+    "midjourney-v6": { "kind": "image", "Wh": 45, "water_L": 0.7, "co2_g": 20 },
+    "flux-pro": { "kind": "image", "Wh": 35, "water_L": 0.55, "co2_g": 16 },
+    "flux-schnell": { "kind": "image", "Wh": 12, "water_L": 0.2, "co2_g": 5.5 },
+    "video-gen": { "kind": "video", "Wh": 200, "water_L": 3.0, "co2_g": 90 }
+  }
+}
