@@ -76,7 +76,7 @@ export class DraftCoach {
     this.display = hooks.display ?? (() => {});
     this.now = hooks.now ?? (() => Date.now());
     this.debounceMs = hooks.debounceMs ?? 400;
-    this.holdMs = hooks.holdMs ?? 800;
+    this.holdMs = hooks.holdMs ?? 2300;
     this.classifyTimeoutMs = hooks.classifyTimeoutMs ?? 4000;
     this.expectedProfileVersion = hooks.expectedProfileVersion ?? null;
     this.expectedPolicyVersion = hooks.expectedPolicyVersion ?? null;

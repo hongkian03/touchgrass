@@ -36,7 +36,8 @@ const platforms = platformsData as Platform[];
 const footprintModels = (
   footprintData as { models: Record<string, FootprintModel> }
 ).models;
-const REDIRECT_MS = 1600;
+/** Auto-hop / progress-bar window — give the user time to Stay / Hop / same-site switch. */
+const REDIRECT_MS = 3100;
 const MISS_THRESHOLD = 3;
 
 function estimateHopSavings(
@@ -431,7 +432,7 @@ export function startCoachWatch(): void {
   };
 
   const chalkCoach = new DraftCoach({
-    holdMs: 800,
+    holdMs: 2300,
     classifyTimeoutMs: 5000,
     classify: async (draft, signal) => {
       const res = await bgBackend<{
