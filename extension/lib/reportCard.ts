@@ -55,55 +55,97 @@ export function escapeXml(s: string): string {
 function treeSvg(cx: number, cy: number, scale: number): string {
   return `
   <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <rect x="-3" y="-18" width="6" height="18" rx="2" fill="#8b5a2b"/>
-    <circle cx="0" cy="-28" r="14" fill="#5cb85c"/>
-    <circle cx="-7" cy="-24" r="9" fill="#3d8b40"/>
-    <circle cx="7" cy="-25" r="8" fill="#8fd18f"/>
-    <circle cx="-4" cy="-28" r="2" fill="#2d5a27"/>
-    <circle cx="4" cy="-28" r="2" fill="#2d5a27"/>
-    <path d="M-4 -22 Q0 -18 5 -22" fill="none" stroke="#2d5a27" stroke-width="1.5" stroke-linecap="round"/>
+    <ellipse cx="0" cy="2" rx="14" ry="4" fill="#8fd18f" opacity="0.55"/>
+    <rect x="-3.5" y="-22" width="7" height="22" rx="2.5" fill="#8b5a2b"/>
+    <circle cx="0" cy="-34" r="16" fill="#5cb85c"/>
+    <circle cx="-9" cy="-28" r="11" fill="#3d8b40"/>
+    <circle cx="9" cy="-29" r="10" fill="#8fd18f"/>
+    <circle cx="-4.5" cy="-34" r="2.2" fill="#2d5a27"/>
+    <circle cx="4.5" cy="-34" r="2.2" fill="#2d5a27"/>
+    <path d="M-4.5 -27 Q0 -23 5 -27" fill="none" stroke="#2d5a27" stroke-width="1.8" stroke-linecap="round"/>
   </g>`;
 }
 
 function boltSvg(cx: number, cy: number, scale: number): string {
   return `
   <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <circle cx="0" cy="0" r="28" fill="#fff3c4"/>
-    <path d="M4 -20 L-14 2 H-2 L-6 22 L18 -2 H6 Z" fill="#f5c400" stroke="#8a5a00" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="0" cy="0" r="30" fill="#fff3c4"/>
+    <path d="M4 -20 L-14 2 H-2 L-6 22 L18 -2 H6 Z" fill="#f5c400" stroke="#8a5a00" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="-4" cy="-1" r="1.8" fill="#8a5a00"/>
+    <circle cx="5" cy="-2" r="1.8" fill="#8a5a00"/>
   </g>`;
 }
 
 function dropSvg(cx: number, cy: number, scale: number): string {
   return `
   <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <circle cx="0" cy="0" r="28" fill="#d6f0ff"/>
-    <path d="M0 -18 C0 -18 -14 2 -14 12 C-14 22 -8 28 0 28 C8 28 14 22 14 12 C14 2 0 -18 0 -18 Z" fill="#2ba4e0" stroke="#0b4f74" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="30" fill="#d6f0ff"/>
+    <path d="M0 -19 C0 -19 -15 2 -15 12 C-15 22 -8 28 0 28 C8 28 15 22 15 12 C15 2 0 -19 0 -19 Z" fill="#2ba4e0" stroke="#0b4f74" stroke-width="1.6"/>
+    <ellipse cx="-5" cy="7" rx="4" ry="5.5" fill="#9ad8f5" opacity="0.9"/>
+    <circle cx="-5" cy="10" r="1.9" fill="#0b4f74"/>
+    <circle cx="5" cy="10" r="1.9" fill="#0b4f74"/>
+    <path d="M-4 16 Q0 19 4 16" fill="none" stroke="#0b4f74" stroke-width="1.5" stroke-linecap="round"/>
   </g>`;
 }
 
 function cloudSvg(cx: number, cy: number, scale: number): string {
   return `
   <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <circle cx="0" cy="0" r="28" fill="#eef1f4"/>
+    <circle cx="0" cy="0" r="30" fill="#e4e8ec"/>
     <ellipse cx="-6" cy="4" rx="16" ry="11" fill="#c5cdd4"/>
-    <ellipse cx="8" cy="2" rx="13" ry="10" fill="#8e99a4"/>
-    <ellipse cx="0" cy="-6" rx="11" ry="9" fill="#c5cdd4"/>
+    <ellipse cx="9" cy="2" rx="13" ry="10" fill="#8e99a4"/>
+    <ellipse cx="0" cy="-6" rx="12" ry="9.5" fill="#c5cdd4"/>
+    <circle cx="-5" cy="1" r="1.9" fill="#4a5560"/>
+    <circle cx="6" cy="0" r="1.9" fill="#4a5560"/>
+    <path d="M-4 7 Q1 10 6 6" fill="none" stroke="#4a5560" stroke-width="1.5" stroke-linecap="round"/>
   </g>`;
 }
 
-function pipSvg(cx: number, cy: number, scale: number): string {
-  // Simplified muskie blob so the card stays self-contained (no external PNG).
+function pipMascotSvg(cx: number, cy: number, scale: number): string {
   return `
   <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <ellipse cx="0" cy="8" rx="36" ry="28" fill="#5fa8d3"/>
-    <ellipse cx="-6" cy="0" rx="22" ry="20" fill="#62b6cb"/>
-    <circle cx="-10" cy="-2" r="4" fill="#1b4965"/>
-    <circle cx="8" cy="-2" r="4" fill="#1b4965"/>
-    <circle cx="-9" cy="-3" r="1.4" fill="#ffffff"/>
-    <circle cx="9" cy="-3" r="1.4" fill="#ffffff"/>
-    <path d="M-8 10 Q0 16 10 9" fill="none" stroke="#1b4965" stroke-width="2.2" stroke-linecap="round"/>
-    <ellipse cx="-18" cy="18" rx="10" ry="6" fill="#bee9e8" opacity="0.9"/>
+    <!-- soft sticker rim + shadow -->
+    <circle cx="0" cy="4" r="44" fill="#ffffff"/>
+    <circle cx="0" cy="4" r="38" fill="#cae9ff"/>
+    <!-- leaf sprout on top -->
+    <path d="M0 -30 Q-12 -44 -2 -46 Q6 -44 0 -30 Z" fill="#5cb85c" stroke="#2d5a27" stroke-width="1.5"/>
+    <path d="M2 -30 Q16 -42 10 -32 Q6 -28 2 -30 Z" fill="#8fd18f" stroke="#2d5a27" stroke-width="1.3"/>
+    <!-- body -->
+    <ellipse cx="0" cy="6" rx="28" ry="29" fill="#62b6cb" stroke="#1b4965" stroke-width="2"/>
+    <!-- belly -->
+    <ellipse cx="0" cy="12" rx="16" ry="17" fill="#bee9e8"/>
+    <!-- cheeks -->
+    <circle cx="-16" cy="6" r="4.2" fill="#5fa8d3" opacity="0.9"/>
+    <circle cx="16" cy="6" r="4.2" fill="#5fa8d3" opacity="0.9"/>
+    <!-- eyes -->
+    <circle cx="-10" cy="-2" r="3.8" fill="#1b4965"/>
+    <circle cx="10" cy="-2" r="3.8" fill="#1b4965"/>
+    <circle cx="-8.8" cy="-3.2" r="1.4" fill="#ffffff"/>
+    <circle cx="11.2" cy="-3.2" r="1.4" fill="#ffffff"/>
+    <!-- smile -->
+    <path d="M-8 8 Q0 15 8 8" fill="none" stroke="#1b4965" stroke-width="2.4" stroke-linecap="round"/>
   </g>`;
+}
+
+function flameBadgeSvg(cx: number, cy: number, scale: number): string {
+  return `
+  <g transform="translate(${cx} ${cy}) scale(${scale})">
+    <path d="M0 -14 C-2 -6 -10 -3 -10 5 C-10 11 -5 15 0 15 C5 15 10 11 10 5 C10 -2 4 -5 3 -11 C2 -8 0 -7 0 -14 Z" fill="#ff6a00"/>
+    <path d="M0 -7 C-1 -2 -6 0 -6 5 C-6 9 -3 12 0 12 C3 12 6 9 6 5 C6 0 2 -2 1 -6 Z" fill="#ffd000"/>
+  </g>`;
+}
+
+/** Symmetrically center N items around center=540. */
+export function symmetricPositions(
+  count: number,
+  center = 540,
+  spacing = 125,
+): number[] {
+  const n = Math.max(1, count);
+  return Array.from(
+    { length: n },
+    (_, i) => center + (i - (n - 1) / 2) * spacing,
+  );
 }
 
 /** Full-bleed SVG achievement card (1080×1350). */
@@ -111,9 +153,48 @@ export function buildReportCardSvg(data: ReportCardData): string {
   const name = escapeXml(data.userName.trim() || "Friend");
   const rank = escapeXml(rankForScore(data.score));
   const date = escapeXml(data.dateLabel);
-  const plats = data.platforms.slice(0, 6).map(escapeXml).join(" · ") || "No platforms yet";
+  const plats =
+    data.platforms.slice(0, 6).map(escapeXml).join("  ·  ") ||
+    "Local AI footprint tracker";
   const treeCount = Math.min(5, Math.max(1, Math.round(data.trees) || 1));
-  const treeOffsets = [-160, -80, 0, 80, 160].slice(0, treeCount);
+  const treeXs = symmetricPositions(treeCount, 540, 128);
+  const scoreInt = Math.round(Math.max(0, Math.min(100, data.score)));
+
+  // 4 symmetrically centered stat cards across x=96..984 (total width=888, cardW=204, gap=24)
+  const statCards = [
+    {
+      x: 96,
+      cx: 198,
+      wash: "#fff8dc",
+      value: `${data.energyWh.toFixed(1)} Wh`,
+      label: "power used",
+      art: boltSvg(198, 972, 1.15),
+    },
+    {
+      x: 324,
+      cx: 426,
+      wash: "#e7f6ff",
+      value: `${data.waterL.toFixed(2)} L`,
+      label: "water used",
+      art: dropSvg(426, 972, 1.15),
+    },
+    {
+      x: 552,
+      cx: 654,
+      wash: "#eef1f4",
+      value: `${data.co2g.toFixed(1)} g`,
+      label: "carbon out",
+      art: cloudSvg(654, 972, 1.15),
+    },
+    {
+      x: 780,
+      cx: 882,
+      wash: "#e8f6df",
+      value: `${data.trees.toFixed(1)}`,
+      label: "trees planted",
+      art: treeSvg(882, 994, 1.15),
+    },
+  ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${REPORT_CARD_WIDTH}" height="${REPORT_CARD_HEIGHT}" viewBox="0 0 ${REPORT_CARD_WIDTH} ${REPORT_CARD_HEIGHT}">
@@ -121,57 +202,79 @@ export function buildReportCardSvg(data: ReportCardData): string {
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#cae9ff"/>
       <stop offset="55%" stop-color="#e8f6df"/>
-      <stop offset="100%" stop-color="#e4f5d8"/>
+      <stop offset="100%" stop-color="#d8f0c8"/>
     </linearGradient>
     <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#8fd18f"/>
       <stop offset="100%" stop-color="#5cb85c"/>
     </linearGradient>
   </defs>
+
+  <!-- outer backdrop -->
   <rect width="100%" height="100%" fill="url(#sky)"/>
-  <path d="M0 980 Q270 900 540 960 T1080 940 L1080 1350 L0 1350 Z" fill="url(#hill)" opacity="0.85"/>
-  <path d="M0 1040 Q360 980 720 1030 T1080 1010 L1080 1350 L0 1350 Z" fill="#3d8b40" opacity="0.35"/>
+  <path d="M0 1080 Q270 1010 540 1060 T1080 1040 L1080 1350 L0 1350 Z" fill="url(#hill)" opacity="0.75"/>
+  <path d="M0 1140 Q360 1090 720 1130 T1080 1110 L1080 1350 L0 1350 Z" fill="#3d8b40" opacity="0.3"/>
 
-  <!-- card frame -->
-  <rect x="48" y="48" width="984" height="1254" rx="48" fill="#ffffff" fill-opacity="0.92" stroke="#1b4965" stroke-opacity="0.12" stroke-width="3"/>
+  <!-- main white card frame -->
+  <rect x="48" y="44" width="984" height="1262" rx="48" fill="#ffffff" stroke="#1b4965" stroke-opacity="0.1" stroke-width="3"/>
 
-  <text x="540" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="36" fill="#1b4965">Touchgrass Passport</text>
-  <text x="540" y="190" text-anchor="middle" font-family="system-ui, sans-serif" font-size="48" font-weight="700" fill="#1b4965">${name}'s Report</text>
-  <text x="540" y="235" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" fill="#71717a">${date}</text>
+  <!-- Header Zone -->
+  <rect x="390" y="78" width="300" height="40" rx="20" fill="#e7f6ff"/>
+  <text x="540" y="104" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="700" letter-spacing="1.5" fill="#1b4965">Touchgrass Passport</text>
 
-  <!-- rank badge -->
-  <rect x="300" y="260" width="480" height="56" rx="28" fill="#e8f6df"/>
-  <text x="540" y="297" text-anchor="middle" font-family="system-ui, sans-serif" font-size="26" font-weight="600" fill="#3d8b40">${rank}</text>
+  <text x="540" y="176" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="54" font-weight="800" fill="#1b4965">${name}'s Report</text>
 
-  ${pipSvg(540, 420, 2.2)}
+  <!-- Rank + Date pill -->
+  <rect x="270" y="202" width="540" height="50" rx="25" fill="#e8f6df"/>
+  <text x="540" y="235" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#3d8b40">${rank}  ·  ${date}</text>
 
-  <!-- score -->
-  <text x="540" y="560" text-anchor="middle" font-family="system-ui, sans-serif" font-size="120" font-weight="700" fill="#1b4965">${Math.round(data.score)}</text>
-  <text x="540" y="600" text-anchor="middle" font-family="system-ui, sans-serif" font-size="28" fill="#71717a">/ 100 touchgrass score</text>
+  <!-- Hero Score Box (matches Popup ScoreHero, zero overlap!) -->
+  <g>
+    <rect x="96" y="278" width="888" height="292" rx="36" fill="#e8f6df"/>
+    <path d="M96 520 Q310 492 540 518 T984 510 L984 570 L96 570 Z" fill="#8fd18f" opacity="0.55"/>
+    <path d="M96 538 Q360 515 640 534 T984 528 L984 570 L96 570 Z" fill="#5cb85c" opacity="0.4"/>
 
-  <!-- streak pill -->
-  <rect x="390" y="630" width="300" height="52" rx="26" fill="#fff3c4"/>
-  <text x="540" y="665" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="600" fill="#8a5a00">${data.streak} day streak</text>
+    <!-- Pip mascot on the left of the hero box -->
+    ${pipMascotSvg(255, 420, 2.05)}
 
-  <!-- forest -->
-  ${treeOffsets.map((ox, i) => treeSvg(540 + ox, 820, 1.6 + (i % 3) * 0.15)).join("\n")}
+    <!-- Score + Streak cleanly aligned on the right of Pip -->
+    <text x="424" y="424" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="124" font-weight="800" fill="#1b4965">${scoreInt}<tspan font-size="34" font-weight="600" fill="#3d8b40"> / 100</tspan></text>
+    <text x="428" y="466" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="600" fill="#2d5a27">touchgrass score</text>
 
-  <!-- stats row -->
-  ${boltSvg(220, 980, 1.1)}
-  ${dropSvg(420, 980, 1.1)}
-  ${cloudSvg(620, 980, 1.1)}
-  ${treeSvg(820, 1000, 1.3)}
+    <!-- Streak badge inside hero box -->
+    <rect x="424" y="486" width="256" height="52" rx="26" fill="#ffffff" fill-opacity="0.92"/>
+    ${flameBadgeSvg(460, 512, 1.1)}
+    <text x="486" y="520" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1b4965">${data.streak} day streak</text>
+  </g>
 
-  <text x="220" y="1045" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${data.energyWh.toFixed(1)} Wh</text>
-  <text x="420" y="1045" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${data.waterL.toFixed(2)} L</text>
-  <text x="620" y="1045" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${data.co2g.toFixed(1)} g</text>
-  <text x="820" y="1045" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${data.trees.toFixed(1)} trees</text>
+  <!-- Symmetrically Centered Tree Grove Stage -->
+  <g>
+    <rect x="96" y="594" width="888" height="264" rx="36" fill="#f4fbf0" stroke="#d8f0c8" stroke-width="2"/>
+    <ellipse cx="540" cy="776" rx="340" ry="22" fill="#d8f0c8"/>
+    ${treeXs
+      .map((x, i) => treeSvg(x, 774, 1.7 + (i % 2) * 0.15))
+      .join("\n")}
+    <text x="540" y="828" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Planted ${data.trees.toFixed(1)} virtual saplings  ·  ${data.smallPct}% smart-routed to small models</text>
+  </g>
 
-  <text x="540" y="1110" text-anchor="middle" font-family="system-ui, sans-serif" font-size="26" fill="#1b4965">Planted ${data.trees.toFixed(1)} virtual saplings</text>
-  <text x="540" y="1150" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" fill="#71717a">${data.smallPct}% smart-routed to small models</text>
+  <!-- 4 Symmetrically Aligned Footprint Stat Cards -->
+  ${statCards
+    .map(
+      (c) => `
+  <g>
+    <rect x="${c.x}" y="884" width="204" height="236" rx="28" fill="${c.wash}"/>
+    ${c.art}
+    <text x="${c.cx}" y="1062" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#1b4965">${c.value}</text>
+    <text x="${c.cx}" y="1096" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#71717a">${c.label}</text>
+  </g>`,
+    )
+    .join("\n")}
 
-  <text x="540" y="1220" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" fill="#71717a">${plats}</text>
-  <text x="540" y="1265" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#5fa8d3">touch grass · share freely</text>
+  <!-- Footer -->
+  <rect x="96" y="1148" width="888" height="64" rx="32" fill="#f4f4f5"/>
+  <text x="540" y="1188" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${plats}</text>
+
+  <text x="540" y="1264" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#5fa8d3">touchgrass · local-first AI coach</text>
 </svg>`;
 }
 
@@ -193,67 +296,47 @@ function concatBytes(chunks: Uint8Array[]): Uint8Array {
 }
 
 /**
- * Minimal PDF with one page and an embedded JPEG/PNG (Image XObject).
- * Prefer PNG from canvas; fall back path still works for JPEG.
+ * Minimal PDF with one page and an embedded JPEG Image XObject.
  */
 export function buildPdfFromPng(
   pngBytes: Uint8Array,
   width: number,
   height: number,
 ): Uint8Array {
-  // Convert PNG → raw RGB via a tiny approach: embed as XObject with Flate? 
-  // Chrome canvas toDataURL('image/jpeg') is more reliable for PDF Image/DCTDecode.
-  // Callers should pass JPEG bytes when possible. Detect format by magic.
   const isJpeg = pngBytes[0] === 0xff && pngBytes[1] === 0xd8;
-  const isPng =
-    pngBytes[0] === 0x89 &&
-    pngBytes[1] === 0x50 &&
-    pngBytes[2] === 0x4e &&
-    pngBytes[3] === 0x47;
-
-  if (!isJpeg && !isPng) {
-    throw new Error("Expected JPEG or PNG bytes for PDF embed");
-  }
-
-  // PDF page size in points (1 pt = 1/72"). Match portrait card aspect.
-  const pageW = 612; // letter width
-  const pageH = Math.round((pageW * height) / width);
-
-  const filter = isJpeg ? "/DCTDecode" : "/FlateDecode";
-  // PNG as FlateDecode of raw file won't render as a bitmap correctly.
-  // Require JPEG for reliable offline PDF without a decoder.
   if (!isJpeg) {
-    throw new Error("PDF embed requires JPEG bytes (use canvas toDataURL image/jpeg)");
+    throw new Error(
+      "PDF embed requires JPEG bytes (use canvas toDataURL image/jpeg)",
+    );
   }
+
+  const pageW = 612;
+  const pageH = Math.round((pageW * height) / width);
 
   const objects: Uint8Array[] = [];
   const offsets: number[] = [];
 
   const pushObj = (body: string | Uint8Array) => {
-    offsets.push(0); // filled later
+    offsets.push(0);
     if (typeof body === "string") objects.push(asciiEncode(body));
     else objects.push(body);
   };
 
-  // 1: Catalog
   pushObj("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
-  // 2: Pages
   pushObj("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
-  // 3: Page
   pushObj(
     `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>\nendobj\n`,
   );
-  // 4: Content stream — draw image full page
   const content = `q\n${pageW} 0 0 ${pageH} 0 0 cm\n/Im0 Do\nQ\n`;
   pushObj(
     `4 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`,
   );
-  // 5: Image XObject
-  const imgHeader = `5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter ${filter} /Length ${pngBytes.length} >>\nstream\n`;
+  const imgHeader = `5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pngBytes.length} >>\nstream\n`;
   const imgTail = `\nendstream\nendobj\n`;
-  pushObj(concatBytes([asciiEncode(imgHeader), pngBytes, asciiEncode(imgTail)]));
+  pushObj(
+    concatBytes([asciiEncode(imgHeader), pngBytes, asciiEncode(imgTail)]),
+  );
 
-  // Assemble with correct offsets
   const header = asciiEncode("%PDF-1.4\n");
   const parts: Uint8Array[] = [header];
   let pos = header.length;
@@ -302,7 +385,7 @@ export async function svgToJpeg(
   svg: string,
   width = REPORT_CARD_WIDTH,
   height = REPORT_CARD_HEIGHT,
-  quality = 0.92,
+  quality = 0.94,
 ): Promise<{ dataUrl: string; bytes: Uint8Array }> {
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
