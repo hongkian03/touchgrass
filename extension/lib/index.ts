@@ -79,7 +79,13 @@ export {
   weekWindow,
 } from "./score";
 export { computeStreak } from "./streak";
-export { DEFAULT_STATE, readState, writeState } from "./storage";
+export {
+  DEFAULT_STATE,
+  estimateStorageBytes,
+  formatStorageSize,
+  readState,
+  writeState,
+} from "./storage";
 export type { PuddleState } from "./storage";
 export {
   DEFAULT_BACKEND_BASE,
