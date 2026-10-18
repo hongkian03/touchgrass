@@ -105,6 +105,8 @@ class ClassifyResponse(Contract):
     confidence: Probability = 0.0
     jev_resolved_model: str | None = None
     chalk_feature_group: str = "coaching.session_v2"
+    recommendation_scope: Literal["evaluated_pair", "generalized"] = "evaluated_pair"
+    evidence_note: str | None = None
 
 
 class Decision(Contract):

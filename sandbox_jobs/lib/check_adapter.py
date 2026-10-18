@@ -5,6 +5,8 @@ Verifies an adapter's CSS selectors against a saved page snapshot with Beautiful
   send_button  matches at least one element
   model_name   matches, with non-empty text equal to the expected model (if given)
   response     matches at least one element (skipped if expected.json says has_responses: false)
+model_name and response also fail if they match a page-level region (html, body, main, role=main)
+or an element that contains the prompt box: a selector that broad matches the page, not the part.
 Prints PASS/FAIL per selector and exits 1 on any failure.
 
 Usage: py check_adapter.py --adapter adapter.json --snapshot page.html [--expected expected.json]
@@ -21,6 +23,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 REQUIRED_KEYS = ["prompt_box", "send_button", "model_name", "response"]
+PAGE_TAGS = {"html", "body", "main"}
 
 
 def text_of(el):
@@ -35,9 +38,21 @@ def select(soup, selector):
         return [], f"invalid selector ({type(e).__name__})"
 
 
+def too_broad(found, prompt_boxes):
+    """Why these matches cover a page region rather than one part of the page, or None."""
+    for el in found:
+        if el.name in PAGE_TAGS or el.get("role") == "main":
+            return f"matches the page-level <{el.name}>"
+        if any(p is el for box in prompt_boxes for p in box.parents):
+            return f"matches a <{el.name}> that contains the prompt box"
+    return None
+
+
 def check(adapter, soup, expected):
     selectors = adapter.get("selectors", {})
     results = {}
+    prompt_sel = selectors.get("prompt_box")
+    prompt_boxes = select(soup, prompt_sel)[0] if isinstance(prompt_sel, str) and prompt_sel.strip() else []
 
     for key in REQUIRED_KEYS:
         sel = selectors.get(key)
@@ -49,8 +64,11 @@ def check(adapter, soup, expected):
             continue
 
         found, err = select(soup, sel)
+        broad = too_broad(found, prompt_boxes) if key in ("model_name", "response") else None
         if err:
             results[key] = (False, err)
+        elif broad:
+            results[key] = (False, f"too broad: {broad}")
         elif key == "prompt_box":
             want = expected.get("prompt")
             if len(found) != 1:

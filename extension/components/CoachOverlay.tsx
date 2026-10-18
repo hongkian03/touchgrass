@@ -27,7 +27,13 @@ type Props = {
   actions?: {
     onSwitch?: () => void;
     onSendAnyway?: () => void;
+    /** Third choice: carry the prompt to another AI the user enabled. */
+    onOpenOther?: () => void;
     switchLabel?: string;
+    openOtherLabel?: string;
+    sendAnywayLabel?: string;
+    /** Short status after a choice, e.g. "Prompt copied, paste it there". */
+    note?: string | null;
     badge?: string | null;
     chalkMeta?: {
       confidencePct?: number | null;
@@ -231,11 +237,12 @@ export function CoachOverlay({
                       fontWeight: 700,
                     }}
                   >
-                    −{redirectMeta?.savedWh?.toFixed(1)} Wh
+                    ≈ −{redirectMeta?.savedWh?.toFixed(2)} Wh
                     {typeof redirectMeta?.savedCo2G === "number" &&
                     redirectMeta.savedCo2G > 0
-                      ? ` · −${redirectMeta.savedCo2G.toFixed(2)}g CO₂`
+                      ? ` · −${redirectMeta.savedCo2G.toFixed(3)}g CO₂`
                       : ""}
+                    {" est."}
                   </span>
                 ) : null}
                 {redirectMeta?.chalkPill ? (
@@ -462,15 +469,23 @@ export function CoachOverlay({
                       fontWeight: 700,
                     }}
                   >
-                    −{actions.chalkMeta.savedWh.toFixed(1)} Wh
+                    ≈ −{actions.chalkMeta.savedWh.toFixed(2)} Wh est.
                   </span>
                 ) : null}
               </div>
             ) : null}
           </>
         )}
-        {actions?.onSwitch || actions?.onSendAnyway ? (
-          <div style={btnRow}>
+        {actions?.note ? (
+          <p
+            data-testid="coach-status"
+            style={{ margin: "8px 0 0", fontSize: 12, color: "#2d5a27" }}
+          >
+            {actions.note}
+          </p>
+        ) : null}
+        {actions?.onSwitch || actions?.onSendAnyway || actions?.onOpenOther ? (
+          <div style={{ ...btnRow, flexWrap: "wrap" }}>
             {actions.onSwitch ? (
               <button
                 type="button"
@@ -479,6 +494,16 @@ export function CoachOverlay({
                 onClick={actions.onSwitch}
               >
                 {actions.switchLabel || "Switch"}
+              </button>
+            ) : null}
+            {actions.onOpenOther ? (
+              <button
+                type="button"
+                data-testid="coach-open-other"
+                style={btn}
+                onClick={actions.onOpenOther}
+              >
+                {actions.openOtherLabel || "Open in another AI"}
               </button>
             ) : null}
             {actions.onSendAnyway ? (
@@ -493,7 +518,7 @@ export function CoachOverlay({
                 }}
                 onClick={actions.onSendAnyway}
               >
-                Send anyway
+                {actions.sendAnywayLabel || "Send anyway"}
               </button>
             ) : null}
           </div>

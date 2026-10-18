@@ -1,0 +1,251 @@
+/*
+ * Popup reskin (uiux inspo): warm cream, near-black ink, flat pastels, big radii,
+ * pill buttons, Urbanist. Loaded ONLY by the popup, after puddle.css.
+ *
+ * Visual only: no class names, keyframes, durations, easings or transforms are
+ * defined or changed here. Animated classes (.ui-*, .jt-*, .ft-*, .pip-*,
+ * .streak-*) keep their puddle.css rules untouched.
+ */
+@import "@fontsource/urbanist/400.css";
+@import "@fontsource/urbanist/500.css";
+@import "@fontsource/urbanist/600.css";
+@import "@fontsource/urbanist/700.css";
+
+/* html:root outranks puddle.css's :root, whichever stylesheet loads last */
+html:root {
+  /* Palette */
+  --tg-cream: #f8f2e4;
+  --tg-card: #ede6d4;
+  --tg-card-strong: #e3d9c2;
+  --tg-line: #dcd2bc;
+  --tg-ink: #161616;
+  --tg-ink-soft: #3a372f;
+  --tg-muted: #7a7466;
+  --tg-on-ink: #f8f2e4;
+  /* Off-white "paper cut" fill for hand-drawn icons */
+  --tg-paper: #faf8f2;
+
+  --tg-yellow: #f4d86f;
+  --tg-yellow-deep: #e2be45;
+  --tg-pink: #f2b6d9;
+  --tg-pink-deep: #e48dbe;
+  --tg-blue: #b9c8ec;
+  --tg-blue-deep: #8fa4da;
+  --tg-green: #a3b36b;
+  --tg-green-soft: #d9e0b8;
+  --tg-green-deep: #7e8f47;
+
+  /* Shape */
+  --tg-radius-card: 22px;
+  --tg-radius-tile: 18px;
+  --tg-radius-sm: 12px;
+  --tg-radius-pill: 999px;
+
+  /* Type */
+  --tg-font: "Urbanist", ui-sans-serif, system-ui, sans-serif;
+
+  /* Existing theme tokens, remapped so every bg-/text-/border- utility follows */
+  --background: var(--tg-cream);
+  --foreground: var(--tg-ink);
+  --primary: var(--tg-ink);
+  --primary-foreground: var(--tg-on-ink);
+  --secondary: var(--tg-card);
+  --secondary-foreground: var(--tg-ink);
+  --muted: var(--tg-card);
+  --muted-foreground: var(--tg-muted);
+  --accent: var(--tg-card-strong);
+  --accent-foreground: var(--tg-ink);
+  --border: var(--tg-line);
+  --input: var(--tg-line);
+  --ring: var(--tg-ink);
+  --radius: var(--tg-radius-sm);
+  --yale-blue: var(--tg-ink);
+  --surface: var(--tg-card);
+}
+
+html:root,
+html:root body,
+html:root #root {
+  background: var(--tg-cream);
+}
+
+html:root body,
+html:root body * {
+  font-family: var(--tg-font);
+}
+
+/* ---- Surfaces: white/grey chrome → cream & beige cards --------------------- */
+/* main[...] outranks the root's own .bg-white utility */
+main[data-testid="popup"],
+div[data-testid="popup"] {
+  background: var(--tg-cream);
+  color: var(--tg-ink);
+}
+[data-testid="popup"] .font-sans,
+[data-testid="popup"] .font-brand,
+[data-testid="popup"] [data-testid="puddle-title"] {
+  font-family: var(--tg-font);
+}
+[data-testid="popup"] .bg-white,
+[data-testid="popup"] .bg-\[\#fafafa\] {
+  background-color: var(--tg-card);
+}
+[data-testid="popup"] .bg-white\/90,
+[data-testid="popup"] .bg-white\/85,
+[data-testid="popup"] .bg-white\/80,
+[data-testid="popup"] .bg-white\/60 {
+  background-color: var(--tg-cream);
+}
+[data-testid="popup"] .bg-\[\#f4f4f5\],
+[data-testid="popup"] .bg-\[\#eef1f4\] {
+  background-color: var(--tg-card);
+}
+[data-testid="popup"] .hover\:bg-\[\#eef1f4\]:hover,
+[data-testid="popup"] .hover\:bg-\[\#f4f4f5\]:hover {
+  background-color: var(--tg-card-strong);
+}
+[data-testid="popup"] .bg-\[\#e7f6ff\] {
+  background-color: var(--tg-blue);
+}
+[data-testid="popup"] .bg-\[\#e8f6df\],
+[data-testid="popup"] .bg-\[\#f4fbf0\] {
+  background-color: var(--tg-green-soft);
+}
+[data-testid="popup"] .bg-\[\#1b4965\] {
+  background-color: var(--tg-ink);
+}
+
+/* Text and borders */
+[data-testid="popup"] .text-\[\#1b4965\],
+[data-testid="popup"] .text-\[\#2d5a27\],
+[data-testid="popup"] .text-\[\#2ba4e0\] {
+  color: var(--tg-ink);
+}
+[data-testid="popup"] .border-\[\#cae9ff\],
+[data-testid="popup"] .border-\[\#d8f0c8\] {
+  border-color: var(--tg-line);
+}
+[data-testid="popup"] .shadow-sm {
+  box-shadow: none;
+}
+
+/* ---- Shape: inspo radii ----------------------------------------------------- */
+[data-testid="popup"] .rounded-2xl {
+  border-radius: var(--tg-radius-card);
+}
+[data-testid="popup"] .rounded-xl {
+  border-radius: var(--tg-radius-tile);
+}
+[data-testid="popup"] .rounded-lg,
+[data-testid="popup"] .rounded-md {
+  border-radius: var(--tg-radius-sm);
+}
+
+/* Buttons (ui/button): solid ink or beige pills, like "Plan check-up" */
+[data-testid="popup"] button.bg-primary,
+[data-testid="popup"] button.bg-secondary {
+  border-radius: var(--tg-radius-pill);
+  font-weight: 600;
+  box-shadow: none;
+}
+[data-testid="popup"] button.bg-secondary {
+  background-color: var(--tg-card);
+}
+[data-testid="popup"] button.bg-secondary:hover {
+  background-color: var(--tg-card-strong);
+}
+
+/* Period switch: beige track, solid ink thumb, cream label on the active tab */
+[data-testid="popup"] [data-testid="period-switch"] {
+  background-color: var(--tg-card);
+}
+[data-testid="popup"] [data-testid="period-switch"] .ui-period-thumb {
+  background-color: var(--tg-ink);
+}
+[data-testid="popup"] [data-testid="period-switch"] [aria-selected="true"] {
+  color: var(--tg-on-ink);
+}
+
+/* Inputs */
+[data-testid="popup"] input {
+  border-radius: var(--tg-radius-pill);
+  background-color: var(--tg-cream);
+  border-color: var(--tg-line);
+}
+
+/* Morph nav: cream active pill on the beige track (color only; .ui-morph-pill transition untouched) */
+[data-testid="popup"] [data-testid="morph-nav"] [aria-selected="true"] {
+  background-color: var(--tg-cream);
+}
+
+/*
+ * Wordmark: outranks "html:root body *" so only the brand title uses the
+ * dot-matrix cursive. Centered under the panel's drag handle.
+ */
+html:root body [data-testid="puddle-title"] {
+  font-family: var(--tg-font-wordmark);
+  font-weight: 400;
+  color: var(--tg-ink);
+  /* Grayscale smoothing: subpixel (LCD) text gives the tiny dots color fringes */
+  -webkit-font-smoothing: antialiased;
+  will-change: transform;
+}
+
+/* Icons: let animated shapes draw past their viewBox instead of being clipped */
+main[data-testid="popup"] svg {
+  overflow: visible;
+}
+main[data-testid="popup"] li,
+main[data-testid="popup"] [data-testid="settings-pane"] > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/*
+ * Thin edges: every visible shape gets a 1px edge in its own colour mixed with
+ * black (--tg-edge-mix). Drawn as an inset outline (outline-offset: -1px) so no
+ * size, spacing or animation changes. Black shapes are skipped.
+ */
+main[data-testid="popup"] {
+  --tg-edge-mix: 80%;
+  --tg-edge-bg: var(--tg-cream);
+}
+[data-testid="popup"] .bg-\[\#f4f4f5\]\/80 {
+  background-color: var(--tg-card);
+}
+
+/* Which colour each shape is, so its edge can be a darker shade of it */
+main[data-testid="popup"] [style*="background: var(--tg-yellow)"] { --tg-edge-bg: var(--tg-yellow); }
+main[data-testid="popup"] [style*="background: var(--tg-pink)"] { --tg-edge-bg: var(--tg-pink); }
+main[data-testid="popup"] [style*="background: var(--tg-blue)"] { --tg-edge-bg: var(--tg-blue); }
+main[data-testid="popup"] [style*="background: var(--tg-green)"] { --tg-edge-bg: var(--tg-green); }
+main[data-testid="popup"] [style*="background: var(--tg-green-soft)"] { --tg-edge-bg: var(--tg-green-soft); }
+main[data-testid="popup"] [style*="background: var(--tg-card)"] { --tg-edge-bg: var(--tg-card); }
+main[data-testid="popup"] [style*="background: var(--tg-cream)"] { --tg-edge-bg: var(--tg-cream); }
+main[data-testid="popup"] :is(.bg-white, .bg-\[\#fafafa\], .bg-\[\#f4f4f5\], .bg-\[\#f4f4f5\]\/80, .bg-\[\#eef1f4\], button.bg-secondary) { --tg-edge-bg: var(--tg-card); }
+main[data-testid="popup"] :is(.bg-white\/90, .bg-white\/85, .bg-white\/80, .bg-white\/60, input) { --tg-edge-bg: var(--tg-cream); }
+main[data-testid="popup"] .bg-\[\#e7f6ff\] { --tg-edge-bg: var(--tg-blue); }
+main[data-testid="popup"] :is(.bg-\[\#e8f6df\], .bg-\[\#f4fbf0\]) { --tg-edge-bg: var(--tg-green-soft); }
+main[data-testid="popup"] [data-testid="morph-nav"] [aria-selected="true"] { --tg-edge-bg: var(--tg-cream); }
+
+/* Draw the edge (skip black shapes and keep keyboard focus rings) */
+main[data-testid="popup"] :is(
+    [style*="background: var(--tg-yellow)"],
+    [style*="background: var(--tg-pink)"],
+    [style*="background: var(--tg-blue)"],
+    [style*="background: var(--tg-green)"],
+    [style*="background: var(--tg-green-soft)"],
+    [style*="background: var(--tg-card)"],
+    [style*="background: var(--tg-cream)"],
+    .bg-white, .bg-white\/90, .bg-white\/85, .bg-white\/80, .bg-white\/60,
+    .bg-\[\#fafafa\], .bg-\[\#f4f4f5\], .bg-\[\#f4f4f5\]\/80, .bg-\[\#eef1f4\],
+    .bg-\[\#e7f6ff\], .bg-\[\#e8f6df\], .bg-\[\#f4fbf0\],
+    button.bg-secondary, input
+  ):not([data-testid="period-switch"] .ui-period-thumb):not(:focus-visible) {
+  outline: 1px solid color-mix(in srgb, var(--tg-edge-bg) var(--tg-edge-mix), black);
+  outline-offset: -1px;
+}
+/* Shapes that already draw a 1px border: same darker shade, no double line */
+main[data-testid="popup"] .border {
+  border-color: color-mix(in srgb, var(--tg-edge-bg) var(--tg-edge-mix), black);
+}

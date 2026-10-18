@@ -5,7 +5,27 @@ import {
   bundledAdapter,
   missingSelectorKeys,
   queryBySelector,
+  snapshotHtml,
 } from "../lib/adapter";
+
+describe("snapshotHtml", () => {
+  it("drops scripts, styles and svgs before the size cap", () => {
+    const filler = "x".repeat(500);
+    const html =
+      `<html><head><script>${filler}</script><style>${filler}</style></head>` +
+      `<body><svg viewBox="0 0 1 1"><path d="M0"/></svg>` +
+      `<div contenteditable="true" role="textbox">draft</div></body></html>`;
+    const out = snapshotHtml(html, 120);
+    expect(out).not.toContain("<script");
+    expect(out).not.toContain("<style");
+    expect(out).not.toContain("<svg");
+    expect(out).toContain('role="textbox"');
+  });
+
+  it("still caps the length", () => {
+    expect(snapshotHtml("<p>" + "a".repeat(50) + "</p>", 10)).toHaveLength(10);
+  });
+});
 
 describe("chatgpt adapter bundle", () => {
   it("ships versioned selectors (not a TODO stub)", () => {

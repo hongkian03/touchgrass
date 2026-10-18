@@ -12,6 +12,8 @@ dependencies = [
   "uvicorn==0.42.0",
   "python-dotenv>=1.0.0",
   "daytona>=0.21.0",
+  "numpy>=2.4.6",
+  "pillow>=13.0.0",
 ]
 
 [project.optional-dependencies]

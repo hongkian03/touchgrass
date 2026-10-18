@@ -1,3 +1,4 @@
+import type { CoachChoiceRow } from "./coachChoice";
 import type { UsageRow } from "./types";
 
 export type PuddleState = {
@@ -87,6 +88,24 @@ export async function appendUsage(row: UsageRow): Promise<void> {
   await writeState({ usage: next.slice(-MAX_USAGE_ROWS) });
 }
 
+/** Coach toast decisions (which button the user picked). */
+export async function appendCoachChoice(row: CoachChoiceRow): Promise<void> {
+  const raw = await browser.storage.local.get("coachChoices");
+  const prev = Array.isArray(raw.coachChoices)
+    ? (raw.coachChoices as CoachChoiceRow[])
+    : [];
+  await browser.storage.local.set({
+    coachChoices: [...prev, row].slice(-MAX_USAGE_ROWS),
+  });
+}
+
+export async function readCoachChoices(): Promise<CoachChoiceRow[]> {
+  const raw = await browser.storage.local.get("coachChoices");
+  return Array.isArray(raw.coachChoices)
+    ? (raw.coachChoices as CoachChoiceRow[])
+    : [];
+}
+
 /** Rough byte size of persisted state (UTF-16 JSON). */
 export function estimateStorageBytes(state: PuddleState): number {
   try {
@@ -99,4 +118,22 @@ export function estimateStorageBytes(state: PuddleState): number {
 export function formatStorageSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+/**
+ * Prompts in a row on each site's big model (for check-ins).
+ * `onBig=false` resets the site's count. Returns the new count.
+ */
+export async function bumpBigModelStreak(
+  site: string,
+  onBig: boolean,
+): Promise<number> {
+  const raw = await browser.storage.local.get("bigModelStreak");
+  const map =
+    raw.bigModelStreak && typeof raw.bigModelStreak === "object"
+      ? (raw.bigModelStreak as Record<string, number>)
+      : {};
+  const next = onBig ? (map[site] ?? 0) + 1 : 0;
+  await browser.storage.local.set({ bigModelStreak: { ...map, [site]: next } });
+  return next;
 }

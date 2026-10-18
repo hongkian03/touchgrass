@@ -22,6 +22,21 @@ class ClassifierService:
         )
         self.inflight = 0
 
+    def select(self, pred, evaluation):
+        return choose(
+            pred,
+            self.profile,
+            self.policy,
+            self.settings.mode,
+            "shadow" if evaluation else self.settings.coaching_mode,
+        )
+
+    def target_for(self, req):
+        return Target(
+            model_id=self.profile.small_model_id,
+            website_label=self.profile.website_target_label,
+        )
+
     def skip_reason(self, req, *, evaluation=False):
         if not req.opted_in:
             return "not_opted_in"
@@ -69,13 +84,7 @@ class ClassifierService:
                     raise TimeoutError()
                 async with asyncio.timeout_at(deadline):
                     pred = await self.client.predict(req, self.profile)
-                    action, candidate, reason = choose(
-                        pred,
-                        self.profile,
-                        self.policy,
-                        self.settings.mode,
-                        "shadow" if evaluation else self.settings.coaching_mode,
-                    )
+                    action, candidate, reason = self.select(pred, evaluation)
                 if time.monotonic() >= deadline:
                     raise TimeoutError()
             except TimeoutError:
@@ -84,14 +93,7 @@ class ClassifierService:
                 reason = exc.category
             finally:
                 self.inflight -= 1
-        target = (
-            Target(
-                model_id=self.profile.small_model_id,
-                website_label=self.profile.website_target_label,
-            )
-            if action == "suggest_small"
-            else None
-        )
+        target = self.target_for(req) if action == "suggest_small" else None
         return Decision(
             response=ClassifyResponse(
                 request_id=req.request_id,

@@ -24,7 +24,10 @@ export type CoachClassifyResponse = {
   site: string;
   current_model_label: string;
   action: string;
-  target?: { label?: string; model?: string } | null;
+  target?: { model_id: string; website_label: string } | null;
+  reason_code?: string;
+  recommendation_scope?: "evaluated_pair" | "generalized";
+  evidence_note?: string | null;
   ttl_ms: number;
   decision_id: string;
   profile_version?: string;
@@ -48,6 +51,7 @@ export type DraftCoachHooks = {
   holdMs?: number;
   /** Abort classify fetch after this (ms). Separate from hold. */
   classifyTimeoutMs?: number;
+  verdict?: (response: CoachClassifyResponse | null) => void;
 };
 
 export class DraftCoach {
@@ -58,6 +62,7 @@ export class DraftCoach {
   debounceMs: number;
   holdMs: number;
   classifyTimeoutMs: number;
+  verdict: NonNullable<DraftCoachHooks["verdict"]>;
   expectedProfileVersion: string | null;
   expectedPolicyVersion: string | null;
   generation = 0;
@@ -78,6 +83,7 @@ export class DraftCoach {
     this.debounceMs = hooks.debounceMs ?? 400;
     this.holdMs = hooks.holdMs ?? 800;
     this.classifyTimeoutMs = hooks.classifyTimeoutMs ?? 4000;
+    this.verdict = hooks.verdict ?? (() => {});
     this.expectedProfileVersion = hooks.expectedProfileVersion ?? null;
     this.expectedPolicyVersion = hooks.expectedPolicyVersion ?? null;
   }
@@ -161,9 +167,11 @@ export class DraftCoach {
       ) {
         return;
       }
+      this.verdict(response);
       if (
         response.action !== "suggest_small" ||
-        !response.target ||
+        !response.target?.model_id ||
+        !response.target.website_label ||
         response.ttl_ms <= 0
       ) {
         return;
@@ -183,7 +191,7 @@ export class DraftCoach {
         }
       }, this.ready.expiresAt - this.now());
     } catch {
-      // submission independent of coaching
+      if (generation === this.generation && !controller.signal.aborted) this.verdict(null);
     } finally {
       clearTimeout(cutoff);
     }

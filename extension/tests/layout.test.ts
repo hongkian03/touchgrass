@@ -6,15 +6,19 @@ import {
   DASHBOARD_MAX_WIDTH,
   DASHBOARD_MIN_WIDTH,
   ONBOARDING_MAX_WIDTH,
+  ONBOARDING_POPUP_HEIGHT,
+  POPUP_CONTENT_HEIGHT,
   POPUP_HEIGHT,
   POPUP_WIDTH,
   POPUP_WIDTH_TOLERANCE,
 } from "../lib/layout";
 
 describe("layout constants (issue #4)", () => {
-  it("popup is 360 x 520", () => {
+  it("popup is 360 wide; 520 of content + the 38px wordmark row = 558; setup is 70px shorter", () => {
     expect(POPUP_WIDTH).toBe(360);
-    expect(POPUP_HEIGHT).toBe(520);
+    expect(POPUP_CONTENT_HEIGHT).toBe(520);
+    expect(POPUP_HEIGHT).toBe(558);
+    expect(ONBOARDING_POPUP_HEIGHT).toBe(488);
     expect(POPUP_WIDTH_TOLERANCE).toBe(4);
   });
 

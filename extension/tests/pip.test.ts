@@ -75,7 +75,7 @@ describe("coach bubble + hide", () => {
     expect(overlay).toMatch(/COACH_RIGHT/);
   });
 
-  it("content watches typing and holds Send when paired", () => {
+  it("content watches typing and reports sends to Chalk when paired", () => {
     const entry = readFileSync(
       resolve(__dirname, "../entrypoints/content.ts"),
       "utf8",
@@ -87,7 +87,8 @@ describe("coach bubble + hide", () => {
     );
     expect(content).toMatch(/COACH_TYPE_DEBOUNCE_MS/);
     expect(content).toMatch(/addEventListener\(\s*["']input["']/);
-    expect(content).toMatch(/holdSend/);
+    expect(content).toMatch(/chalkCoach\.onSend\(\)/);
+    expect(content).toMatch(/chalkCoach\.update\(/);
     expect(content).toMatch(/DraftCoach/);
   });
 
