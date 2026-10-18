@@ -137,7 +137,7 @@ function muskieStickerSvg(href: string): string {
   return `
   <g transform="translate(232 424) rotate(-4)">
     <ellipse cx="0" cy="116" rx="84" ry="18" fill="#3d8b40" opacity="0.22"/>
-    <image href="${safeHref}" x="-110" y="-154" width="220" height="296" preserveAspectRatio="xMidYMid contain"/>
+    <image href="${safeHref}" x="-110" y="-154" width="220" height="296" preserveAspectRatio="xMidYMid meet"/>
   </g>`;
 }
 

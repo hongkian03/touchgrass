@@ -229,6 +229,32 @@ describe("userName + local storage helpers", () => {
     expect(bytes).toBeGreaterThan(40);
     expect(formatStorageSize(bytes)).toMatch(/B|KB/);
   });
+
+  it("detects extension context invalidated errors", async () => {
+    const { isExtensionContextError, isExtensionStorageAlive } = await import(
+      "../lib/storage"
+    );
+    expect(
+      isExtensionContextError(new Error("Extension context invalidated.")),
+    ).toBe(true);
+    expect(isExtensionContextError(new Error("other"))).toBe(false);
+    // In vitest, browser.storage may be mocked or missing — just ensure no throw.
+    expect(typeof isExtensionStorageAlive()).toBe("boolean");
+  });
+});
+
+describe("onboarding Musky greeting copy", () => {
+  it("says Hi I'm Musky not Pip", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(
+      resolve(__dirname, "../components/InlineOnboarding.tsx"),
+      "utf8",
+    );
+    expect(src).toMatch(/Hi! I'm Musky/);
+    expect(src).toMatch(/Meet Musky, your AI footprint buddy/);
+    expect(src).not.toMatch(/Hi! I'm Pip/);
+  });
 });
 
 describe("achievement report card + PDF", () => {

@@ -167,7 +167,7 @@ export function InlineOnboarding({ onComplete }: Props) {
         </h1>
         <p className="m-0 mt-0.5 text-xs text-muted-foreground">
           {step === 1
-            ? "Meet Pip, your AI footprint buddy"
+            ? "Meet Musky, your AI footprint buddy"
             : step === 2
               ? trimmedName
                 ? `Which AI tabs do you use, ${trimmedName}?`
@@ -203,7 +203,7 @@ export function InlineOnboarding({ onComplete }: Props) {
               <p className="m-0 text-xs font-medium text-foreground">
                 {trimmedName
                   ? `Hey ${trimmedName}! Ready to save some trees?`
-                  : "Hi! I'm Pip. What should I call you?"}
+                  : "Hi! I'm Musky. What should I call you?"}
               </p>
             </div>
           </div>
