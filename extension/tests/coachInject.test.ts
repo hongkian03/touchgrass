@@ -87,6 +87,21 @@ describe("content + background wiring", () => {
     expect(src).toMatch(/clearDebounce/);
   });
 
+  it("startCoachWatch swallows extension context invalidated after reload", () => {
+    const src = readFileSync(
+      resolve(__dirname, "../lib/startCoachWatch.ts"),
+      "utf8",
+    );
+    const bridge = readFileSync(
+      resolve(__dirname, "../lib/backendBridge.ts"),
+      "utf8",
+    );
+    expect(src).toMatch(/isExtensionContextAlive/);
+    expect(src).toMatch(/markContextDead/);
+    expect(src).toMatch(/contextDead/);
+    expect(bridge).toMatch(/extension_context_invalidated/);
+  });
+
   it("background rebinds on permission and message", () => {
     const src = readFileSync(
       resolve(__dirname, "../entrypoints/background.ts"),

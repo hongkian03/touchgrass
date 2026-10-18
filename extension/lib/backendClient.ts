@@ -1,5 +1,7 @@
 /** Background-only PromptPrint API client. No secrets; session token from storage. */
 
+import { isExtensionContextError } from "./storage";
+
 export const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8000";
 
 export type BackendConfig = {
@@ -25,21 +27,31 @@ export function resolveBaseUrl(stored?: string | null): string {
 }
 
 export async function readBackendConfig(): Promise<BackendConfig> {
-  const raw = await browser.storage.local.get([
-    "backendBaseUrl",
-    "coachingSessionToken",
-    "backendEnabled",
-  ]);
-  return {
-    baseUrl: resolveBaseUrl(
-      typeof raw.backendBaseUrl === "string" ? raw.backendBaseUrl : null,
-    ),
-    sessionToken:
-      typeof raw.coachingSessionToken === "string" && raw.coachingSessionToken
-        ? raw.coachingSessionToken
-        : null,
-    backendEnabled: raw.backendEnabled !== false,
+  const fallback: BackendConfig = {
+    baseUrl: DEFAULT_BACKEND_BASE,
+    sessionToken: null,
+    backendEnabled: false,
   };
+  try {
+    const raw = await browser.storage.local.get([
+      "backendBaseUrl",
+      "coachingSessionToken",
+      "backendEnabled",
+    ]);
+    return {
+      baseUrl: resolveBaseUrl(
+        typeof raw.backendBaseUrl === "string" ? raw.backendBaseUrl : null,
+      ),
+      sessionToken:
+        typeof raw.coachingSessionToken === "string" && raw.coachingSessionToken
+          ? raw.coachingSessionToken
+          : null,
+      backendEnabled: raw.backendEnabled !== false,
+    };
+  } catch (e) {
+    if (isExtensionContextError(e)) return fallback;
+    throw e;
+  }
 }
 
 export async function writeBackendConfig(

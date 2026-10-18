@@ -231,15 +231,18 @@ describe("userName + local storage helpers", () => {
   });
 
   it("detects extension context invalidated errors", async () => {
-    const { isExtensionContextError, isExtensionStorageAlive } = await import(
-      "../lib/storage"
-    );
+    const {
+      isExtensionContextAlive,
+      isExtensionContextError,
+      isExtensionStorageAlive,
+    } = await import("../lib/storage");
     expect(
       isExtensionContextError(new Error("Extension context invalidated.")),
     ).toBe(true);
     expect(isExtensionContextError(new Error("other"))).toBe(false);
     // In vitest, browser.storage may be mocked or missing — just ensure no throw.
     expect(typeof isExtensionStorageAlive()).toBe("boolean");
+    expect(typeof isExtensionContextAlive()).toBe("boolean");
   });
 });
 

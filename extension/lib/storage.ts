@@ -20,9 +20,19 @@ export const DEFAULT_STATE: PuddleState = {
   lastCoachAt: 0,
 };
 
+/** True when chrome.runtime still belongs to a live extension (false after reload). */
+export function isExtensionContextAlive(): boolean {
+  try {
+    return Boolean(browser?.runtime?.id);
+  } catch {
+    return false;
+  }
+}
+
 /** True when chrome.storage is usable (false after extension reload until tab refresh). */
 export function isExtensionStorageAlive(): boolean {
   try {
+    if (!isExtensionContextAlive()) return false;
     return Boolean(browser?.storage?.local);
   } catch {
     return false;

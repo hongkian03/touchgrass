@@ -23,6 +23,7 @@ import { providerFromHostname, urlForPlatformId } from "./route";
 import { resolveActiveSite } from "./siteDetect";
 import {
   appendUsage,
+  isExtensionContextAlive,
   isExtensionContextError,
   isExtensionStorageAlive,
   readState,
@@ -125,6 +126,35 @@ export function startCoachWatch(): void {
   let sendBypassOnce = false;
   /** Groq/cross-site toast up — chalk must not unmount it. */
   let redirectToastActive = false;
+  /** Extension was reloaded; chrome.runtime is a dead binding. */
+  let contextDead = false;
+  const mo = new MutationObserver(() => {
+    swallow(maybeReportMiss());
+  });
+
+  const markContextDead = () => {
+    if (contextDead) return;
+    contextDead = true;
+    clearDebounce();
+    mo.disconnect();
+  };
+
+  const contextOk = (): boolean => {
+    if (contextDead) return false;
+    if (isExtensionContextAlive()) return true;
+    markContextDead();
+    return false;
+  };
+
+  const swallow = (p: Promise<unknown>) => {
+    void p.catch((e) => {
+      if (isExtensionContextError(e)) {
+        markContextDead();
+        return;
+      }
+      console.warn("[Touchgrass] coach error", e);
+    });
+  };
   let activeSite: string | null =
     providerFromHostname(location.hostname, platforms) ?? null;
 
@@ -146,6 +176,7 @@ export function startCoachWatch(): void {
   ): Promise<boolean> => {
     let result: GroqRouteResult;
     try {
+      if (!contextOk()) return false;
       result = (await browser.runtime.sendMessage({
         type: "puddle/route-query",
         draft: draftText,
@@ -153,7 +184,10 @@ export function startCoachWatch(): void {
         enabledPlatforms: enabled,
       })) as GroqRouteResult;
     } catch (e) {
-      if (isExtensionContextError(e)) return false;
+      if (isExtensionContextError(e)) {
+        markContextDead();
+        return false;
+      }
       throw e;
     }
 
@@ -279,15 +313,14 @@ export function startCoachWatch(): void {
     return activeSite;
   };
 
-  void ensureSite().then((site) => {
-    if (site && site !== activeSite) {
-      console.log(`[Touchgrass] watching ${site}`);
-    } else if (site) {
-      console.log(`[Touchgrass] watching ${site}`);
-    }
-  });
+  swallow(
+    ensureSite().then((site) => {
+      if (site) console.log(`[Touchgrass] watching ${site}`);
+    }),
+  );
 
   const loadAdapter = async () => {
+    if (!contextOk()) return;
     const site = await ensureSite();
     if (!site) return;
     const res = await bgBackend<{ ok?: boolean; adapter?: SiteAdapter | null }>(
@@ -300,17 +333,24 @@ export function startCoachWatch(): void {
     }
   };
 
-  void loadAdapter();
+  swallow(loadAdapter());
 
-  browser.runtime.onMessage.addListener((message) => {
-    if (message?.type === "touchgrass/adapter-updated" && message.adapter) {
-      adapter = message.adapter as SiteAdapter;
-      console.log(
-        `[Touchgrass] adapter updated to v${adapter.version}`,
-      );
-      missStreak = 0;
+  try {
+    if (contextOk()) {
+      browser.runtime.onMessage.addListener((message) => {
+        if (message?.type === "touchgrass/adapter-updated" && message.adapter) {
+          adapter = message.adapter as SiteAdapter;
+          console.log(
+            `[Touchgrass] adapter updated to v${adapter.version}`,
+          );
+          missStreak = 0;
+        }
+      });
     }
-  });
+  } catch (e) {
+    if (isExtensionContextError(e)) markContextDead();
+    else throw e;
+  }
 
   const modelLabelEl = (): HTMLElement | null => {
     if (adapter?.selectors.model_name) {
@@ -330,7 +370,7 @@ export function startCoachWatch(): void {
   };
 
   const maybeReportMiss = async () => {
-    if (!adapter || repairInFlight) return;
+    if (!contextOk() || !adapter || repairInFlight) return;
     const site = await ensureSite();
     if (!site || adapter.site !== site) return;
     const missing = missingSelectorKeys(adapter, document, [
@@ -403,7 +443,7 @@ export function startCoachWatch(): void {
       if (!res?.ok || !res.response) throw new Error(res?.error || "classify");
       return res.response;
     },
-    emit: (eventType, response) => void emitEvent(eventType, response),
+    emit: (eventType, response) => swallow(emitEvent(eventType, response)),
     display: (response) => {
       if (!response) {
         if (!redirectToastActive) unmountCoach();
@@ -456,7 +496,7 @@ export function startCoachWatch(): void {
             savedCo2G: savings.savedCo2G,
           },
           onSwitch: () => {
-            void (async () => {
+            swallow((async () => {
               chalkCoach.safeEmit("switch_clicked", response);
               const modelEl = modelLabelEl();
               const targetModel =
@@ -475,7 +515,7 @@ export function startCoachWatch(): void {
               unmountCoach();
               pendingRelease?.();
               pendingRelease = null;
-            })();
+            })());
           },
           onSendAnyway: () => {
             chalkCoach.safeEmit("sent_anyway", response);
@@ -523,7 +563,7 @@ export function startCoachWatch(): void {
     if (acting || redirectToastActive) return false;
     if (!text || text.length < 8) return false;
     if (text === lastRoutedDraft) return false;
-    if (!isExtensionStorageAlive()) return false;
+    if (!contextOk() || !isExtensionStorageAlive()) return false;
 
     let state;
     try {
@@ -552,7 +592,10 @@ export function startCoachWatch(): void {
     try {
       return await runCrossSiteRedirect(text, provider, enabled);
     } catch (e) {
-      if (isExtensionContextError(e)) return false;
+      if (isExtensionContextError(e)) {
+        markContextDead();
+        return false;
+      }
       console.warn("[Touchgrass] coach route error", e);
       return false;
     } finally {
@@ -636,13 +679,13 @@ export function startCoachWatch(): void {
         (btn.textContent ?? "").slice(0, 40),
       ].join(" ");
       if (!REGENERATE_RE.test(label)) return;
-      void recordSend(lastSentText, true);
+      swallow(recordSend(lastSentText, true));
     },
     true,
   );
 
   const releaseSend = (sendBtn: Element | null, text: string) => {
-    void recordSend(text);
+    swallow(recordSend(text));
     sendBypassOnce = true;
     if (sendBtn instanceof HTMLElement) {
       sendBtn.click();
@@ -673,7 +716,8 @@ export function startCoachWatch(): void {
     document.addEventListener(
       "click",
       (ev) => {
-        void (async () => {
+        swallow((async () => {
+          if (!contextOk()) return;
           const t = ev.target as Element | null;
           if (!t) return;
           const sendSel = adapter?.selectors.send_button;
@@ -703,7 +747,7 @@ export function startCoachWatch(): void {
           const text = draftFrom(composer).trim();
           if (text.length < 8) {
             // Short text or image-only send: let the site send, just log it
-            void recordSend(text);
+            swallow(recordSend(text));
             return;
           }
 
@@ -726,7 +770,7 @@ export function startCoachWatch(): void {
             const draft = await buildDraft(text, model);
             if (draft) {
               pendingRelease = () => {
-                void recordSend(text);
+                swallow(recordSend(text));
                 chalkCoach.armBypass();
                 sendBypassOnce = true;
                 (sendBtn as HTMLElement).click();
@@ -743,7 +787,7 @@ export function startCoachWatch(): void {
 
           // Stay / no hop → let Claude send
           releaseSend(sendBtn, text);
-        })();
+        })());
       },
       true,
     );
@@ -752,13 +796,13 @@ export function startCoachWatch(): void {
   const schedule = () => {
     if (debounceTimer) window.clearTimeout(debounceTimer);
     debounceTimer = window.setTimeout(() => {
-      void maybeCoach();
+      swallow(maybeCoach());
     }, COACH_TYPE_DEBOUNCE_MS);
   };
 
   const maybeCoach = async () => {
-    if (acting || redirectToastActive) return;
-    void maybeReportMiss();
+    if (acting || redirectToastActive || !contextOk()) return;
+    swallow(maybeReportMiss());
     const composer = composerForSite();
     if (!composer) {
       console.warn("[Touchgrass] no composer found");
@@ -813,7 +857,10 @@ export function startCoachWatch(): void {
         if (chalkDraft) chalkCoach.update(chalkDraft);
       }
     } catch (e) {
-      if (isExtensionContextError(e)) return;
+      if (isExtensionContextError(e)) {
+        markContextDead();
+        return;
+      }
       console.warn("[Touchgrass] coach route error", e);
     } finally {
       acting = false;
@@ -836,7 +883,7 @@ export function startCoachWatch(): void {
       const text = draftFrom(composer).trim();
       if (text.length < 8) {
         // Short text or image-only send: let the site send, just log it
-        void recordSend(text);
+        swallow(recordSend(text));
         return;
       }
 
@@ -846,11 +893,12 @@ export function startCoachWatch(): void {
       clearDebounce();
       bindHold();
 
-      void (async () => {
+      swallow((async () => {
+        if (!contextOk()) return;
         const hopped = await tryHopOnSend(text);
         if (hopped) return;
         releaseSend(findSendButton(null), text);
-      })();
+      })());
     },
     true,
   );
@@ -872,9 +920,6 @@ export function startCoachWatch(): void {
   );
 
   bindHold();
-  void maybeReportMiss();
-  const mo = new MutationObserver(() => {
-    void maybeReportMiss();
-  });
+  swallow(maybeReportMiss());
   mo.observe(document.documentElement, { childList: true, subtree: true });
 }
