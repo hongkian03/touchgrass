@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="extension/public/pets/muskie/sticker-claude-chatgpt.png" alt="Musky holding Claude and ChatGPT" width="420" />
+  <img src="extension/public/pets/muskie/sticker-touchgrass.png" alt="Musky touching grass" width="320" />
 </p>
 
 <h1 align="center">touchgrass</h1>
