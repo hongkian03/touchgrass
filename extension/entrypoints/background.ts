@@ -297,20 +297,85 @@ export default defineBackground(() => {
             .executeScript({
               target: { tabId },
               func: (text: string) => {
-                const el = document.querySelector<HTMLElement>(
-                  '[data-testid="chat-input"], [data-testid="prompt-textarea"], div.ProseMirror[contenteditable="true"], textarea, [contenteditable="true"]',
-                );
-                if (!el) return false;
-                if (el instanceof HTMLTextAreaElement) {
+                const COMPOSER =
+                  '[data-testid="chat-input"], [data-testid="prompt-textarea"], div.ProseMirror[contenteditable="true"], rich-textarea textarea, textarea, [contenteditable="true"]';
+                const SEND =
+                  'button[aria-label="Send message"], button[aria-label="Send"], button[data-testid="send-button"], button[aria-label*="Send" i]';
+
+                const findComposer = (): HTMLElement | null =>
+                  document.querySelector<HTMLElement>(COMPOSER);
+
+                const pasteInto = (el: HTMLElement): void => {
                   el.focus();
-                  el.value = text;
-                  el.dispatchEvent(new Event("input", { bubbles: true }));
+                  if (el instanceof HTMLTextAreaElement) {
+                    el.value = text;
+                    el.dispatchEvent(new Event("input", { bubbles: true }));
+                    return;
+                  }
+                  // React contenteditables prefer insertText over textContent
+                  try {
+                    document.execCommand("selectAll", false);
+                    const ok = document.execCommand("insertText", false, text);
+                    if (ok) return;
+                  } catch {
+                    /* fall through */
+                  }
+                  el.textContent = text;
+                  el.dispatchEvent(
+                    new InputEvent("input", { bubbles: true, data: text }),
+                  );
+                };
+
+                const pressSend = (): boolean => {
+                  const btn = document.querySelector<HTMLButtonElement>(SEND);
+                  if (btn && !btn.disabled) {
+                    btn.click();
+                    return true;
+                  }
+                  const el = findComposer();
+                  if (!el) return false;
+                  el.focus();
+                  el.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                      key: "Enter",
+                      code: "Enter",
+                      keyCode: 13,
+                      which: 13,
+                      bubbles: true,
+                      cancelable: true,
+                    }),
+                  );
+                  el.dispatchEvent(
+                    new KeyboardEvent("keyup", {
+                      key: "Enter",
+                      code: "Enter",
+                      keyCode: 13,
+                      which: 13,
+                      bubbles: true,
+                      cancelable: true,
+                    }),
+                  );
                   return true;
-                }
-                el.focus();
-                el.textContent = text;
-                el.dispatchEvent(new Event("input", { bubbles: true }));
-                return true;
+                };
+
+                const run = (): boolean => {
+                  const el = findComposer();
+                  if (!el) return false;
+                  pasteInto(el);
+                  window.setTimeout(() => {
+                    pressSend();
+                  }, 350);
+                  return true;
+                };
+
+                if (run()) return true;
+                // Gemini SPA often mounts composer after "complete"
+                let tries = 0;
+                const id = window.setInterval(() => {
+                  tries += 1;
+                  if (run() || tries >= 24) window.clearInterval(id);
+                }, 400);
+                return false;
               },
               args: [draft],
             })
