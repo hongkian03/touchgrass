@@ -1,0 +1,40 @@
+
+[project]
+name = "prompt-print"
+version = "0.1.0"
+description = "Prompt Print coaching and reproducible evaluation backend"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+  "fastapi==0.135.1",
+  "pydantic==2.14.1",
+  "httpx==0.28.1",
+  "uvicorn==0.42.0",
+]
+
+[project.optional-dependencies]
+eval = ["chalkcompute==2.13.7", "chalkpy[runtime]==2.163.1", "pyarrow==23.0.1"]
+
+[dependency-groups]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "black>=23.0",
+  "isort>=5.0",
+  "flake8>=6.0",
+  "ipython>=8.37.0",
+  "jupyter>=1.1.1",
+  "ipykernel>=6.29.5",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.pyright]
+ignore = ["."]
+
+[tool.mypy]
+ignore_errors = true
+
+[tool.ty.rules]
+all = "ignore"

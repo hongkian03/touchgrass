@@ -33,3 +33,13 @@ sandbox_jobs/samples/chatgpt_snapshot.html
 
 # NASA GIBS images and results for "Seen from space" (rebuilt by space/nasa_lights.py)
 space/cache/
+# Private evaluation checkpoints, reports, pairing database and SQLite sidecars
+artifacts/
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# docs
+prompt-print-chalk-architecture.md
+prompt-print-coding-agent-handoff.md
