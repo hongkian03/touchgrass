@@ -91,7 +91,7 @@ export function SettingsPane({
       >
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: "#e7f6ff" }}
+          style={{ background: "var(--tg-blue)" }}
         >
           <AccountCartoon size={36} />
         </div>
@@ -131,7 +131,7 @@ export function SettingsPane({
             <div className="min-w-0 flex-1">
               <span
                 className="mb-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                style={{ background: "#e7f6ff", color: "#2ba4e0" }}
+                style={{ background: "var(--tg-blue)", color: "var(--tg-ink)" }}
               >
                 account
               </span>
@@ -165,7 +165,7 @@ export function SettingsPane({
       >
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: "#fff8dc" }}
+          style={{ background: "var(--tg-yellow)" }}
         >
           <PlatformsCartoon size={36} />
         </div>
@@ -173,7 +173,7 @@ export function SettingsPane({
           <div className="mb-0.5 flex items-center gap-1.5">
             <span
               className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
-              style={{ background: "#fff8dc", color: "#8a5a00" }}
+              style={{ background: "var(--tg-yellow)", color: "var(--tg-ink)" }}
             >
               {state.enabledPlatforms.length} active
             </span>
@@ -198,7 +198,7 @@ export function SettingsPane({
         className="ui-note-enter ui-btn-press flex w-full items-center gap-2.5 rounded-xl border border-border px-2.5 py-2.5 text-left transition-transform"
         style={
           {
-            background: "#e8f6df",
+            background: "var(--tg-green-soft)",
             ["--i" as string]: 2,
           } as CSSProperties
         }
@@ -209,7 +209,7 @@ export function SettingsPane({
         <div className="min-w-0 flex-1">
           <span
             className="mb-0.5 inline-flex rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold"
-            style={{ color: "#3d8b40" }}
+            style={{ color: "var(--tg-green-deep)" }}
           >
             shareable card
           </span>
@@ -231,7 +231,7 @@ export function SettingsPane({
       >
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: "#e8f6df" }}
+          style={{ background: "var(--tg-green-soft)" }}
         >
           <LocalShieldCartoon size={36} />
         </div>
@@ -239,7 +239,7 @@ export function SettingsPane({
           <div className="flex items-center justify-between gap-2">
             <span
               className="mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
-              style={{ background: "#e8f6df", color: "#3d8b40" }}
+              style={{ background: "var(--tg-green-soft)", color: "var(--tg-green-deep)" }}
             >
               {formatStorageSize(bytes)} local
             </span>

@@ -15,8 +15,8 @@ import type { Platform } from "../../lib/types";
 
 const platforms = platformsData as Platform[];
 const DEFAULT_DRAFT = "what's the weather in Boston";
-const REDIRECT_MS = 3100;
-const SWITCH_HOLD_MS = 3300;
+const REDIRECT_MS = 1600;
+const SWITCH_HOLD_MS = 1800;
 
 export function FixtureApp() {
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -99,6 +99,8 @@ export function FixtureApp() {
           fromPlatform: provider,
           savedWh: 1.8,
           savedCo2G: 0.79,
+          chalkPill: "Chalk JEV + Router",
+          smallOkPct: 94,
           contextTurns: 2,
           sameSiteModel: platform?.smallModel ?? "gpt-4o-mini",
           durationMs: REDIRECT_MS,

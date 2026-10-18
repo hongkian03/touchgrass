@@ -52,6 +52,15 @@ export function queryBySelector(
   }
 }
 
+/** Tags the backend's snapshot cleaner deletes anyway; on ChatGPT they are most of the page. */
+const SNAPSHOT_DROP = /<(script|style|svg|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+
+/** Page HTML for an adapter-failure report: dropped tags removed first, so the
+ * size cap keeps the composer and messages instead of the head's scripts. */
+export function snapshotHtml(html: string, maxChars = 200_000): string {
+  return html.replace(SNAPSHOT_DROP, "").slice(0, maxChars);
+}
+
 export function missingSelectorKeys(
   adapter: SiteAdapter,
   root: ParentNode = document,

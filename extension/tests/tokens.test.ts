@@ -86,7 +86,14 @@ describe("onboarding chrome", () => {
   });
 
   it("inline popup onboarding mirrors name + platform chrome", () => {
-    expect(inline).toMatch(/puddle-title/);
+    // Brand title comes from the shared lowercase wordmark
+    expect(inline).toMatch(/<Wordmark \/>/);
+    const wordmark = readFileSync(
+      resolve(__dirname, "../components/Wordmark.tsx"),
+      "utf8",
+    );
+    expect(wordmark).toMatch(/data-testid="puddle-title"/);
+    expect(wordmark).toMatch(/>\s*touchgrass\s*</);
     expect(inline).toMatch(/onboarding-name/);
     expect(inline).toMatch(/PlatformGrid/);
     expect(inline).toMatch(/variant=["']sticker["']/);

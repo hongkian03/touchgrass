@@ -16,8 +16,6 @@ import { CountUp } from "../../components/ScoreCountUp";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import evalsData from "../../data/evals.json";
-import footprintData from "../../data/footprint.json";
-import seedInsights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
 import { bgBackend } from "../../lib/backendBridge";
 import type { EvalsSummary, HealthResult } from "../../lib/backendClient";
@@ -31,16 +29,22 @@ import { readState, writeState, type PuddleState } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
 import { parseExport } from "../../lib/upload";
 import { parseVoiceIntent } from "../../lib/voiceIntent";
-import { saplingsFromCo2G, weekSavings } from "../../lib/savings";
+import { projectTotals } from "../../lib/projection";
+import { weekSavings } from "../../lib/savings";
+import { rowsInLastDays, usageInsightCards } from "../../lib/usageInsights";
 import { weekTotals } from "../../lib/weekTotals";
-import type { FootprintModel } from "../../lib/totals";
+import {
+  FOOTPRINT_MODELS,
+  FOOTPRINT_SOURCE_NOTE,
+  TREE_SOURCE_NOTE,
+  treeMinutesFromCo2G,
+} from "../../lib/footprint";
 import type { Platform, UsageRow } from "../../lib/types";
 
 type InsightCard = { id: string; text: string };
 
 const platforms = platformsData as Platform[];
-const models = (footprintData as { models: Record<string, FootprintModel> })
-  .models;
+const models = FOOTPRINT_MODELS;
 const evalRows = (
   evalsData as { rows: Array<{ prompt_text: string; kind: string; label: string }> }
 ).rows;
@@ -53,9 +57,8 @@ export function DashboardApp() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
-  const [insightCards, setInsightCards] = useState<InsightCard[]>(
-    seedInsights.slice(0, 3),
-  );
+  /** Backend (Droid Analyst) tips after an upload; local tips until then. */
+  const [liveCards, setLiveCards] = useState<InsightCard[] | null>(null);
   const [evalsSummary, setEvalsSummary] = useState<EvalsSummary | null>(null);
   const [voiceLine, setVoiceLine] = useState("");
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
@@ -81,10 +84,10 @@ export function DashboardApp() {
             cards?: InsightCard[];
           }>("insights-latest");
           if (latest?.ok && latest.cards?.length) {
-            setInsightCards(latest.cards);
+            setLiveCards(latest.cards);
           }
         } catch {
-          // keep seed tips
+          // keep local tips
         }
         try {
           await bgBackend("adapter-sync");
@@ -114,16 +117,21 @@ export function DashboardApp() {
   }, [state]);
 
   const evalResult = useMemo(() => recomputeAccuracy(evalRows), []);
+  // Scaled from the daily average until there are 7 days of history
   const week = state
-    ? weekTotals(state.usage, today, models)
-    : { Wh: 0, water_L: 0, co2_g: 0, days: 0 };
+    ? projectTotals(weekTotals(state.usage, today, models), state.usage, today, 7)
+    : { Wh: 0, water_L: 0, co2_g: 0, days: 0, projected: false, basisDays: 0 };
   const saved = state
-    ? weekSavings(state.usage, today, platforms, models)
-    : { Wh: 0, water_L: 0, co2_g: 0 };
-  const saplings = saplingsFromCo2G(saved.co2_g);
+    ? projectTotals(weekSavings(state.usage, today, platforms, models), state.usage, today, 7)
+    : { Wh: 0, water_L: 0, co2_g: 0, projected: false, basisDays: 0 };
+  const estTag = week.projected ? "(projected)" : "(est.)";
   const streak = state
     ? computeStreak(state.usage, today, platforms)
     : 0;
+  const treeMinutes = treeMinutesFromCo2G(saved.co2_g);
+  const weekPrompts = state ? rowsInLastDays(state.usage, today, 7).length : 0;
+  const insightCards: InsightCard[] =
+    liveCards ?? (state ? usageInsightCards(state.usage, today, platforms, 7) : []);
 
   const onFile = async (file: File | null) => {
     if (!file || !state) return;
@@ -150,7 +158,7 @@ export function DashboardApp() {
         if (!result?.ok) {
           throw new Error(result?.error || "upload failed");
         }
-        if (result.cards?.length) setInsightCards(result.cards);
+        if (result.cards?.length) setLiveCards(result.cards);
         setUploadStatus(`Job ${result.job_id} succeeded · live insights`);
         return;
       } catch (e) {
@@ -275,9 +283,9 @@ export function DashboardApp() {
           <div>
             <h1
               data-testid="puddle-title"
-              className="m-0 text-3xl font-semibold tracking-tight"
+              className="m-0 text-[44px] leading-none"
             >
-              Touchgrass
+              touchgrass
             </h1>
             <p className="mt-1 mb-0 text-sm text-muted-foreground">
               Week · insights · upload · recap
@@ -317,43 +325,46 @@ export function DashboardApp() {
           className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
           <Stat
-            label="power used"
-            hint="Electricity these prompts burned, in watt-hours."
+            label={`power used ${estTag}`}
+            hint={`Estimated electricity these prompts used, in watt-hours. ${FOOTPRINT_SOURCE_NOTE}`}
             value={week.Wh}
-            decimals={1}
+            decimals={2}
             suffix=" Wh"
             art={<EnergyBolt size={72} />}
           />
           <Stat
-            label="water used"
-            hint="Water used to cool the servers, in liters."
-            value={week.water_L}
-            decimals={2}
-            suffix=" L"
+            label={`water used ${estTag}`}
+            hint={`Estimated water for server cooling and power, in millilitres. ${FOOTPRINT_SOURCE_NOTE}`}
+            value={week.water_L * 1000}
+            decimals={1}
+            suffix=" mL"
             art={<WaterDrop size={72} />}
           />
           <Stat
-            label="carbon out"
-            hint="CO₂ from the power those prompts used, in grams."
+            label={`carbon out ${estTag}`}
+            hint={`Estimated CO₂e from the power those prompts used, in grams. ${FOOTPRINT_SOURCE_NOTE}`}
             value={week.co2_g}
-            decimals={1}
+            decimals={2}
             suffix=" g"
             art={<Co2Cloud size={72} />}
           />
           <Stat
-            label="trees planted"
-            hint="Trees equal to the CO₂ you skipped vs the big default model."
-            value={saplings}
+            label={`trees ${estTag}`}
+            hint={`${TREE_SOURCE_NOTE} You saved ≈${saved.co2_g.toFixed(2)} g CO₂e.`}
+            value={treeMinutes}
             decimals={1}
-            suffix=""
-            art={<TreeGrove size={72} count={saplings} />}
+            suffix=" tree-min"
+            art={<TreeGrove size={72} count={Math.min(5, Math.max(1, Math.ceil(treeMinutes / 10)))} />}
           />
         </section>
 
         <section data-testid="streak-card">
           <h2 className="m-0 text-lg font-semibold">Habit</h2>
           <p className="mt-1 mb-0 text-sm" data-testid="streak">
-            {streak} day streak · {week.days} active days this week
+            {streak} day streak · {weekPrompts} prompts on {week.days} active days in the last 7 days
+            {week.projected
+              ? ` · 7-day totals projected from ${week.basisDays} ${week.basisDays === 1 ? "day" : "days"} of use`
+              : ""}
           </p>
         </section>
 
@@ -493,35 +504,35 @@ export function DashboardApp() {
           data-testid="recap"
           className="scroll-mt-8 rounded-xl border border-border p-4"
         >
-          <h2 className="m-0 text-lg font-semibold">Weekly recap</h2>
+          <h2 className="m-0 text-lg font-semibold">Recap · last 7 days</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <RecapCard
-              title="Energy"
+              title={`Energy ${estTag}`}
               value={week.Wh}
-              decimals={1}
+              decimals={2}
               suffix=" Wh"
               art={<EnergyBolt size={56} />}
             />
             <RecapCard
-              title="Water"
-              value={week.water_L}
-              decimals={2}
-              suffix=" L"
+              title={`Water ${estTag}`}
+              value={week.water_L * 1000}
+              decimals={1}
+              suffix=" mL"
               art={<WaterDrop size={56} />}
             />
             <RecapCard
-              title="CO₂"
+              title={`CO₂ ${estTag}`}
               value={week.co2_g}
-              decimals={1}
+              decimals={2}
               suffix=" g"
               art={<Co2Cloud size={56} />}
             />
             <RecapCard
-              title="Trees"
-              value={saplings}
+              title={`Trees ${estTag}`}
+              value={treeMinutes}
               decimals={1}
-              suffix=""
-              art={<TreeGrove size={56} count={saplings} />}
+              suffix=" tree-min"
+              art={<TreeGrove size={56} count={Math.min(5, Math.max(1, Math.ceil(treeMinutes / 10)))} />}
             />
           </div>
         </section>

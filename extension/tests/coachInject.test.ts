@@ -61,21 +61,22 @@ describe("content + background wiring", () => {
     expect(src).not.toMatch(/registration:\s*["']runtime["']/);
   });
 
-  it("startCoachWatch uses document capture + Groq route", () => {
+  it("startCoachWatch uses document capture + three-way choice", () => {
     const src = readFileSync(
       resolve(__dirname, "../lib/startCoachWatch.ts"),
       "utf8",
     );
     expect(src).toMatch(/document\.addEventListener/);
-    expect(src).toMatch(/puddle\/route-query/);
     expect(src).toMatch(/findComposer/);
     expect(src).toMatch(/adapter-get/);
-    expect(src).toMatch(/holdSend/);
     expect(src).toMatch(/resolveActiveSite/);
-    expect(src).toMatch(/\[Touchgrass\] route/);
+    expect(src).toMatch(/switch_here/);
+    expect(src).toMatch(/open_other/);
+    expect(src).toMatch(/send_anyway/);
+    expect(src).toMatch(/appendCoachChoice/);
   });
 
-  it("startCoachWatch intercepts Enter and logs watching", () => {
+  it("startCoachWatch observes Enter without blocking it", () => {
     const src = readFileSync(
       resolve(__dirname, "../lib/startCoachWatch.ts"),
       "utf8",
@@ -83,8 +84,11 @@ describe("content + background wiring", () => {
     expect(src).toMatch(/addEventListener\(\s*["']keydown["']/);
     expect(src).toMatch(/ev\.key\s*!==\s*["']Enter["']/);
     expect(src).toMatch(/\[Touchgrass\] watching/);
-    expect(src).toMatch(/sendBypassOnce/);
     expect(src).toMatch(/clearDebounce/);
+    // Never block the send
+    expect(src).not.toMatch(/preventDefault\(/);
+    expect(src).not.toMatch(/stopImmediatePropagation\(/);
+    expect(src).not.toMatch(/holdSend\(/);
   });
 
   it("startCoachWatch swallows extension context invalidated after reload", () => {

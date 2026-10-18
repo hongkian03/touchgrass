@@ -1,25 +1,49 @@
-/** Real-world cartoon colors (not the 5 Pip tokens). */
-const ENERGY_FIELD = "#fff3c4";
-const ENERGY_BOLT = "#f5c400";
-const ENERGY_HI = "#ffe566";
-const ENERGY_FACE = "#8a5a00";
+/**
+ * Hand-drawn footprint icons: ink linework with a slight brush wobble and
+ * off-white paper-cut fills, drawn to sit on a pastel tile.
+ *
+ * Motion is unchanged: every animation class (.ft-glow, .ft-orbit, .ft-spark*,
+ * .ft-bolt, .ft-drop, .ft-ripple*, .ft-splash, .ft-drip, .ft-cloud,
+ * .ft-puffball, .ft-tree, .ft-sway, .ft-leaf) sits on the same group as before.
+ * The cartoon faces (eyes and their blink) were removed for the hand-drawn style.
+ */
 
-const WATER_FIELD = "#d6f0ff";
-const WATER_DROP = "#2ba4e0";
-const WATER_HI = "#9ad8f5";
-const WATER_FACE = "#0b4f74";
+/** Theme tokens with fallbacks for pages without the popup theme (dashboard). */
+export const INK = "var(--tg-ink, #161616)";
+export const PAPER = "var(--tg-paper, #faf8f2)";
+const INK_W = 3.2;
 
-const CO2_FIELD = "#eef1f4";
-const CO2_BODY = "#c5cdd4";
-const CO2_DARK = "#8e99a4";
-const CO2_FACE = "#4a5560";
+/** Shared brush wobble; identical in every icon, so duplicate ids are harmless. */
+export const ROUGH = "url(#tg-ink-rough)";
+export function InkDefs() {
+  return (
+    <defs>
+      <filter id="tg-ink-rough" x="-15%" y="-15%" width="130%" height="130%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  );
+}
 
-const TREE_FIELD = "#e4f5d8";
-const TREE_LEAF = "#5cb85c";
-const TREE_LEAF_DK = "#3d8b40";
-const TREE_LEAF_LT = "#8fd18f";
-const TREE_TRUNK = "#8b5a2b";
-const TREE_FACE = "#2d5a27";
+/** Ink stroke props: round, slightly heavy, roughened. */
+export const ink = {
+  fill: "none",
+  stroke: INK,
+  strokeWidth: INK_W,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  filter: ROUGH,
+};
+
+/** Paper-cut shape with an ink outline. */
+export const paper = {
+  fill: PAPER,
+  stroke: INK,
+  strokeWidth: INK_W,
+  strokeLinejoin: "round" as const,
+  filter: ROUGH,
+};
 
 type SizeProps = { size?: number };
 
@@ -32,33 +56,17 @@ export function EnergyBolt({ size = 72 }: SizeProps) {
       viewBox="0 0 72 72"
       aria-label="energy"
       role="img"
+      overflow="visible"
     >
-      <circle className="ft-glow" cx="36" cy="36" r="30" fill={ENERGY_FIELD} />
+      <InkDefs />
+      <circle className="ft-glow" cx="36" cy="36" r="24" fill={PAPER} opacity="0.55" filter={ROUGH} />
       <g className="ft-orbit">
-        <circle className="ft-spark" cx="10" cy="22" r="2.4" fill={ENERGY_HI} />
-        <circle className="ft-spark ft-spark--mid" cx="62" cy="20" r="2" fill={ENERGY_BOLT} />
-        <circle className="ft-spark ft-spark--late" cx="60" cy="50" r="2.2" fill={ENERGY_HI} />
+        <path className="ft-spark" d="M9 20 L14 23" {...ink} />
+        <path className="ft-spark ft-spark--mid" d="M63 18 L58 22" {...ink} />
+        <path className="ft-spark ft-spark--late" d="M62 52 L57 49" {...ink} />
       </g>
       <g className="ft-bolt">
-        <path
-          d="M40 8 L18 36 H32 L28 62 L56 30 H40 Z"
-          fill={ENERGY_BOLT}
-          stroke={ENERGY_FACE}
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <ellipse cx="30" cy="30" rx="4" ry="5" fill={ENERGY_HI} opacity="0.9" />
-        <g className="ft-eyes">
-          <ellipse className="ft-eye" cx="30" cy="34" rx="2.1" ry="2.4" fill={ENERGY_FACE} />
-          <ellipse className="ft-eye ft-eye--late" cx="42" cy="32" rx="2.1" ry="2.4" fill={ENERGY_FACE} />
-        </g>
-        <path
-          d="M30 42 Q36 46 43 40"
-          fill="none"
-          stroke={ENERGY_FACE}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
+        <path d="M40 8 L19 37 H32 L27 63 L54 30 H40 Z" {...paper} />
       </g>
     </svg>
   );
@@ -73,35 +81,20 @@ export function WaterDrop({ size = 72 }: SizeProps) {
       viewBox="0 0 72 72"
       aria-label="water"
       role="img"
+      overflow="visible"
     >
-      <circle cx="36" cy="36" r="30" fill={WATER_FIELD} />
-      <ellipse className="ft-ripple" cx="36" cy="58" rx="20" ry="5" fill={WATER_DROP} />
-      <ellipse className="ft-ripple ft-ripple--late" cx="36" cy="58" rx="12" ry="3" fill={WATER_HI} />
-      <circle className="ft-splash" cx="20" cy="52" r="2" fill={WATER_HI} />
-      <circle className="ft-splash ft-spark--mid" cx="52" cy="50" r="1.8" fill={WATER_DROP} />
-      <circle className="ft-drip" cx="36" cy="6" r="2.6" fill={WATER_DROP} />
+      <InkDefs />
+      <ellipse className="ft-ripple" cx="36" cy="60" rx="20" ry="4.5" {...ink} />
+      <ellipse className="ft-ripple ft-ripple--late" cx="36" cy="60" rx="11" ry="2.6" {...ink} strokeWidth={2.4} />
+      <circle className="ft-splash" cx="19" cy="52" r="2.2" fill={INK} />
+      <circle className="ft-splash ft-spark--mid" cx="53" cy="50" r="1.9" fill={INK} />
+      <circle className="ft-drip" cx="36" cy="6" r="2.6" fill={INK} />
       <g className="ft-drop">
         <path
-          d="M36 12 C36 12 16 34 16 46 C16 57 25 64 36 64 C47 64 56 57 56 46 C56 34 36 12 36 12 Z"
-          fill={WATER_DROP}
-          stroke={WATER_FACE}
-          strokeWidth="1.8"
-          strokeLinejoin="round"
+          d="M36 12 C35 14 17 34 17 46 C17 57 25 63 36 63 C47 63 55 57 55 46 C55 34 37 14 36 12 Z"
+          {...paper}
         />
-        <ellipse cx="28" cy="40" rx="6" ry="8" fill={WATER_HI} opacity="0.95" />
-        <g className="ft-eyes">
-          <ellipse className="ft-eye" cx="28" cy="42" rx="2.2" ry="2.5" fill={WATER_FACE} />
-          <ellipse className="ft-eye ft-eye--late" cx="42" cy="42" rx="2.2" ry="2.5" fill={WATER_FACE} />
-        </g>
-        <circle cx="24" cy="48" r="2.4" fill={WATER_HI} opacity="0.85" />
-        <circle cx="46" cy="48" r="2.4" fill={WATER_HI} opacity="0.85" />
-        <path
-          d="M30 52 Q36 56 42 52"
-          fill="none"
-          stroke={WATER_FACE}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
+        <path d="M26 44 C26 39 29 34 32 31" {...ink} strokeWidth={2.6} />
       </g>
     </svg>
   );
@@ -116,25 +109,18 @@ export function Co2Cloud({ size = 72 }: SizeProps) {
       viewBox="0 0 72 72"
       aria-label="carbon dioxide"
       role="img"
+      overflow="visible"
     >
-      <circle cx="36" cy="36" r="30" fill={CO2_FIELD} />
-      <circle className="ft-puffball" cx="16" cy="48" r="4" fill={CO2_BODY} />
-      <circle className="ft-puffball ft-spark--mid" cx="56" cy="50" r="3.4" fill={CO2_DARK} />
+      <InkDefs />
+      <circle className="ft-puffball" cx="15" cy="50" r="3.6" {...ink} strokeWidth={2.4} />
+      <circle className="ft-puffball ft-spark--mid" cx="57" cy="52" r="3" {...ink} strokeWidth={2.4} />
       <g className="ft-cloud">
-        <ellipse cx="30" cy="40" rx="18" ry="13" fill={CO2_BODY} />
-        <ellipse cx="46" cy="38" rx="15" ry="12" fill={CO2_DARK} />
-        <ellipse cx="36" cy="30" rx="13" ry="11" fill={CO2_BODY} />
-        <g className="ft-eyes">
-          <ellipse className="ft-eye" cx="28" cy="36" rx="2.3" ry="2.6" fill={CO2_FACE} />
-          <ellipse className="ft-eye ft-eye--late" cx="44" cy="34" rx="2.3" ry="2.6" fill={CO2_FACE} />
-        </g>
         <path
-          d="M30 44 Q36 48 44 43"
-          fill="none"
-          stroke={CO2_FACE}
-          strokeWidth="1.6"
-          strokeLinecap="round"
+          d="M18 48 C10 48 10 36 19 36 C19 27 30 23 36 29 C40 21 54 23 53 34 C62 34 62 48 53 48 Z"
+          {...paper}
         />
+        {/* scribbled "CO2" mark */}
+        <path d="M28 41 C25 37 31 35 31 39 M35 38 C33 41 38 42 37 38 C37 36 35 36 35 38 M41 41 L44 41 L41 44 L44 44" {...ink} strokeWidth={2} />
       </g>
     </svg>
   );
@@ -156,9 +142,10 @@ export function TreeGrove({ size = 72, count = 1 }: SizeProps & { count?: number
       viewBox="0 0 72 72"
       aria-label="trees planted"
       role="img"
+      overflow="visible"
     >
-      <circle cx="36" cy="36" r="30" fill={TREE_FIELD} />
-      <ellipse cx="36" cy="56" rx="22" ry="6" fill={TREE_LEAF_LT} />
+      <InkDefs />
+      <path d="M10 57 C24 55 48 58 62 56" {...ink} />
       {trees.map((i) => {
         const x = 36 + (used[i] ?? 0);
         const scale = n <= 1 ? 1 : 0.7 + (i % 3) * 0.1;
@@ -170,14 +157,11 @@ export function TreeGrove({ size = 72, count = 1 }: SizeProps & { count?: number
           >
             <g className="ft-tree" style={{ animationDelay: `${i * 140}ms` }}>
               <g className="ft-sway" style={{ animationDelay: `${i * 180}ms` }}>
-                <rect x="-2.4" y="-18" width="4.8" height="18" rx="1.6" fill={TREE_TRUNK} />
-                <circle cx="0" cy="-26" r="11" fill={TREE_LEAF} />
-                <circle cx="-6" cy="-22" r="7.5" fill={TREE_LEAF_DK} />
-                <circle cx="6" cy="-23" r="7" fill={TREE_LEAF_LT} />
-                <circle className="ft-leaf" cx="-8" cy="-30" r="2" fill={TREE_LEAF_LT} />
-                <circle className="ft-leaf ft-spark--late" cx="8" cy="-32" r="1.8" fill={TREE_LEAF} />
-                <ellipse className="ft-eye" cx="-3" cy="-26" rx="1.4" ry="1.6" fill={TREE_FACE} />
-                <ellipse className="ft-eye ft-eye--late" cx="3" cy="-26" rx="1.4" ry="1.6" fill={TREE_FACE} />
+                <path d="M0 0 C-1 -10 1 -18 0 -30" {...ink} />
+                <path d="M0 -14 C-6 -14 -13 -19 -13 -25 C-7 -25 -1 -21 0 -14 Z" {...paper} />
+                <path d="M0 -22 C6 -22 13 -27 13 -33 C7 -33 1 -29 0 -22 Z" {...paper} />
+                <circle className="ft-leaf" cx="-8" cy="-34" r="1.8" fill={INK} />
+                <circle className="ft-leaf ft-spark--late" cx="7" cy="-40" r="1.6" fill={INK} />
               </g>
             </g>
           </g>

@@ -2,7 +2,7 @@
   "oversized": "Easy ask. Switching to a lighter model.",
   "regenerate": "You already asked this. Another regen costs water and watts.",
   "image": "This image costs about as much as dozens of text prompts.",
-  "video": "One video is about hundreds of text prompts.",
+  "video": "We estimate one video ≈ 1,000 text prompts of energy.",
   "switched": "Switched to {model}.",
   "redirecting": "Redirecting you to {name}…",
   "needAnotherPlatform": "Add another AI in onboarding to auto-redirect.",

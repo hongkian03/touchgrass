@@ -40,6 +40,7 @@ function smallModelFor(
 /**
  * Waste for rows on a single local calendar day.
  * Weights (also hardcoded in tests per issue #3): oversized +15, regen +5, image +25, video +40.
+ * These are team-chosen coaching weights, not measurements; the footprint numbers live in footprint.ts.
  */
 export function wastePenalty(
   rows: UsageRow[],

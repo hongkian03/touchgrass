@@ -4,7 +4,6 @@ import { PlatformGrid } from "../../components/PlatformGrid";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import platformsData from "../../data/platforms.json";
-import usageSeed from "../../data/usage-seed.json";
 import {
   canContinueOnboarding,
   customPlatformId,
@@ -15,9 +14,9 @@ import {
 import type { AiSiteVerdict } from "../../lib/groqClassify";
 import { ONBOARDING_MAX_WIDTH } from "../../lib/layout";
 import { score } from "../../lib/score";
-import { writeState } from "../../lib/storage";
+import { readState, writeState } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
-import type { Platform, UsageRow } from "../../lib/types";
+import type { Platform } from "../../lib/types";
 
 const platforms = platformsData as Platform[];
 
@@ -92,17 +91,12 @@ export function OnboardingApp() {
     setError(null);
     const origins = hostsForPlatforms(selected, platforms);
     try {
-      if (origins.length > 0) {
-        try {
-          await browser.permissions.request({ origins });
-        } catch {
-          // Custom sites may be outside the optional list. still finish setup.
-        }
-      }
-      const usage = usageSeed as UsageRow[];
+      // Keep real history and never seed demo rows into it
+      const usage = (await readState()).usage;
       const today = new Date();
       const dayScore = score(usage, today, platforms);
       const streak = computeStreak(usage, today, platforms);
+      // Save before the permission prompt so setup can't be lost mid-dialog
       await writeState({
         onboarded: true,
         userName: userName.trim(),
@@ -112,6 +106,13 @@ export function OnboardingApp() {
         streak,
         lastCoachAt: 0,
       });
+      if (origins.length > 0) {
+        try {
+          await browser.permissions.request({ origins });
+        } catch {
+          // Custom sites may be outside the optional list. still finish setup.
+        }
+      }
       try {
         await browser.runtime.sendMessage({
           type: "puddle/coach-rebind",
@@ -150,9 +151,9 @@ export function OnboardingApp() {
         <header className={`relative z-10 ${step === 1 ? "pr-24" : ""}`}>
           <h1
             data-testid="puddle-title"
-            className="font-brand m-0 text-3xl font-semibold tracking-tight"
+            className="m-0 text-[40px] leading-none"
           >
-            Touchgrass
+            touchgrass
           </h1>
           <p className="m-0 mt-1 text-sm text-muted-foreground">
             {step === 1
@@ -237,7 +238,7 @@ export function OnboardingApp() {
                 Easy asks switch to a lighter model.
               </p>
               <p className="m-0 mt-1 text-[11px] leading-snug text-muted-foreground">
-                If another chat site is needed, Touchgrass opens that tab and pastes
+                If another chat site is needed, touchgrass opens that tab and pastes
                 your prompt.
               </p>
             </InfoCard>

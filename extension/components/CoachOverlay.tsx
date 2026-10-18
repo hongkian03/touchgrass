@@ -27,7 +27,13 @@ type Props = {
   actions?: {
     onSwitch?: () => void;
     onSendAnyway?: () => void;
+    /** Third choice: carry the prompt to another AI the user enabled. */
+    onOpenOther?: () => void;
     switchLabel?: string;
+    openOtherLabel?: string;
+    sendAnywayLabel?: string;
+    /** Short status after a choice, e.g. "Prompt copied, paste it there". */
+    note?: string | null;
     badge?: string | null;
     chalkMeta?: {
       confidencePct?: number | null;
@@ -137,40 +143,6 @@ function TargetIcon({ target }: { target: CoachTargetDisplay }): ReactNode {
   return null;
 }
 
-function prettyModelName(model: string): string {
-  const m = model.trim();
-  const map: Record<string, string> = {
-    "claude-haiku": "Haiku",
-    "claude-sonnet": "Sonnet",
-    "gpt-4o-mini": "GPT-4o mini",
-    "gemini-flash": "Gemini Flash",
-    "grok-mini": "Grok mini",
-    sonar: "Sonar",
-  };
-  return map[m.toLowerCase()] ?? m;
-}
-
-function RightChevron() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      style={{ opacity: 0.65, display: "block" }}
-    >
-      <path
-        d="M6 3 L11 8 L6 13"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 /** Compact top-right toast. No pet. White surface + brand logo. */
 export function CoachOverlay({
   message,
@@ -183,12 +155,11 @@ export function CoachOverlay({
 
   const hasSavings =
     typeof redirectMeta?.savedWh === "number" && redirectMeta.savedWh > 0;
-  const hasContext =
-    typeof redirectMeta?.contextTurns === "number" &&
-    redirectMeta.contextTurns > 0;
-  const hasHoldSavings =
-    typeof actions?.chalkMeta?.savedWh === "number" &&
-    actions.chalkMeta.savedWh > 0;
+  const hasChalkMeta =
+    Boolean(actions?.chalkMeta) &&
+    (typeof actions?.chalkMeta?.confidencePct === "number" ||
+      typeof actions?.chalkMeta?.elapsedMs === "number" ||
+      typeof actions?.chalkMeta?.savedWh === "number");
 
   return (
     <div data-testid="coach-overlay" style={shell}>
@@ -196,19 +167,6 @@ export function CoachOverlay({
         @keyframes puddle-toast-progress {
           from { transform: scaleX(1); }
           to { transform: scaleX(0); }
-        }
-        .puddle-btn-press {
-          transition: transform 0.15s ease, background-color 0.15s ease;
-        }
-        .puddle-btn-press:active {
-          transform: scale(0.96);
-        }
-        .puddle-btn-press .puddle-btn-chevron {
-          transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
-        }
-        .puddle-btn-press:hover .puddle-btn-chevron,
-        .puddle-btn-press:active .puddle-btn-chevron {
-          transform: translateX(2px);
         }
       `}</style>
       <div data-testid="coach-bubble" style={{ ...bubble, position: "relative", overflow: "hidden" }}>
@@ -255,7 +213,7 @@ export function CoachOverlay({
               </div>
             </div>
 
-            {hasSavings || hasContext ? (
+            {hasSavings || redirectMeta?.chalkPill ? (
               <div
                 data-testid="coach-redirect-savings"
                 style={{
@@ -279,14 +237,33 @@ export function CoachOverlay({
                       fontWeight: 700,
                     }}
                   >
-                    −{redirectMeta?.savedWh?.toFixed(1)} Wh
+                    ≈ −{redirectMeta?.savedWh?.toFixed(2)} Wh
                     {typeof redirectMeta?.savedCo2G === "number" &&
                     redirectMeta.savedCo2G > 0
-                      ? ` · −${redirectMeta.savedCo2G.toFixed(2)}g CO₂`
+                      ? ` · −${redirectMeta.savedCo2G.toFixed(3)}g CO₂`
                       : ""}
+                    {" est."}
                   </span>
                 ) : null}
-                {hasContext ? (
+                {redirectMeta?.chalkPill ? (
+                  <span
+                    data-testid="coach-chalk-pill"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#e7f6ff",
+                      color: "#0b4f74",
+                      fontSize: 10,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {redirectMeta.chalkPill}
+                  </span>
+                ) : null}
+                {typeof redirectMeta?.contextTurns === "number" &&
+                redirectMeta.contextTurns > 0 ? (
                   <span
                     data-testid="coach-context-pill"
                     style={{
@@ -300,10 +277,56 @@ export function CoachOverlay({
                       fontWeight: 600,
                     }}
                   >
-                    +{redirectMeta?.contextTurns} turn
-                    {redirectMeta?.contextTurns === 1 ? "" : "s"} carried
+                    +{redirectMeta.contextTurns} turn
+                    {redirectMeta.contextTurns === 1 ? "" : "s"} carried
                   </span>
                 ) : null}
+              </div>
+            ) : null}
+
+            {typeof redirectMeta?.smallOkPct === "number" &&
+            redirectMeta.smallOkPct > 0 ? (
+              <div
+                data-testid="coach-jev-bar"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                  background: "#f8fafc",
+                  borderRadius: 8,
+                  padding: "4px 6px",
+                  border: "1px solid #eef1f4",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#1b4965",
+                  }}
+                >
+                  <span>Chalk JEV small_ok</span>
+                  <span>{Math.round(redirectMeta.smallOkPct)}%</span>
+                </div>
+                <div
+                  style={{
+                    height: 4,
+                    borderRadius: 999,
+                    background: "#e4e4e7",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.min(100, Math.max(8, redirectMeta.smallOkPct))}%`,
+                      background: "#2ba4e0",
+                      borderRadius: 999,
+                    }}
+                  />
+                </div>
               </div>
             ) : null}
 
@@ -311,62 +334,32 @@ export function CoachOverlay({
               <button
                 type="button"
                 data-testid="coach-redirect-same-site"
-                className="puddle-btn-press"
                 style={{
                   ...btn,
-                  position: "relative",
-                  overflow: "hidden",
-                  width: "100%",
-                  height: 30,
-                  padding: "0 34px 0 10px",
+                  padding: "4px 8px",
                   fontSize: 11,
-                  fontWeight: 600,
-                  background: "#f4f4f5",
-                  borderColor: "#e4e4e7",
-                  color: "#1b4965",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: "100%",
+                  background: "#f4fbf0",
+                  borderColor: "#b7e1a1",
+                  color: "#2d5a27",
                 }}
                 onClick={redirectMeta.onSwitchSameSite}
               >
-                <span>Switch to {prettyModelName(redirectMeta.sameSiteModel)}</span>
-                <span
-                  className="puddle-btn-chevron"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    bottom: 0,
-                    right: 0,
-                    width: 28,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "rgba(27, 73, 101, 0.07)",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <RightChevron />
-                </span>
+                ⚡ Use {redirectMeta.sameSiteModel} here instead
               </button>
             ) : null}
 
             {redirectMeta?.onCancel || redirectMeta?.onHopNow ? (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
                 {redirectMeta.onCancel ? (
                   <button
                     type="button"
                     data-testid="coach-redirect-stay"
-                    className="puddle-btn-press"
                     style={{
                       ...btn,
-                      height: 30,
-                      padding: "0 10px",
+                      padding: "4px 8px",
                       fontSize: 11,
                       flex: 1,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
                     }}
                     onClick={redirectMeta.onCancel}
                   >
@@ -377,42 +370,18 @@ export function CoachOverlay({
                   <button
                     type="button"
                     data-testid="coach-redirect-now"
-                    className="puddle-btn-press"
                     style={{
                       ...btn,
-                      position: "relative",
-                      overflow: "hidden",
-                      height: 30,
-                      padding: "0 34px 0 10px",
+                      padding: "4px 8px",
                       fontSize: 11,
                       flex: 1,
                       background: "#1b4965",
                       color: "#fff",
                       borderColor: "#1b4965",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
                     }}
                     onClick={redirectMeta.onHopNow}
                   >
-                    <span>Hop now</span>
-                    <span
-                      className="puddle-btn-chevron"
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        bottom: 0,
-                        right: 0,
-                        width: 28,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "rgba(255, 255, 255, 0.15)",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      <RightChevron />
-                    </span>
+                    Hop now ↗
                   </button>
                 ) : null}
               </div>
@@ -450,7 +419,7 @@ export function CoachOverlay({
                 <span style={{ fontWeight: 600 }}>{target.name}</span>
               </div>
             ) : null}
-            {hasHoldSavings && actions?.chalkMeta?.savedWh ? (
+            {hasChalkMeta && actions?.chalkMeta ? (
               <div
                 data-testid="coach-chalk-telemetry"
                 style={{
@@ -460,24 +429,63 @@ export function CoachOverlay({
                   marginTop: 6,
                 }}
               >
-                <span
-                  style={{
-                    padding: "2px 6px",
-                    borderRadius: 999,
-                    background: "#e8f6df",
-                    color: "#2d5a27",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  −{actions.chalkMeta.savedWh.toFixed(1)} Wh
-                </span>
+                {typeof actions.chalkMeta.confidencePct === "number" ? (
+                  <span
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#e7f6ff",
+                      color: "#0b4f74",
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Chalk JEV {actions.chalkMeta.confidencePct}%
+                  </span>
+                ) : null}
+                {typeof actions.chalkMeta.elapsedMs === "number" ? (
+                  <span
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#f4f4f5",
+                      color: "#1b4965",
+                      fontSize: 10,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {Math.round(actions.chalkMeta.elapsedMs)}ms
+                  </span>
+                ) : null}
+                {typeof actions.chalkMeta.savedWh === "number" &&
+                actions.chalkMeta.savedWh > 0 ? (
+                  <span
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#e8f6df",
+                      color: "#2d5a27",
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    ≈ −{actions.chalkMeta.savedWh.toFixed(2)} Wh est.
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </>
         )}
-        {actions?.onSwitch || actions?.onSendAnyway ? (
-          <div style={btnRow}>
+        {actions?.note ? (
+          <p
+            data-testid="coach-status"
+            style={{ margin: "8px 0 0", fontSize: 12, color: "#2d5a27" }}
+          >
+            {actions.note}
+          </p>
+        ) : null}
+        {actions?.onSwitch || actions?.onSendAnyway || actions?.onOpenOther ? (
+          <div style={{ ...btnRow, flexWrap: "wrap" }}>
             {actions.onSwitch ? (
               <button
                 type="button"
@@ -486,6 +494,16 @@ export function CoachOverlay({
                 onClick={actions.onSwitch}
               >
                 {actions.switchLabel || "Switch"}
+              </button>
+            ) : null}
+            {actions.onOpenOther ? (
+              <button
+                type="button"
+                data-testid="coach-open-other"
+                style={btn}
+                onClick={actions.onOpenOther}
+              >
+                {actions.openOtherLabel || "Open in another AI"}
               </button>
             ) : null}
             {actions.onSendAnyway ? (
@@ -500,7 +518,7 @@ export function CoachOverlay({
                 }}
                 onClick={actions.onSendAnyway}
               >
-                Send anyway
+                {actions.sendAnywayLabel || "Send anyway"}
               </button>
             ) : null}
           </div>

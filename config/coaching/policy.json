@@ -1,0 +1,9 @@
+{
+  "version": "offline-shadow-v1",
+  "status": "shadow",
+  "profile_fingerprint": "1f3cd55d894677a5cb52a3c32ef825fd317daee6fe9c0c5f5fecf8f2b85a56fb",
+  "threshold": 1.0,
+  "tuning_revision": null,
+  "evidence_revision": null,
+  "source_mode": "live"
+}
