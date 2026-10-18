@@ -321,10 +321,10 @@ export function PopupApp() {
               type="button"
               data-testid="home-settings"
               aria-label="Settings"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f4f4f5] text-foreground"
+              className="ui-btn-press inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f4f4f5] text-foreground transition-colors hover:bg-[#eef1f4]"
               onClick={() => setScreen("settings")}
             >
-              <GearIcon size={16} />
+              <GearIcon size={24} active />
             </button>
             <SplitButton
               testId="view-more"
