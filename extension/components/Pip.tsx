@@ -10,6 +10,10 @@ const SHEET = "/pets/muskie/spritesheet.webp";
 const STICKERS = {
   hello: "/pets/muskie/sticker-hello.png",
   gotit: "/pets/muskie/sticker-gotit.png",
+  search: "/pets/muskie/sticker-search.png",
+  plant: "/pets/muskie/sticker-plant.png",
+  chill: "/pets/muskie/sticker-chill.png",
+  report: "/pets/muskie/sticker-report.png",
 } as const;
 
 export type PipPose = keyof typeof STICKERS;
