@@ -70,7 +70,7 @@ folder. It runs manually and has not been run or published by this change.
 4. Open **Actions → Publish privacy policy → Run workflow** and select `main`.
 5. Wait for success and open the deployment URL shown by the workflow. With the
    current repository name and no custom domain, the expected URL is
-   **https://nicovillab.github.io/HackHarvard/**.
+   **https://hongkian03.github.io/touchgrass/**.
 6. Confirm it opens without signing in, then put that URL in the Chrome Web Store
    privacy-policy field and the extension's consent UI.
 

@@ -196,7 +196,7 @@ through our hosting and service providers.
 We may update this policy as Touchgrass changes. We will update the effective
 date and provide additional notice or request consent when required for material
 changes in data handling. The current policy will be available at
-https://nicovillab.github.io/HackHarvard/.
+https://hongkian03.github.io/touchgrass/.
 
 Operator: Kian Hong
 
