@@ -239,13 +239,13 @@ export function buildReportCardSvg(data: ReportCardData): string {
 
   <!-- Header Zone -->
   <rect x="390" y="78" width="300" height="40" rx="20" fill="#e7f6ff"/>
-  <text x="540" y="104" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="700" letter-spacing="1.5" fill="#1b4965">Touchgrass Passport</text>
+  <text x="540" y="104" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" letter-spacing="1.5" fill="#1b4965">Touchgrass Passport</text>
 
-  <text x="540" y="176" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="54" font-weight="800" fill="#1b4965">${name}'s Report</text>
+  <text x="540" y="176" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="54" font-weight="800" fill="#1b4965">${name}'s Report</text>
 
   <!-- Rank + Date pill -->
   <rect x="270" y="202" width="540" height="50" rx="25" fill="#e8f6df"/>
-  <text x="540" y="235" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#3d8b40">${rank}  ·  ${date}</text>
+  <text x="540" y="235" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#3d8b40">${rank}  ·  ${date}</text>
 
   <!-- Hero Score Box (matches Popup ScoreHero, Elon/Muskie sticker presenting your report!) -->
   <g>
@@ -257,13 +257,13 @@ export function buildReportCardSvg(data: ReportCardData): string {
     ${muskieStickerSvg(stickerHref)}
 
     <!-- Score + Streak cleanly aligned on the right -->
-    <text x="410" y="418" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="124" font-weight="800" fill="#1b4965">${scoreInt}<tspan font-size="34" font-weight="600" fill="#3d8b40"> / 100</tspan></text>
-    <text x="414" y="460" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="600" fill="#2d5a27">touchgrass score  ·  presented by Pip</text>
+    <text x="410" y="418" text-anchor="start" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="124" font-weight="800" fill="#1b4965">${scoreInt}<tspan font-size="34" font-weight="600" fill="#3d8b40"> / 100</tspan></text>
+    <text x="414" y="460" text-anchor="start" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="600" fill="#2d5a27">touchgrass score  ·  presented by Pip</text>
 
     <!-- Streak badge inside hero box -->
     <rect x="410" y="484" width="268" height="52" rx="26" fill="#ffffff" fill-opacity="0.92"/>
     ${flameBadgeSvg(446, 510, 1.1)}
-    <text x="472" y="518" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1b4965">${data.streak} day streak</text>
+    <text x="472" y="518" text-anchor="start" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1b4965">${data.streak} day streak</text>
   </g>
 
   <!-- Symmetrically Centered Tree Grove Stage -->
@@ -273,7 +273,7 @@ export function buildReportCardSvg(data: ReportCardData): string {
     ${treeXs
       .map((x, i) => treeSvg(x, 774, 1.7 + (i % 2) * 0.15))
       .join("\n")}
-    <text x="540" y="828" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Planted ${data.trees.toFixed(1)} virtual saplings  ·  ${data.smallPct}% smart-routed to small models</text>
+    <text x="540" y="828" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Planted ${data.trees.toFixed(1)} virtual saplings  ·  ${data.smallPct}% smart-routed to small models</text>
   </g>
 
   <!-- 4 Symmetrically Aligned Footprint Stat Cards -->
@@ -283,17 +283,17 @@ export function buildReportCardSvg(data: ReportCardData): string {
   <g>
     <rect x="${c.x}" y="884" width="204" height="236" rx="28" fill="${c.wash}"/>
     ${c.art}
-    <text x="${c.cx}" y="1062" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#1b4965">${c.value}</text>
-    <text x="${c.cx}" y="1096" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#71717a">${c.label}</text>
+    <text x="${c.cx}" y="1062" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#1b4965">${c.value}</text>
+    <text x="${c.cx}" y="1096" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#71717a">${c.label}</text>
   </g>`,
     )
     .join("\n")}
 
   <!-- Footer -->
   <rect x="96" y="1148" width="888" height="64" rx="32" fill="#f4f4f5"/>
-  <text x="540" y="1188" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${plats}</text>
+  <text x="540" y="1188" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${plats}</text>
 
-  <text x="540" y="1264" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#5fa8d3">touchgrass · local-first AI coach</text>
+  <text x="540" y="1264" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="24" fill="#5fa8d3">touchgrass · local-first AI coach</text>
 </svg>`;
 }
 

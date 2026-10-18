@@ -83,7 +83,7 @@ export function PlatformGrid({
             className={cn(
               "ui-note-enter ui-btn-press flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center font-sans text-foreground outline-none transition-colors",
               on
-                ? "bg-[#e7f6ff] ring-1 ring-[var(--yale-blue)]/25"
+                ? "bg-[#e7f6ff] ring-1 ring-inset ring-[var(--yale-blue)]/30"
                 : "bg-[#f4f4f5]/80 hover:bg-[#eef1f4]",
             )}
           >

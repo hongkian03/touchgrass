@@ -26,7 +26,7 @@ export function HopApp() {
         minHeight: "100vh",
         margin: 0,
         padding: 24,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
         background: "#f5f5f4",
       }}
     >
