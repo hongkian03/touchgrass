@@ -20,7 +20,38 @@ export type ReportCardData = {
   co2g: number;
   platforms: string[];
   dateLabel: string;
+  /** Optional sticker URL or data-URI for the Elon/Muskie sticker presenting the report. */
+  stickerHref?: string;
 };
+
+let cachedStickerDataUrls: Partial<Record<"gotit" | "hello", string>> = {};
+
+/** Load sticker PNG as a base64 data URI so canvas JPEG/PNG export can draw it without tainting. */
+export async function resolveStickerDataUrl(
+  pose: "gotit" | "hello" = "gotit",
+): Promise<string> {
+  const cached = cachedStickerDataUrls[pose];
+  if (cached) return cached;
+  const path =
+    pose === "gotit"
+      ? "/pets/muskie/sticker-gotit.png"
+      : "/pets/muskie/sticker-hello.png";
+  try {
+    const res = await fetch(path);
+    if (!res.ok) return path;
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? path));
+      reader.onerror = () => reject(new Error("read failed"));
+      reader.readAsDataURL(blob);
+    });
+    cachedStickerDataUrls[pose] = dataUrl;
+    return dataUrl;
+  } catch {
+    return path;
+  }
+}
 
 export function rankForScore(score: number): ReportRank {
   const s = Math.max(0, Math.min(100, score));
@@ -101,29 +132,12 @@ function cloudSvg(cx: number, cy: number, scale: number): string {
   </g>`;
 }
 
-function pipMascotSvg(cx: number, cy: number, scale: number): string {
+function muskieStickerSvg(href: string): string {
+  const safeHref = escapeXml(href);
   return `
-  <g transform="translate(${cx} ${cy}) scale(${scale})">
-    <!-- soft sticker rim + shadow -->
-    <circle cx="0" cy="4" r="44" fill="#ffffff"/>
-    <circle cx="0" cy="4" r="38" fill="#cae9ff"/>
-    <!-- leaf sprout on top -->
-    <path d="M0 -30 Q-12 -44 -2 -46 Q6 -44 0 -30 Z" fill="#5cb85c" stroke="#2d5a27" stroke-width="1.5"/>
-    <path d="M2 -30 Q16 -42 10 -32 Q6 -28 2 -30 Z" fill="#8fd18f" stroke="#2d5a27" stroke-width="1.3"/>
-    <!-- body -->
-    <ellipse cx="0" cy="6" rx="28" ry="29" fill="#62b6cb" stroke="#1b4965" stroke-width="2"/>
-    <!-- belly -->
-    <ellipse cx="0" cy="12" rx="16" ry="17" fill="#bee9e8"/>
-    <!-- cheeks -->
-    <circle cx="-16" cy="6" r="4.2" fill="#5fa8d3" opacity="0.9"/>
-    <circle cx="16" cy="6" r="4.2" fill="#5fa8d3" opacity="0.9"/>
-    <!-- eyes -->
-    <circle cx="-10" cy="-2" r="3.8" fill="#1b4965"/>
-    <circle cx="10" cy="-2" r="3.8" fill="#1b4965"/>
-    <circle cx="-8.8" cy="-3.2" r="1.4" fill="#ffffff"/>
-    <circle cx="11.2" cy="-3.2" r="1.4" fill="#ffffff"/>
-    <!-- smile -->
-    <path d="M-8 8 Q0 15 8 8" fill="none" stroke="#1b4965" stroke-width="2.4" stroke-linecap="round"/>
+  <g transform="translate(232 424) rotate(-4)">
+    <ellipse cx="0" cy="116" rx="84" ry="18" fill="#3d8b40" opacity="0.22"/>
+    <image href="${safeHref}" x="-110" y="-154" width="220" height="296" preserveAspectRatio="xMidYMid contain"/>
   </g>`;
 }
 
@@ -159,6 +173,11 @@ export function buildReportCardSvg(data: ReportCardData): string {
   const treeCount = Math.min(5, Math.max(1, Math.round(data.trees) || 1));
   const treeXs = symmetricPositions(treeCount, 540, 128);
   const scoreInt = Math.round(Math.max(0, Math.min(100, data.score)));
+  const stickerHref =
+    data.stickerHref ||
+    (scoreInt >= 70
+      ? "/pets/muskie/sticker-gotit.png"
+      : "/pets/muskie/sticker-hello.png");
 
   // 4 symmetrically centered stat cards across x=96..984 (total width=888, cardW=204, gap=24)
   const statCards = [
@@ -228,23 +247,23 @@ export function buildReportCardSvg(data: ReportCardData): string {
   <rect x="270" y="202" width="540" height="50" rx="25" fill="#e8f6df"/>
   <text x="540" y="235" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#3d8b40">${rank}  ·  ${date}</text>
 
-  <!-- Hero Score Box (matches Popup ScoreHero, zero overlap!) -->
+  <!-- Hero Score Box (matches Popup ScoreHero, Elon/Muskie sticker presenting your report!) -->
   <g>
     <rect x="96" y="278" width="888" height="292" rx="36" fill="#e8f6df"/>
     <path d="M96 520 Q310 492 540 518 T984 510 L984 570 L96 570 Z" fill="#8fd18f" opacity="0.55"/>
     <path d="M96 538 Q360 515 640 534 T984 528 L984 570 L96 570 Z" fill="#5cb85c" opacity="0.4"/>
 
-    <!-- Pip mascot on the left of the hero box -->
-    ${pipMascotSvg(255, 420, 2.05)}
+    <!-- Elon/Muskie sticker presenting the report on the left -->
+    ${muskieStickerSvg(stickerHref)}
 
-    <!-- Score + Streak cleanly aligned on the right of Pip -->
-    <text x="424" y="424" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="124" font-weight="800" fill="#1b4965">${scoreInt}<tspan font-size="34" font-weight="600" fill="#3d8b40"> / 100</tspan></text>
-    <text x="428" y="466" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="600" fill="#2d5a27">touchgrass score</text>
+    <!-- Score + Streak cleanly aligned on the right -->
+    <text x="410" y="418" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="124" font-weight="800" fill="#1b4965">${scoreInt}<tspan font-size="34" font-weight="600" fill="#3d8b40"> / 100</tspan></text>
+    <text x="414" y="460" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="25" font-weight="600" fill="#2d5a27">touchgrass score  ·  presented by Pip</text>
 
     <!-- Streak badge inside hero box -->
-    <rect x="424" y="486" width="256" height="52" rx="26" fill="#ffffff" fill-opacity="0.92"/>
-    ${flameBadgeSvg(460, 512, 1.1)}
-    <text x="486" y="520" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1b4965">${data.streak} day streak</text>
+    <rect x="410" y="484" width="268" height="52" rx="26" fill="#ffffff" fill-opacity="0.92"/>
+    ${flameBadgeSvg(446, 510, 1.1)}
+    <text x="472" y="518" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#1b4965">${data.streak} day streak</text>
   </g>
 
   <!-- Symmetrically Centered Tree Grove Stage -->
@@ -449,14 +468,20 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
 }
 
 export async function exportReportPdf(data: ReportCardData): Promise<void> {
-  const svg = buildReportCardSvg(data);
+  const stickerHref =
+    data.stickerHref ||
+    (await resolveStickerDataUrl(data.score >= 70 ? "gotit" : "hello"));
+  const svg = buildReportCardSvg({ ...data, stickerHref });
   const { bytes } = await svgToJpeg(svg);
   const pdf = buildPdfFromPng(bytes, REPORT_CARD_WIDTH, REPORT_CARD_HEIGHT);
   downloadBytes(pdf, `${reportFileBase(data.userName)}.pdf`, "application/pdf");
 }
 
 export async function exportReportPng(data: ReportCardData): Promise<void> {
-  const svg = buildReportCardSvg(data);
+  const stickerHref =
+    data.stickerHref ||
+    (await resolveStickerDataUrl(data.score >= 70 ? "gotit" : "hello"));
+  const svg = buildReportCardSvg({ ...data, stickerHref });
   const dataUrl = await svgToPngDataUrl(svg);
   downloadDataUrl(dataUrl, `touchgrass-card-${slugifyName(data.userName)}.png`);
 }

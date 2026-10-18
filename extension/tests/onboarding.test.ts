@@ -266,6 +266,7 @@ describe("achievement report card + PDF", () => {
     expect(svg).toMatch(/Lush Lawn Legend/);
     expect(svg).toMatch(/88/);
     expect(svg).toMatch(/Touchgrass Passport/);
+    expect(svg).toMatch(/sticker-gotit\.png/);
   });
 
   it("embeds JPEG into a valid PDF byte stream", () => {
