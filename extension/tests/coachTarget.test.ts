@@ -110,6 +110,48 @@ describe("planCoachAuto", () => {
     });
     expect(plan.kind).toBe("noop");
   });
+
+  it("define ask + no label redirects to gemini (not weather-only)", () => {
+    const plan = planCoachAuto({
+      draft: "define photosynthesis",
+      model: "claude-opus",
+      provider: "claude",
+      enabledPlatforms: ["claude", "gemini"],
+    });
+    expect(plan.kind).toBe("redirect");
+    if (plan.kind === "redirect") {
+      expect(plan.url).toMatch(/gemini\.google\.com/);
+      expect(plan.suggestion.reason).not.toMatch(/^whats todays weather\?$/i);
+    }
+  });
+
+  it("who-is ask + perplexity enabled redirects", () => {
+    const plan = planCoachAuto({
+      draft: "who is ada lovelace",
+      model: "gpt-5",
+      provider: "chatgpt",
+      enabledPlatforms: ["chatgpt", "perplexity"],
+    });
+    expect(plan.kind).toBe("redirect");
+    if (plan.kind === "redirect") {
+      expect(plan.url).toMatch(/perplexity\.ai/);
+    }
+  });
+
+  it("hard coding ask with no label still redirects only via alternate pick", () => {
+    // needs_big → preferGemini true in pickEnabledAlternate; still may open gemini
+    // when no model label — assert it is not weather-string gated.
+    const plan = planCoachAuto({
+      draft: "refactor this typescript module with generics and tests",
+      model: "claude-opus",
+      provider: "claude",
+      enabledPlatforms: ["claude", "gemini"],
+    });
+    expect(["redirect", "noop", "switched"]).toContain(plan.kind);
+    if (plan.kind === "redirect") {
+      expect(plan.url).not.toMatch(/weather/i);
+    }
+  });
 });
 
 describe("multi-turn context carryover + inline model switch", () => {

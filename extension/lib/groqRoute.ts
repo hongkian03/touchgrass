@@ -1,4 +1,5 @@
 import platformsData from "../data/platforms.json";
+import { isSimpleHopAsk } from "./classify";
 import type { Platform } from "./types";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -11,23 +12,20 @@ export type GroqRouteResult =
   | { ok: true; platformId: string; reason: string }
   | { ok: false; error: string };
 
-const WEATHER_HINT =
-  /weather|news|what's happening|whats happening|current events|research|look up|lookup/i;
-
 const ROUTE_SYSTEM = `You route a user's AI chat draft to the best platform from a fixed allowlist.
 Reply with ONLY compact JSON: {"platformId":string,"reason":string}
 Rules:
 - platformId MUST be one of the provided enabled ids. Never invent an id.
 - Prefer not deepseek unless it is the only enabled text option.
 - Image / draw / video / generate picture → dalle, midjourney, or flux if enabled; else best text chat.
-- Research, news, weather, "what's happening", current events → MUST pick perplexity if enabled, else gemini if enabled. Do NOT stay on claude or chatgpt for weather/news.
+- Research, news, weather, live lookup, "what's happening", current events → MUST pick perplexity if enabled, else gemini if enabled. Do NOT stay on claude or chatgpt for weather/news/live lookup.
+- Short factoid / define / translate / who-is / simple Q → gemini or perplexity if enabled; do not keep a heavy Claude/ChatGPT default when a lighter enabled site exists.
 - Code, long reasoning, hard analysis → claude or chatgpt if enabled.
-- Short factoid / simple Q → gemini or chatgpt if enabled.
-- Only return the current provider id when it is clearly the best fit AND the ask is not weather/news/research.
+- Only return the current provider id when it is clearly the best fit AND the ask is not a simple/live lookup.
 - reason = short phrase, max 8 words.`;
 
-/** Prefer perplexity then gemini for weather/research. Exported for tests. */
-export function weatherFallbackId(
+/** Prefer perplexity then gemini for simple/live hops. Exported for tests. */
+export function simpleHopFallbackId(
   enabledPlatforms: string[],
   currentProvider: string,
 ): string | null {
@@ -39,6 +37,22 @@ export function weatherFallbackId(
     (id) => id !== currentProvider && !/deepseek/i.test(id),
   );
   return other ?? null;
+}
+
+/** @deprecated Use simpleHopFallbackId. */
+export const weatherFallbackId = simpleHopFallbackId;
+
+function shouldForceSimpleHop(
+  draft: string,
+  platformId: string,
+  currentProvider: string,
+): boolean {
+  if (!isSimpleHopAsk(draft)) return false;
+  return (
+    platformId === currentProvider ||
+    platformId === "claude" ||
+    platformId === "chatgpt"
+  );
 }
 
 /** Validate / normalize Groq JSON against enabled list. Exported for tests. */
@@ -81,9 +95,9 @@ export function parseRouteQueryResponse(
     }
   }
 
-  // Weather/news must leave Claude/ChatGPT when perplexity/gemini enabled
-  if (WEATHER_HINT.test(draft) && (id === currentProvider || id === "claude" || id === "chatgpt")) {
-    const hop = weatherFallbackId([...allowed], currentProvider);
+  // Simple asks must leave Claude/ChatGPT when perplexity/gemini enabled
+  if (shouldForceSimpleHop(draft, id, currentProvider)) {
+    const hop = simpleHopFallbackId([...allowed], currentProvider);
     if (hop) id = hop;
   }
 
@@ -120,6 +134,17 @@ export async function groqRouteQuery(args: {
     return `${id} (${name}, ${kind})`;
   });
 
+  const simpleFallback = (): GroqRouteResult | null => {
+    if (!isSimpleHopAsk(draft)) return null;
+    const hop = simpleHopFallbackId(enabled, args.currentProvider);
+    if (!hop) return null;
+    return {
+      ok: true,
+      platformId: hop,
+      reason: "simple ask fallback",
+    };
+  };
+
   try {
     const res = await fetch(GROQ_URL, {
       method: "POST",
@@ -147,17 +172,8 @@ export async function groqRouteQuery(args: {
 
     if (!res.ok) {
       const text = await res.text();
-      // HTTP fail: weather/research still hop if possible
-      if (WEATHER_HINT.test(draft)) {
-        const hop = weatherFallbackId(enabled, args.currentProvider);
-        if (hop) {
-          return {
-            ok: true,
-            platformId: hop,
-            reason: "weather fallback",
-          };
-        }
-      }
+      const hop = simpleFallback();
+      if (hop) return hop;
       return {
         ok: false,
         error: `http_${res.status}:${text.slice(0, 120)}`,
@@ -177,12 +193,8 @@ export async function groqRouteQuery(args: {
       if (m) content = m[0];
     }
     if (!content) {
-      if (WEATHER_HINT.test(draft)) {
-        const hop = weatherFallbackId(enabled, args.currentProvider);
-        if (hop) {
-          return { ok: true, platformId: hop, reason: "weather fallback" };
-        }
-      }
+      const hop = simpleFallback();
+      if (hop) return hop;
       return { ok: false, error: "empty_completion" };
     }
     return parseRouteQueryResponse(
@@ -192,12 +204,8 @@ export async function groqRouteQuery(args: {
       draft,
     );
   } catch (e) {
-    if (WEATHER_HINT.test(draft)) {
-      const hop = weatherFallbackId(enabled, args.currentProvider);
-      if (hop) {
-        return { ok: true, platformId: hop, reason: "weather fallback" };
-      }
-    }
+    const hop = simpleFallback();
+    if (hop) return hop;
     return {
       ok: false,
       error: e instanceof Error ? e.message : "fetch_failed",

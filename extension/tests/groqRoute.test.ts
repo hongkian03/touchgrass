@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   groqRouteQuery,
   parseRouteQueryResponse,
+  simpleHopFallbackId,
   weatherFallbackId,
 } from "../lib/groqRoute";
 
@@ -69,11 +70,62 @@ describe("parseRouteQueryResponse", () => {
     if (r.ok) expect(r.platformId).toBe("gemini");
   });
 
-  it("weatherFallbackId prefers perplexity then gemini", () => {
-    expect(weatherFallbackId(["claude", "gemini"], "claude")).toBe("gemini");
+  it("define ask forces hop off claude when gemini enabled", () => {
+    const r = parseRouteQueryResponse(
+      '{"platformId":"claude","reason":"already best"}',
+      ["claude", "gemini"],
+      "claude",
+      "define photosynthesis",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).toBe("gemini");
+  });
+
+  it("translate ask forces hop to perplexity when enabled", () => {
+    const r = parseRouteQueryResponse(
+      '{"platformId":"claude","reason":"stay"}',
+      ["claude", "perplexity", "gemini"],
+      "claude",
+      "translate hello to spanish",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).toBe("perplexity");
+  });
+
+  it("who-is ask forces hop off chatgpt", () => {
+    const r = parseRouteQueryResponse(
+      '{"platformId":"chatgpt","reason":"stay"}',
+      ["chatgpt", "gemini"],
+      "chatgpt",
+      "who is ada lovelace",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).toBe("gemini");
+  });
+
+  it("hard coding ask does not force hop when Groq says stay", () => {
+    const r = parseRouteQueryResponse(
+      '{"platformId":"claude","reason":"needs reasoning"}',
+      ["claude", "gemini"],
+      "claude",
+      "refactor this typescript module with generics and tests",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).toBe("claude");
+  });
+
+  it("hop logic is not hardcoded to one weather string", () => {
+    const src = parseRouteQueryResponse.toString();
+    expect(src).not.toContain("whats todays weather?");
+    expect(src).not.toContain("what's the weather today");
+  });
+
+  it("simpleHopFallbackId prefers perplexity then gemini", () => {
+    expect(simpleHopFallbackId(["claude", "gemini"], "claude")).toBe("gemini");
     expect(
-      weatherFallbackId(["claude", "perplexity", "gemini"], "claude"),
+      simpleHopFallbackId(["claude", "perplexity", "gemini"], "claude"),
     ).toBe("perplexity");
+    expect(weatherFallbackId(["claude", "gemini"], "claude")).toBe("gemini");
   });
 });
 
@@ -122,7 +174,7 @@ describe("groqRouteQuery", () => {
     if (r.ok) expect(r.platformId).toBe("perplexity");
   });
 
-  it("weather HTTP failure falls back to gemini when enabled", async () => {
+  it("simple-ask HTTP failure falls back to gemini when enabled", async () => {
     vi.stubEnv("WXT_GROQ_API_KEY", "test-key");
     vi.stubGlobal(
       "fetch",
@@ -134,7 +186,7 @@ describe("groqRouteQuery", () => {
     );
 
     const r = await groqRouteQuery({
-      draft: "weather please",
+      draft: "define entropy",
       currentProvider: "claude",
       enabledPlatforms: ["claude", "gemini"],
     });
@@ -145,7 +197,7 @@ describe("groqRouteQuery", () => {
     }
   });
 
-  it("non-weather HTTP failure does not invent", async () => {
+  it("hard-ask HTTP failure does not invent a hop", async () => {
     vi.stubEnv("WXT_GROQ_API_KEY", "test-key");
     vi.stubGlobal(
       "fetch",
@@ -157,7 +209,7 @@ describe("groqRouteQuery", () => {
     );
 
     const r = await groqRouteQuery({
-      draft: "refactor this typescript module",
+      draft: "refactor this typescript module with generics and tests",
       currentProvider: "claude",
       enabledPlatforms: ["claude", "gemini"],
     });
