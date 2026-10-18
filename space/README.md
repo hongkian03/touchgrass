@@ -1,9 +1,7 @@
 # Seen from space
 
-Night-lights growth over three data center regions, from NASA GIBS.
+Night-lights growth over three data center regions, from NASA GIBS. See "Seen from space" in the top-level README.
 
-Full write-up: [docs/seen-from-space.md](../docs/seen-from-space.md).
-
-- `nasa_lights.py` — pick GIBS layer, average clearest Jun–Aug nights, cache images, compute growth
-- `test_space.py` — offline tests (network blocked)
-- `cache/` — gitignored; built on first use
+- `nasa_lights.py`: picks the layer from GIBS capabilities, averages the clearest June–August nights in the first and latest full years, caches the images, computes brightness and growth
+- `test_space.py`: offline tests (network blocked)
+- `cache/`: gitignored; built on first use

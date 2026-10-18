@@ -3,6 +3,7 @@ import {
   backendHealth,
   coachingClassify,
   coachingEmitEvent,
+  coachingTargets,
   fetchAdapter,
   fetchEvalsSummary,
   getCoachingInsights,
@@ -24,6 +25,8 @@ import {
   type SiteAdapter,
 } from "../lib/adapter";
 import { rebindCoachScripts } from "../lib/coachInject";
+import { togglePanel } from "../lib/floatingPanel";
+import { POPUP_HEIGHT, POPUP_WIDTH } from "../lib/layout";
 import { groqIsAiSite } from "../lib/groqClassify";
 import { groqRouteQuery } from "../lib/groqRoute";
 import { readState } from "../lib/storage";
@@ -98,6 +101,41 @@ export default defineBackground(() => {
 
   browser.permissions.onAdded.addListener(() => {
     void rebindFromState();
+  });
+
+  // onClicked never fires while a popup is set; clear any default popup (an older
+  // manifest's, or one left from a build) so every click reaches the panel.
+  void browser.action.setPopup({ popup: "" }).catch(() => undefined);
+
+  // Toolbar click: rounded, draggable panel on the page. Chrome-protected pages
+  // (chrome://, new tab, Web Store) can't be scripted, so they get the popup.
+  browser.action.onClicked.addListener((tab) => {
+    const tabId = tab.id;
+    if (tabId == null) return;
+    void (async () => {
+      try {
+        await browser.scripting.executeScript({
+          target: { tabId },
+          func: togglePanel,
+          args: [browser.runtime.getURL("/popup.html"), POPUP_WIDTH, POPUP_HEIGHT],
+        });
+      } catch {
+        // Show Chrome's popup just this once, then hand the tab back to the
+        // panel; a lingering per-tab popup kept normal sites on the square popup.
+        await browser.action.setPopup({ tabId, popup: "/popup.html" });
+        try {
+          await browser.action.openPopup();
+          await browser.action.setPopup({ tabId, popup: "" });
+        } catch {
+          // Older Chrome: the popup opens on the next click; cleared on navigation below
+        }
+      }
+    })();
+  });
+
+  // Any per-tab popup fallback ends when the tab goes to a new page
+  browser.tabs.onUpdated.addListener((tabId, info) => {
+    if (info.url) void browser.action.setPopup({ tabId, popup: "" }).catch(() => undefined);
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -210,6 +248,10 @@ export default defineBackground(() => {
                 text: t.title,
               })),
             });
+            return;
+          }
+          if (op === "coaching-targets") {
+            sendResponse({ ok: true, ...(await coachingTargets()) });
             return;
           }
           if (op === "coaching-event") {

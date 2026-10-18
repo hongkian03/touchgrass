@@ -47,13 +47,16 @@ export { recomputeAccuracy } from "./evalAccuracy";
 export { parseExport } from "./upload";
 export { parseVoiceIntent } from "./voiceIntent";
 export { monthTotals, totalsForKeys, weekTotals } from "./weekTotals";
+export { daySavings, monthSavings, weekSavings } from "./savings";
 export {
-  G_CO2_PER_SAPLING,
-  daySavings,
-  monthSavings,
-  saplingsFromCo2G,
-  weekSavings,
-} from "./savings";
+  FOOTPRINT_MODELS,
+  FOOTPRINT_SOURCE_NOTE,
+  GOOGLE_GEMINI_MEDIAN,
+  IMAGE_MULTIPLIER,
+  OPENAI_CHATGPT_AVG,
+  SMALL_MODEL_FRACTION,
+  VIDEO_MULTIPLIER,
+} from "./footprint";
 export {
   pickEnabledAlternate,
   platformOpenUrl,

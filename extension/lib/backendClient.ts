@@ -122,14 +122,21 @@ export async function backendFetch(
   if (!cfg.backendEnabled) {
     throw new Error("backend_disabled");
   }
+  const canPair = path === "/classify" || path === "/coaching/targets" || path === "/coaching/insights";
   const headers = new Headers(init.headers);
-  if (cfg.sessionToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${cfg.sessionToken}`);
+  let token = cfg.sessionToken;
+  if (canPair && !token) token = (await autoPairCoachingSession()).session_token;
+  if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+  const send = () => fetch(`${cfg.baseUrl}${path.startsWith("/") ? path : `/${path}`}`, { ...init, headers });
+  let response = await send();
+  // A rejected session has not reached inference. Re-pair once after expiry or
+  // a backend database change; never retry provider errors or a model response.
+  if (canPair && response.status === 401 && !init.signal?.aborted) {
+    const renewed = await autoPairCoachingSession(true);
+    headers.set("Authorization", `Bearer ${renewed.session_token}`);
+    response = await send();
   }
-  return fetch(`${cfg.baseUrl}${path.startsWith("/") ? path : `/${path}`}`, {
-    ...init,
-    headers,
-  });
+  return response;
 }
 
 export type JobStatus = {
@@ -367,23 +374,27 @@ export async function pairCoachingSession(
   return { session_token: body.session_token };
 }
 
-/** Mint a coaching session without a pasted code (demo auto-start). */
-export async function autoPairCoachingSession(): Promise<{
-  session_token: string;
-}> {
+let pairingInFlight: Promise<{ session_token: string }> | null = null;
+
+/** Mint on demand as well as on startup; concurrent requests share one pairing. */
+export async function autoPairCoachingSession(force = false): Promise<{ session_token: string }> {
   const cfg = await readBackendConfig();
-  if (cfg.coachingSessionToken) {
-    return { session_token: cfg.coachingSessionToken };
-  }
-  const res = await fetch(`${cfg.baseUrl}/coaching/auto-pair`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok) throw new Error(`auto_pair_http_${res.status}`);
-  const body = (await res.json()) as { session_token?: string };
-  if (!body.session_token) throw new Error("auto_pair_missing_token");
-  await writeBackendConfig({ coachingSessionToken: body.session_token });
-  return { session_token: body.session_token };
+  if (!cfg.backendEnabled) throw new Error("backend_disabled");
+  if (pairingInFlight) return pairingInFlight;
+  if (cfg.sessionToken && !force) return { session_token: cfg.sessionToken };
+  pairingInFlight = (async () => {
+    const res = await fetch(`${cfg.baseUrl}/coaching/auto-pair`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) throw new Error(`auto_pair_http_${res.status}`);
+    const body = (await res.json()) as { session_token?: string };
+    if (!body.session_token) throw new Error("auto_pair_missing_token");
+    await writeBackendConfig({ coachingSessionToken: body.session_token });
+    return { session_token: body.session_token };
+  })();
+  try { return await pairingInFlight; }
+  finally { pairingInFlight = null; }
 }
 
 export async function coachingClassify(
@@ -394,10 +405,23 @@ export async function coachingClassify(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(draft),
-    signal,
+    signal: signal ?? AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`classify_http_${res.status}`);
   return (await res.json()) as Record<string, unknown>;
+}
+
+export type CoachingTarget = {
+  site: string;
+  model_id: string;
+  website_label: string;
+  aliases: string[];
+};
+
+export async function coachingTargets(): Promise<{ generalized: boolean; targets: CoachingTarget[] }> {
+  const res = await backendFetch("/coaching/targets");
+  if (!res.ok) throw new Error(`targets_http_${res.status}`);
+  return res.json();
 }
 
 export async function coachingEmitEvent(

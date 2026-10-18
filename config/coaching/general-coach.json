@@ -1,0 +1,74 @@
+{
+  "version": "general-lightweight-v2-provisional071",
+  "jev_model_id": "jev-latest",
+  "expected_jev_resolved_model": "jev-1.13.0",
+  "capabilities": "A general lightweight text model, rather than a particular provider or model ID. Usually suitable for clear, self-contained short rewriting, summarization, extraction, translation, basic arithmetic, straightforward explanations, and routine factual questions when sufficient context is supplied. Assess the actual requirements, not prompt length or keywords alone: a short proof can be difficult, and a longer structured extraction can be routine. Prefer needs_big for difficult multi-step reasoning, subtle debugging, complex design, rigorous proofs, or tasks where a material mistake is costly. Use uncertain when references, context, or capability assumptions are insufficient. Assume no external tools, browsing, attachments, image or video generation. This capability class is generalized from a Haiku/Sonnet benchmark; adequacy of each provider target has not been measured. Do not assume tools or context exist merely because the user asks for them.",
+  "threshold": 0.71,
+  "threshold_basis": "Provisional transfer of the existing Haiku/Sonnet development threshold (0.69 plus 0.02 margin). General capability wording and cross-provider mappings change the classifier input and have not been separately calibrated.",
+  "source_evaluation_id": "cmvdfrfng0g5l013ewdsx1tcc",
+  "source_run_id": "71dd8177-6064-4075-b1e2-07df8e8f5ce7",
+  "evidence_note": "General guidance using the existing 0.71 threshold provisionally. Original Haiku/Sonnet synthetic test: 15 suggestions, 14 graded, 0 harmful among those 14; not measured cross-provider accuracy or savings.",
+  "providers": [
+    {
+      "site": "claude",
+      "target_model_id": "anthropic/claude-haiku-4-5-20251001",
+      "target_label": "Haiku 4.5",
+      "target_aliases": [
+        "Haiku 4.5",
+        "Claude Haiku 4.5"
+      ],
+      "lightweight_patterns": [
+        "\\bhaiku\\b"
+      ]
+    },
+    {
+      "site": "chatgpt",
+      "target_model_id": "openai/gpt-4o-mini",
+      "target_label": "GPT-4o mini",
+      "target_aliases": [
+        "GPT-4o mini",
+        "4o mini",
+        "gpt-4o-mini"
+      ],
+      "lightweight_patterns": [
+        "\\b(?:mini|nano|lite)\\b"
+      ]
+    },
+    {
+      "site": "gemini",
+      "target_model_id": "gemini-flash",
+      "target_label": "Flash",
+      "target_aliases": [
+        "Flash",
+        "Gemini Flash",
+        "2.5 Flash",
+        "Gemini 2.5 Flash"
+      ],
+      "lightweight_patterns": [
+        "\\b(?:flash|lite|fast)\\b"
+      ]
+    },
+    {
+      "site": "perplexity",
+      "target_model_id": "sonar",
+      "target_label": "Sonar",
+      "target_aliases": [
+        "Sonar"
+      ],
+      "lightweight_patterns": []
+    },
+    {
+      "site": "grok",
+      "target_model_id": "grok-mini",
+      "target_label": "Grok mini",
+      "target_aliases": [
+        "Grok mini",
+        "Grok 3 mini",
+        "grok-mini"
+      ],
+      "lightweight_patterns": [
+        "\\bmini\\b"
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@ class Settings(Contract):
     judge_model_id: str = ""
     profile_path: str = ""
     policy_path: str = ""
+    general_coach_path: str = ""
     session_secret: SecretStr = SecretStr("")
     database_url: str = "sqlite:///artifacts/coaching.db"
     allowed_origins: list[str] = Field(default_factory=list)
@@ -80,6 +81,7 @@ class Settings(Contract):
             "judge_model_id": "JUDGE_MODEL_ID",
             "profile_path": "COACHING_PROFILE_PATH",
             "policy_path": "COACHING_POLICY_PATH",
+            "general_coach_path": "COACHING_GENERAL_CONFIG_PATH",
             "session_secret": "APP_SESSION_SECRET",
             "database_url": "DATABASE_URL",
             "deadline_ms": "CLASSIFY_DEADLINE_MS",

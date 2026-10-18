@@ -200,6 +200,8 @@ def main():
         env["DROID_SAVED_DIR"] = str(SAVED_OUTPUTS)
     port = free_port()
     base = f"http://127.0.0.1:{port}"
+    # The repair job publishes to BACKEND_URL; point it here, not at a dev server on :8000.
+    env["BACKEND_URL"] = base
     server_log = Path(tempfile.mkdtemp(prefix="smoke_server_")) / "server.log"
     with server_log.open("w", encoding="utf-8") as log:
         server = subprocess.Popen([sys.executable, str(REPO / "start.py"), "--port", str(port)], cwd=REPO,

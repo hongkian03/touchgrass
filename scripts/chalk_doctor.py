@@ -13,6 +13,7 @@ from evals.data import load_dataset
 
 async def inspect(args, settings):
     profile, policy = settings.artifacts()
+    jev_profile = profile
     if profile.fingerprint != policy.profile_fingerprint:
         raise ValueError("profile/policy fingerprint mismatch")
     result = {
@@ -26,6 +27,20 @@ async def inspect(args, settings):
         "network_checked": False,
         "inference_checked": False,
     }
+    if settings.general_coach_path:
+        from backend.coaching.general import GeneralCoachConfig, GeneralCoachService
+
+        config = GeneralCoachConfig.load(settings.general_coach_path)
+        general = GeneralCoachService(settings, config, None)
+        result["runtime_coach"] = {
+            "scope": "generalized",
+            "version": config.version,
+            "threshold": config.threshold,
+            "threshold_basis": config.threshold_basis,
+            "providers": [p.site for p in config.providers],
+            "suggestions_enabled": settings.coaching_mode == "suggest",
+        }
+        jev_profile = general.profile
     if args.network or args.smoke:
         if settings.mode != "live":
             raise ValueError(
@@ -56,18 +71,19 @@ async def inspect(args, settings):
                 request = row.request.model_copy(
                     update={
                         "current_model_label": (
-                            profile.website_aliases[0]
-                            if profile.website_aliases
+                            jev_profile.website_aliases[0]
+                            if jev_profile.website_aliases
                             else "offline-baseline"
                         ),
                         "mock_fixture_id": None,
-                        "site": profile.site,
+                        "site": jev_profile.site,
                     }
                 )
-                prediction = await gateway.predict(request, profile)
+                prediction = await gateway.predict(request, jev_profile)
                 if (
-                    profile.expected_jev_resolved_model
-                    and prediction.resolved_model != profile.expected_jev_resolved_model
+                    jev_profile.expected_jev_resolved_model
+                    and prediction.resolved_model
+                    != jev_profile.expected_jev_resolved_model
                 ):
                     raise GatewayError("model_version_mismatch")
                 result["prediction"] = prediction.model_dump()
