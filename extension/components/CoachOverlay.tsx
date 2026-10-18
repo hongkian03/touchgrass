@@ -137,6 +137,40 @@ function TargetIcon({ target }: { target: CoachTargetDisplay }): ReactNode {
   return null;
 }
 
+function prettyModelName(model: string): string {
+  const m = model.trim();
+  const map: Record<string, string> = {
+    "claude-haiku": "Haiku",
+    "claude-sonnet": "Sonnet",
+    "gpt-4o-mini": "GPT-4o mini",
+    "gemini-flash": "Gemini Flash",
+    "grok-mini": "Grok mini",
+    sonar: "Sonar",
+  };
+  return map[m.toLowerCase()] ?? m;
+}
+
+function RightChevron() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      style={{ opacity: 0.65, display: "block" }}
+    >
+      <path
+        d="M6 3 L11 8 L6 13"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Compact top-right toast. No pet. White surface + brand logo. */
 export function CoachOverlay({
   message,
@@ -162,6 +196,19 @@ export function CoachOverlay({
         @keyframes puddle-toast-progress {
           from { transform: scaleX(1); }
           to { transform: scaleX(0); }
+        }
+        .puddle-btn-press {
+          transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        .puddle-btn-press:active {
+          transform: scale(0.96);
+        }
+        .puddle-btn-press .puddle-btn-chevron {
+          transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+        }
+        .puddle-btn-press:hover .puddle-btn-chevron,
+        .puddle-btn-press:active .puddle-btn-chevron {
+          transform: translateX(2px);
         }
       `}</style>
       <div data-testid="coach-bubble" style={{ ...bubble, position: "relative", overflow: "hidden" }}>
@@ -260,17 +307,66 @@ export function CoachOverlay({
               </div>
             ) : null}
 
+            {redirectMeta?.onSwitchSameSite && redirectMeta.sameSiteModel ? (
+              <button
+                type="button"
+                data-testid="coach-redirect-same-site"
+                className="puddle-btn-press"
+                style={{
+                  ...btn,
+                  position: "relative",
+                  overflow: "hidden",
+                  width: "100%",
+                  height: 30,
+                  padding: "0 34px 0 10px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: "#f4f4f5",
+                  borderColor: "#e4e4e7",
+                  color: "#1b4965",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onClick={redirectMeta.onSwitchSameSite}
+              >
+                <span>Switch to {prettyModelName(redirectMeta.sameSiteModel)}</span>
+                <span
+                  className="puddle-btn-chevron"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    width: 28,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(27, 73, 101, 0.07)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <RightChevron />
+                </span>
+              </button>
+            ) : null}
+
             {redirectMeta?.onCancel || redirectMeta?.onHopNow ? (
-              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+              <div style={{ display: "flex", gap: 6 }}>
                 {redirectMeta.onCancel ? (
                   <button
                     type="button"
                     data-testid="coach-redirect-stay"
+                    className="puddle-btn-press"
                     style={{
                       ...btn,
-                      padding: "4px 8px",
+                      height: 30,
+                      padding: "0 10px",
                       fontSize: 11,
                       flex: 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                     onClick={redirectMeta.onCancel}
                   >
@@ -281,18 +377,42 @@ export function CoachOverlay({
                   <button
                     type="button"
                     data-testid="coach-redirect-now"
+                    className="puddle-btn-press"
                     style={{
                       ...btn,
-                      padding: "4px 8px",
+                      position: "relative",
+                      overflow: "hidden",
+                      height: 30,
+                      padding: "0 34px 0 10px",
                       fontSize: 11,
                       flex: 1,
                       background: "#1b4965",
                       color: "#fff",
                       borderColor: "#1b4965",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                     onClick={redirectMeta.onHopNow}
                   >
-                    Hop now ↗
+                    <span>Hop now</span>
+                    <span
+                      className="puddle-btn-chevron"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        right: 0,
+                        width: 28,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(255, 255, 255, 0.15)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <RightChevron />
+                    </span>
                   </button>
                 ) : null}
               </div>
