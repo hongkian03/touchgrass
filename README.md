@@ -17,10 +17,10 @@ A Chrome MV3 extension (Musky on ChatGPT and Claude) pairs with a FastAPI backen
 ## Table of contents
 
 [Stack](#stack)
-[Request, approve, key, and session flow](#request-approve-key-and-session-flow) 
-[Folder map](#folder-map) 
-[How to run it](#how-to-run-it) 
-[How to test it](#how-to-test-it) 
+[Request, approve, key, and session flow](#request-approve-key-and-session-flow) ·
+[Folder map](#folder-map) ·
+[How to run it](#how-to-run-it) ·
+[How to test it](#how-to-test-it) ·
 [Where to start reading](#where-to-start-reading)
 
 ### Docs
@@ -43,8 +43,8 @@ A Chrome MV3 extension (Musky on ChatGPT and Claude) pairs with a FastAPI backen
 [Architecture index](docs/droid-daytona-architecture.md)
 
 Schemas:
-[ingest attempt](docs/ingest-attempt.schema.json) 
-[normalized exchange](docs/normalized-exchange.schema.json) 
+[ingest attempt](docs/ingest-attempt.schema.json) ·
+[normalized exchange](docs/normalized-exchange.schema.json) ·
 [OpenAPI](docs/coaching-openapi.json)
 
 </div>
@@ -174,9 +174,9 @@ Live Chalk smoke and eval budgets: [docs/chalk-runbook.md](docs/chalk-runbook.md
 ## Where to start reading
 
 1. This README — map, flow diagram, run/test.
-2. [Where Droid works](docs/where-droid-works.md) 
-   [Where Daytona works](docs/where-daytona-works.md) 
-   [Where Chalk works](docs/where-chalk-works.md) 
+2. [Where Droid works](docs/where-droid-works.md) ·
+   [Where Daytona works](docs/where-daytona-works.md) ·
+   [Where Chalk works](docs/where-chalk-works.md) ·
    [Seen from space](docs/seen-from-space.md)
 3. [Coaching integration](docs/coaching-integration.md) — extension ↔ `/classify`.
 4. [Chalk setup](docs/chalk-setup.md) → [Chalk runbook](docs/chalk-runbook.md) — keys, shadow policy, evals.
