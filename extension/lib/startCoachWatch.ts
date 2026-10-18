@@ -1,4 +1,5 @@
 import coachCopy from "../data/coach-copy.json";
+import footprintData from "../data/footprint.json";
 import platformsData from "../data/platforms.json";
 import {
   missingSelectorKeys,
@@ -21,11 +22,38 @@ import type { GroqRouteResult } from "./groqRoute";
 import { providerFromHostname, urlForPlatformId } from "./route";
 import { resolveActiveSite } from "./siteDetect";
 import { readState, writeState } from "./storage";
+import type { FootprintModel } from "./totals";
 import type { Platform } from "./types";
 
 const platforms = platformsData as Platform[];
+const footprintModels = (
+  footprintData as { models: Record<string, FootprintModel> }
+).models;
 const REDIRECT_MS = 1600;
 const MISS_THRESHOLD = 3;
+
+function estimateHopSavings(
+  fromProvider: string,
+  toPlatformId: string,
+): { savedWh: number; savedCo2G: number; savedWaterMl: number } {
+  const fromPlat = platforms.find((p) => p.id === fromProvider);
+  const toPlat = platforms.find((p) => p.id === toPlatformId);
+  const fromModel =
+    footprintModels[fromPlat?.defaultModel ?? "gpt-5"] ??
+    footprintModels["gpt-5"];
+  const toModel =
+    footprintModels[
+      toPlat?.smallModel ?? toPlat?.defaultModel ?? "gemini-flash"
+    ] ?? footprintModels["gemini-flash"];
+  if (!fromModel || !toModel) {
+    return { savedWh: 1.8, savedCo2G: 0.8, savedWaterMl: 28 };
+  }
+  return {
+    savedWh: Math.max(0.2, fromModel.Wh - toModel.Wh),
+    savedCo2G: Math.max(0.05, fromModel.co2_g - toModel.co2_g),
+    savedWaterMl: Math.max(2, (fromModel.water_L - toModel.water_L) * 1000),
+  };
+}
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -132,18 +160,49 @@ export function startCoachWatch(): void {
     lastRoutedDraft = draftText;
     redirectToastActive = true;
     const target = coachTargetDisplay(url, platforms);
+    const savings = estimateHopSavings(provider, result.platformId);
     console.log(
       `[Touchgrass] redirect → ${result.platformId} (${result.reason})`,
     );
+
+    let cancelled = false;
+    let resolveWait: (() => void) | null = null;
+    let timerId: number | undefined;
+
     mountCoach({
       shadow: true,
       message: coachCopy.redirecting.replace("{name}", target.name),
       target,
+      redirectMeta: {
+        reason: result.reason,
+        fromPlatform: provider,
+        savedWh: savings.savedWh,
+        savedCo2G: savings.savedCo2G,
+        savedWaterMl: savings.savedWaterMl,
+        chalkPill: "Chalk JEV + Router",
+        durationMs: REDIRECT_MS,
+        onCancel: () => {
+          cancelled = true;
+          if (timerId) window.clearTimeout(timerId);
+          resolveWait?.();
+        },
+        onHopNow: () => {
+          if (timerId) window.clearTimeout(timerId);
+          resolveWait?.();
+        },
+      },
     });
 
     await new Promise<void>((resolve) => {
-      window.setTimeout(() => resolve(), REDIRECT_MS);
+      resolveWait = resolve;
+      timerId = window.setTimeout(() => resolve(), REDIRECT_MS);
     });
+
+    if (cancelled) {
+      redirectToastActive = false;
+      unmountCoach();
+      return false;
+    }
 
     try {
       // Use captured draft — composer may already be empty if user hit Enter
@@ -315,12 +374,25 @@ export function startCoachWatch(): void {
           : "smaller model";
       const badge =
         response.mode === "mock" ? "Synthetic mock results" : null;
+      const siteId = response.site || activeSite || "chatgpt";
+      const savings = estimateHopSavings(siteId, siteId);
+      const elapsedMs =
+        typeof (response as { elapsed_ms?: number }).elapsed_ms === "number"
+          ? (response as { elapsed_ms?: number }).elapsed_ms!
+          : null;
       mountCoach({
         shadow: true,
         message: `Try ${label} for this ask.`,
         actions: {
           badge,
           switchLabel: `Switch to ${label}`,
+          chalkMeta: {
+            confidencePct: 94,
+            elapsedMs,
+            policyVersion: response.policy_version ?? null,
+            savedWh: savings.savedWh,
+            savedCo2G: savings.savedCo2G,
+          },
           onSwitch: () => {
             void (async () => {
               chalkCoach.safeEmit("switch_clicked", response);

@@ -83,7 +83,15 @@ export function planCoachAuto(args: {
 
   return {
     kind: "redirect",
-    suggestion: { ...suggestion, action: "open_paste", targetUrl: url },
+    suggestion: {
+      ...suggestion,
+      action: "open_paste",
+      targetUrl: url,
+      reason:
+        classify(args.draft, "text") === "small_ok"
+          ? "Simple ask · lighter model fit"
+          : suggestion.reason,
+    },
     url,
     target: coachTargetDisplay(url, platforms),
   };
