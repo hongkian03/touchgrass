@@ -9,7 +9,7 @@ Everyone here used AI today. Nobody knows what it cost. touchgrass tracks usage,
 </p>
 
 <p align="center">
-A Chrome MV3 extension (Musky on ChatGPT and Claude) pairs with a FastAPI backend. Pre-send drafts go through Groq and Chalk/Jev. Chat exports and adapter repairs run through Factory Droid inside Daytona sandboxes, with our own validators deciding what ships.
+A Chrome MV3 extension with Musky watching your AI tabs, backed by a FastAPI server. Pre-send drafts go through Groq and Chalk/Jev. Chat exports and adapter repairs run through Factory Droid and Daytona sandboxes, with our own validators deciding what ships.
 </p>
 
 <div align="center">
