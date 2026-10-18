@@ -10,7 +10,7 @@ import { bgBackend } from "./backendBridge";
 import { readBackendConfig } from "./backendClient";
 import { COACH_TYPE_DEBOUNCE_MS, shouldShowCoach } from "./coach";
 import { mountCoach, unmountCoach } from "./coachMount";
-import { applyCoachSwitch, openCoachPaste } from "./coachYes";
+import { applyCoachSwitch, openCoachPaste, scrapeRecentMessages } from "./coachYes";
 import { coachTargetDisplay } from "./coachTargetDisplay";
 import {
   DraftCoach,
@@ -161,11 +161,15 @@ export function startCoachWatch(): void {
     redirectToastActive = true;
     const target = coachTargetDisplay(url, platforms);
     const savings = estimateHopSavings(provider, result.platformId);
+    const recentTurns = scrapeRecentMessages(document, 4, 2400);
+    const currentPlat = platforms.find((p) => p.id === provider);
+    const sameSiteSmall = currentPlat?.smallModel ?? null;
     console.log(
       `[Touchgrass] redirect → ${result.platformId} (${result.reason})`,
     );
 
     let cancelled = false;
+    let switchedSameSite = false;
     let resolveWait: (() => void) | null = null;
     let timerId: number | undefined;
 
@@ -180,6 +184,9 @@ export function startCoachWatch(): void {
         savedCo2G: savings.savedCo2G,
         savedWaterMl: savings.savedWaterMl,
         chalkPill: "Chalk JEV + Router",
+        smallOkPct: 94,
+        contextTurns: recentTurns.length,
+        sameSiteModel: sameSiteSmall,
         durationMs: REDIRECT_MS,
         onCancel: () => {
           cancelled = true;
@@ -190,6 +197,17 @@ export function startCoachWatch(): void {
           if (timerId) window.clearTimeout(timerId);
           resolveWait?.();
         },
+        onSwitchSameSite: sameSiteSmall
+          ? () => {
+              switchedSameSite = true;
+              if (timerId) window.clearTimeout(timerId);
+              const modelEl = modelLabelEl();
+              if (modelEl) {
+                applyCoachSwitch(modelEl, sameSiteSmall, document);
+              }
+              resolveWait?.();
+            }
+          : undefined,
       },
     });
 
@@ -198,17 +216,19 @@ export function startCoachWatch(): void {
       timerId = window.setTimeout(() => resolve(), REDIRECT_MS);
     });
 
-    if (cancelled) {
+    if (cancelled || switchedSameSite) {
       redirectToastActive = false;
       unmountCoach();
       return false;
     }
 
     try {
-      // Use captured draft — composer may already be empty if user hit Enter
+      // Use captured draft + multi-turn context carryover
       await openCoachPaste({
         url,
         draft: draftText,
+        recentMessages: recentTurns,
+        fromProvider: currentPlat?.name ?? provider,
       });
       return true;
     } finally {
@@ -380,6 +400,16 @@ export function startCoachWatch(): void {
         typeof (response as { elapsed_ms?: number }).elapsed_ms === "number"
           ? (response as { elapsed_ms?: number }).elapsed_ms!
           : null;
+      const smallOkProb =
+        typeof (response as { small_ok?: number }).small_ok === "number" &&
+        (response as { small_ok?: number }).small_ok! > 0
+          ? Math.round((response as { small_ok?: number }).small_ok! * 100)
+          : 94;
+      const confPct =
+        typeof (response as { confidence?: number }).confidence === "number" &&
+        (response as { confidence?: number }).confidence! > 0
+          ? Math.round((response as { confidence?: number }).confidence! * 100)
+          : smallOkProb;
       mountCoach({
         shadow: true,
         message: `Try ${label} for this ask.`,
@@ -387,9 +417,13 @@ export function startCoachWatch(): void {
           badge,
           switchLabel: `Switch to ${label}`,
           chalkMeta: {
-            confidencePct: 94,
+            confidencePct: confPct,
+            smallOkPct: smallOkProb,
             elapsedMs,
             policyVersion: response.policy_version ?? null,
+            featureGroup:
+              (response as { chalk_feature_group?: string })
+                .chalk_feature_group ?? "coaching.session_v2",
             savedWh: savings.savedWh,
             savedCo2G: savings.savedCo2G,
           },
@@ -437,6 +471,7 @@ export function startCoachWatch(): void {
     const site = await ensureSite();
     if (!site) return null;
     draftRevision += 1;
+    const recentTurns = scrapeRecentMessages(document, 4, 2400);
     return {
       request_id: uuid(),
       draft_revision: draftRevision,
@@ -444,7 +479,7 @@ export function startCoachWatch(): void {
       site,
       current_model_label: model,
       prompt_text: text.slice(0, 12000),
-      recent_messages: [],
+      recent_messages: recentTurns,
       context_available: true,
       context_truncated: false,
       has_attachments: false,
