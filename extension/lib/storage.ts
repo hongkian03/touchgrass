@@ -20,23 +20,51 @@ export const DEFAULT_STATE: PuddleState = {
   lastCoachAt: 0,
 };
 
+/** True when chrome.storage is usable (false after extension reload until tab refresh). */
+export function isExtensionStorageAlive(): boolean {
+  try {
+    return Boolean(browser?.storage?.local);
+  } catch {
+    return false;
+  }
+}
+
+export function isExtensionContextError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /extension context invalidated|context invalidated/i.test(msg);
+}
+
 export async function readState(): Promise<PuddleState> {
-  const raw = await browser.storage.local.get(null);
-  return {
-    onboarded: Boolean(raw.onboarded),
-    userName: typeof raw.userName === "string" ? raw.userName : "",
-    enabledPlatforms: Array.isArray(raw.enabledPlatforms)
-      ? (raw.enabledPlatforms as string[])
-      : [],
-    usage: Array.isArray(raw.usage) ? (raw.usage as UsageRow[]) : [],
-    score: typeof raw.score === "number" ? raw.score : 100,
-    streak: typeof raw.streak === "number" ? raw.streak : 0,
-    lastCoachAt: typeof raw.lastCoachAt === "number" ? raw.lastCoachAt : 0,
-  };
+  if (!isExtensionStorageAlive()) {
+    return { ...DEFAULT_STATE };
+  }
+  try {
+    const raw = await browser.storage.local.get(null);
+    return {
+      onboarded: Boolean(raw.onboarded),
+      userName: typeof raw.userName === "string" ? raw.userName : "",
+      enabledPlatforms: Array.isArray(raw.enabledPlatforms)
+        ? (raw.enabledPlatforms as string[])
+        : [],
+      usage: Array.isArray(raw.usage) ? (raw.usage as UsageRow[]) : [],
+      score: typeof raw.score === "number" ? raw.score : 100,
+      streak: typeof raw.streak === "number" ? raw.streak : 0,
+      lastCoachAt: typeof raw.lastCoachAt === "number" ? raw.lastCoachAt : 0,
+    };
+  } catch (e) {
+    if (isExtensionContextError(e)) return { ...DEFAULT_STATE };
+    throw e;
+  }
 }
 
 export async function writeState(patch: Partial<PuddleState>): Promise<void> {
-  await browser.storage.local.set(patch);
+  if (!isExtensionStorageAlive()) return;
+  try {
+    await browser.storage.local.set(patch);
+  } catch (e) {
+    if (isExtensionContextError(e)) return;
+    throw e;
+  }
 }
 
 /** Rough byte size of persisted state (UTF-16 JSON). */
