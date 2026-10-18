@@ -71,6 +71,10 @@ describe("onboarding chrome", () => {
     resolve(__dirname, "../entrypoints/onboarding/App.tsx"),
     "utf8",
   );
+  const inline = readFileSync(
+    resolve(__dirname, "../components/InlineOnboarding.tsx"),
+    "utf8",
+  );
 
   it("shows Ahead-style Pip sticker above Puddle title", () => {
     expect(onboard).toMatch(/puddle-title/);
@@ -78,6 +82,14 @@ describe("onboarding chrome", () => {
     expect(onboard).toMatch(/variant=["']sticker["']/);
     expect(onboard).toMatch(/from ["'].*ui\/button["']/);
     expect(onboard).toMatch(/from ["'].*ui\/input["']/);
+    expect(onboard).toMatch(/onboarding-name/);
+  });
+
+  it("inline popup onboarding mirrors name + platform chrome", () => {
+    expect(inline).toMatch(/puddle-title/);
+    expect(inline).toMatch(/onboarding-name/);
+    expect(inline).toMatch(/PlatformGrid/);
+    expect(inline).toMatch(/variant=["']sticker["']/);
   });
 });
 

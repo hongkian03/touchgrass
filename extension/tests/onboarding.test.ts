@@ -8,6 +8,17 @@ import {
   originPatternFromInput,
   resolvePlatformFromInput,
 } from "../lib/hosts";
+import {
+  DEFAULT_STATE,
+  estimateStorageBytes,
+  formatStorageSize,
+} from "../lib/storage";
+import {
+  buildPdfFromPng,
+  buildReportCardSvg,
+  rankForScore,
+  slugifyName,
+} from "../lib/reportCard";
 import type { Platform } from "../lib/types";
 
 const platforms: Platform[] = [
@@ -188,5 +199,76 @@ describe("custom sites stay in the icon grid", () => {
       faviconHost: "copilot.com",
     });
     expect(items.at(-1)?.id).toBe("custom:poe.com");
+  });
+});
+
+describe("userName + local storage helpers", () => {
+  it("DEFAULT_STATE includes empty userName", () => {
+    expect(DEFAULT_STATE.userName).toBe("");
+    expect(DEFAULT_STATE.onboarded).toBe(false);
+  });
+
+  it("estimateStorageBytes returns positive size for seeded state", () => {
+    const bytes = estimateStorageBytes({
+      ...DEFAULT_STATE,
+      userName: "Ada",
+      onboarded: true,
+      enabledPlatforms: ["claude"],
+      usage: [
+        {
+          ts: "2026-01-01T00:00:00.000Z",
+          provider: "claude",
+          model: "claude-haiku",
+          kind: "text",
+          prompt_text: "hi",
+          regenerated: false,
+        },
+      ],
+    });
+    expect(bytes).toBeGreaterThan(40);
+    expect(formatStorageSize(bytes)).toMatch(/B|KB/);
+  });
+});
+
+describe("achievement report card + PDF", () => {
+  it("ranks scores and slugifies names", () => {
+    expect(rankForScore(90)).toBe("Lush Lawn Legend");
+    expect(rankForScore(50)).toBe("Sapling Guardian");
+    expect(rankForScore(30)).toBe("Fresh Sprout");
+    expect(rankForScore(10)).toBe("Dry Patch");
+    expect(slugifyName("Ada Lovelace")).toBe("ada-lovelace");
+  });
+
+  it("builds SVG card with name + trees + score", () => {
+    const svg = buildReportCardSvg({
+      userName: "Ada",
+      score: 88,
+      streak: 4,
+      trees: 2.5,
+      smallPct: 40,
+      energyWh: 1.2,
+      waterL: 0.05,
+      co2g: 0.8,
+      platforms: ["Claude", "ChatGPT"],
+      dateLabel: "Oct 17, 2026",
+    });
+    expect(svg).toMatch(/Ada's Report/);
+    expect(svg).toMatch(/Lush Lawn Legend/);
+    expect(svg).toMatch(/88/);
+    expect(svg).toMatch(/Touchgrass Passport/);
+  });
+
+  it("embeds JPEG into a valid PDF byte stream", () => {
+    // Minimal JPEG SOI + EOI with a few filler bytes (enough for header check).
+    const jpeg = new Uint8Array([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ]);
+    const pdf = buildPdfFromPng(jpeg, 1080, 1350);
+    const head = String.fromCharCode(...pdf.slice(0, 8));
+    expect(head).toBe("%PDF-1.4");
+    expect(pdf.length).toBeGreaterThan(jpeg.length + 80);
+    const tail = String.fromCharCode(...pdf.slice(-6));
+    expect(tail).toContain("EOF");
   });
 });
