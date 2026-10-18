@@ -73,6 +73,25 @@ function row(partial: Partial<UsageRow> & Pick<UsageRow, "prompt_text" | "model"
   };
 }
 
+describe("C5b classify everyday asks", () => {
+  it.each([
+    "hello claude how are you",
+    "what time is it",
+    "what time is it in Tokyo",
+    "hi",
+  ])("%s -> small_ok", (p) => {
+    expect(classify(p, "text")).toBe("small_ok");
+  });
+
+  it.each([
+    "write a cover letter for a product design internship",
+    "debug this: const x = foo();",
+    "",
+  ])("%s -> needs_big", (p) => {
+    expect(classify(p, "text")).toBe("needs_big");
+  });
+});
+
 describe("C5 classify happy path", () => {
   it('classify("what\'s the weather in Boston", "text") -> small_ok', () => {
     expect(classify("what's the weather in Boston", "text")).toBe("small_ok");

@@ -151,7 +151,10 @@ export function PopupApp() {
     (r) => classify(r.prompt_text, r.kind) === "small_ok",
   ).length;
   const regen = slice.filter((r) => r.regenerated).length;
-  const images = slice.filter((r) => r.kind === "image").length;
+  const images = slice.reduce(
+    (acc, r) => acc + (r.kind === "image" ? 1 : 0) + (r.attachments ?? 0),
+    0,
+  );
   const videos = slice.filter((r) => r.kind === "video").length;
   const smallPct = Math.round((small / n) * 100);
   const tip =
@@ -298,7 +301,7 @@ export function PopupApp() {
             </CartoonTick>
             <CartoonTick
               label="trees planted"
-              hint="Trees equal to the CO₂ you skipped vs the big default model."
+              hint="CO₂ you saved by picking a smaller model (mini, Haiku, Flash) instead of the big default."
               value={trees}
               decimals={1}
               suffix=""
@@ -418,13 +421,13 @@ export function PopupApp() {
                         key={i.id}
                         index={index}
                         testId={`insight-${i.id}`}
-                        badge={videos > 0 ? `${videos}×` : "100×"}
+                        badge={`${videos}×`}
                         wash="#eef1f4"
                         accent="#8e99a4"
                         icon={<MixClapper size={36} />}
                         text={
                           videos === 0
-                            ? "One AI video uses about as much energy as hundreds of text prompts."
+                            ? "No video jobs in this range. One AI video uses about as much energy as hundreds of text prompts."
                             : videos === 1
                               ? "video job in this range. One clip uses about as much energy as hundreds of text prompts."
                               : "video jobs in this range. One clip uses about as much energy as hundreds of text prompts."
@@ -455,8 +458,8 @@ export function PopupApp() {
                     icon={<MixFrame size={36} />}
                     text={
                       images === 1
-                        ? "image job. Those cost more than text."
-                        : "image jobs. Those cost more than text."
+                        ? "image sent or generated. Those cost more than text."
+                        : "images sent or generated. Those cost more than text."
                     }
                   />
                 ) : null}

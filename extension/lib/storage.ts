@@ -67,6 +67,16 @@ export async function writeState(patch: Partial<PuddleState>): Promise<void> {
   }
 }
 
+/** Keep storage bounded; oldest rows drop first. */
+export const MAX_USAGE_ROWS = 2000;
+
+/** Append one sent prompt to local usage history. */
+export async function appendUsage(row: UsageRow): Promise<void> {
+  const { usage } = await readState();
+  const next = [...usage, row];
+  await writeState({ usage: next.slice(-MAX_USAGE_ROWS) });
+}
+
 /** Rough byte size of persisted state (UTF-16 JSON). */
 export function estimateStorageBytes(state: PuddleState): number {
   try {
