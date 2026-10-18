@@ -204,13 +204,13 @@ export function InlineOnboarding({ onComplete }: Props) {
           className="relative z-10 flex min-h-0 flex-1 flex-col gap-3"
         >
           {/* Jitter intro: Musky + eco satellites converge into lawn stage */}
-          <div
-            data-testid="onboarding-hero-stage"
-            className="jt-stage-card flex flex-col items-center gap-2 overflow-hidden rounded-2xl px-3 pt-3 pb-3.5 text-center"
-            style={{ background: "#e8f6df" }}
-          >
-            <div className="relative flex min-h-[124px] w-full items-center justify-center">
-              <div className="jt-grass-rise absolute inset-x-0 bottom-0">
+          <div className="flex flex-col gap-2">
+            <div
+              data-testid="onboarding-hero-stage"
+              className="jt-stage-card relative flex min-h-[126px] items-center justify-center overflow-hidden rounded-2xl px-3 pt-2 pb-4"
+              style={{ background: "#e8f6df" }}
+            >
+              <div className="jt-grass-rise pointer-events-none absolute inset-x-0 bottom-0">
                 <GrassWave />
               </div>
               <EcoSatellites active={Boolean(trimmedName)} />
@@ -227,11 +227,11 @@ export function InlineOnboarding({ onComplete }: Props) {
               key={trimmedName ? "named" : "hello"}
               data-testid="onboarding-greeting"
               className={[
-                "relative z-10 rounded-xl bg-white/95 px-3 py-1.5 shadow-sm",
+                "self-center rounded-full border border-[#d8f0c8] bg-[#f4fbf0] px-3.5 py-1 text-center shadow-sm",
                 trimmedName ? "jt-bubble-pop jt-bubble-react" : "jt-bubble-pop",
               ].join(" ")}
             >
-              <p className="m-0 text-xs font-medium text-foreground">
+              <p className="m-0 text-xs font-medium text-[#1b4965]">
                 {trimmedName
                   ? `Hey ${trimmedName}! Ready to save some trees?`
                   : "Hi! I'm Musky. What should I call you?"}
@@ -368,18 +368,18 @@ export function InlineOnboarding({ onComplete }: Props) {
             </p>
           </InfoCard>
 
-          {/* Finale stage: chosen AI badges converge around thumbs-up Musky on sky-lagoon orbit stage */}
-          <div
-            data-testid="onboarding-finale-stage"
-            className="jt-stage-card flex min-h-[144px] flex-1 flex-col items-center justify-between overflow-hidden rounded-2xl border border-[#cae9ff] px-3 pt-2 pb-2.5"
-            style={{
-              background:
-                "linear-gradient(155deg, #e7f6ff 0%, #cae9ff 52%, #bee9e8 100%)",
-            }}
-          >
-            <div className="relative flex min-h-[104px] w-full flex-1 items-center justify-center">
+          {/* Finale stage: chosen AI badges converge around Musky on sky-lagoon orbit stage */}
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div
+              data-testid="onboarding-finale-stage"
+              className="jt-stage-card relative flex min-h-[118px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[#cae9ff] px-3 py-2"
+              style={{
+                background:
+                  "linear-gradient(155deg, #e7f6ff 0%, #cae9ff 52%, #bee9e8 100%)",
+              }}
+            >
               <OrbitRing />
-              <div className="jt-grass-rise absolute inset-x-0 bottom-0">
+              <div className="jt-grass-rise pointer-events-none absolute inset-x-0 bottom-0">
                 <LagoonWave />
               </div>
               <FinaleSparks />
@@ -388,7 +388,7 @@ export function InlineOnboarding({ onComplete }: Props) {
                 <Pip size={96} variant="sticker" pose="chill" tilt={3} />
               </div>
             </div>
-            <p className="jt-bubble-pop relative z-10 m-0 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-semibold text-[#1b4965] shadow-sm">
+            <p className="jt-bubble-pop m-0 self-center rounded-full border border-[#cae9ff] bg-[#e7f6ff] px-3 py-0.5 text-[10px] font-semibold text-[#1b4965]">
               {trimmedName
                 ? `${trimmedName}'s tabs · Watched by Musky`
                 : "Watched by Musky"}
