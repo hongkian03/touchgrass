@@ -21,7 +21,12 @@ import { draftFrom, findComposer } from "./findComposer";
 import type { GroqRouteResult } from "./groqRoute";
 import { providerFromHostname, urlForPlatformId } from "./route";
 import { resolveActiveSite } from "./siteDetect";
-import { readState, writeState } from "./storage";
+import {
+  isExtensionContextError,
+  isExtensionStorageAlive,
+  readState,
+  writeState,
+} from "./storage";
 import type { FootprintModel } from "./totals";
 import type { Platform } from "./types";
 
@@ -122,12 +127,18 @@ export function startCoachWatch(): void {
     provider: string,
     enabled: string[],
   ): Promise<boolean> => {
-    const result = (await browser.runtime.sendMessage({
-      type: "puddle/route-query",
-      draft: draftText,
-      provider,
-      enabledPlatforms: enabled,
-    })) as GroqRouteResult;
+    let result: GroqRouteResult;
+    try {
+      result = (await browser.runtime.sendMessage({
+        type: "puddle/route-query",
+        draft: draftText,
+        provider,
+        enabledPlatforms: enabled,
+      })) as GroqRouteResult;
+    } catch (e) {
+      if (isExtensionContextError(e)) return false;
+      throw e;
+    }
 
     console.log(
       `[Touchgrass] route ${JSON.stringify({
@@ -495,8 +506,15 @@ export function startCoachWatch(): void {
     if (acting || redirectToastActive) return false;
     if (!text || text.length < 8) return false;
     if (text === lastRoutedDraft) return false;
+    if (!isExtensionStorageAlive()) return false;
 
-    const state = await readState();
+    let state;
+    try {
+      state = await readState();
+    } catch (e) {
+      if (isExtensionContextError(e)) return false;
+      throw e;
+    }
     if (!shouldShowCoach(state.lastCoachAt)) {
       console.log("[Touchgrass] coach cooldown — wait ~1 min");
       return false;
@@ -517,6 +535,7 @@ export function startCoachWatch(): void {
     try {
       return await runCrossSiteRedirect(text, provider, enabled);
     } catch (e) {
+      if (isExtensionContextError(e)) return false;
       console.warn("[Touchgrass] coach route error", e);
       return false;
     } finally {
@@ -645,8 +664,15 @@ export function startCoachWatch(): void {
 
     const text = draftFrom(composer).trim();
     if (!text || text.length < 8) return;
+    if (!isExtensionStorageAlive()) return;
 
-    const state = await readState();
+    let state;
+    try {
+      state = await readState();
+    } catch (e) {
+      if (isExtensionContextError(e)) return;
+      throw e;
+    }
     if (!shouldShowCoach(state.lastCoachAt)) {
       console.log("[Touchgrass] coach cooldown — wait ~1 min");
       return;
@@ -683,6 +709,7 @@ export function startCoachWatch(): void {
         if (chalkDraft) chalkCoach.update(chalkDraft);
       }
     } catch (e) {
+      if (isExtensionContextError(e)) return;
       console.warn("[Touchgrass] coach route error", e);
     } finally {
       acting = false;
