@@ -94,6 +94,34 @@ export function FixtureApp() {
         shadow: false,
         message: coachCopy.redirecting.replace("{name}", plan.target.name),
         target: plan.target,
+        redirectMeta: {
+          reason: plan.suggestion.reason || "Simple ask · lighter model fit",
+          fromPlatform: provider,
+          savedWh: 1.8,
+          savedCo2G: 0.79,
+          chalkPill: "Chalk JEV + Router",
+          durationMs: REDIRECT_MS,
+          onCancel: () => {
+            if (timer) window.clearTimeout(timer);
+            unmountCoach();
+            setStatus("Stayed on current tab");
+          },
+          onHopNow: () => {
+            if (timer) window.clearTimeout(timer);
+            void (async () => {
+              try {
+                await openCoachPaste({
+                  url: plan.url,
+                  draft: composerRef.current?.value ?? draft,
+                });
+                if (alive) setStatus(`Opened ${plan.target.name}`);
+              } finally {
+                await writeState({ lastCoachAt: Date.now() });
+                if (alive) unmountCoach();
+              }
+            })();
+          },
+        },
       });
 
       timer = window.setTimeout(() => {
