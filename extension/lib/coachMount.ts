@@ -29,7 +29,11 @@ export type CoachMountOpts = {
   actions?: {
     onSwitch?: () => void;
     onSendAnyway?: () => void;
+    onOpenOther?: () => void;
     switchLabel?: string;
+    openOtherLabel?: string;
+    sendAnywayLabel?: string;
+    note?: string | null;
     badge?: string | null;
     chalkMeta?: {
       confidencePct?: number | null;

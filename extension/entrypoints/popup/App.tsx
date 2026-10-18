@@ -32,7 +32,13 @@ import {
   weekSavings,
 } from "../../lib/savings";
 import { lastNDays, localDateKey, score } from "../../lib/score";
-import { DEFAULT_STATE, readState, type PuddleState } from "../../lib/storage";
+import type { CoachChoiceRow } from "../../lib/coachChoice";
+import {
+  DEFAULT_STATE,
+  readCoachChoices,
+  readState,
+  type PuddleState,
+} from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
 import { FOOTPRINT_MODELS, FOOTPRINT_SOURCE_NOTE } from "../../lib/footprint";
 import { dayTotals } from "../../lib/totals";
@@ -63,6 +69,7 @@ export function PopupApp() {
   const [period, setPeriod] = useState<Period>("day");
   const [screen, setScreen] = useState<Screen>("home");
   const [chalkTips, setChalkTips] = useState<InsightCard[]>([]);
+  const [choices, setChoices] = useState<CoachChoiceRow[]>([]);
 
   useEffect(() => {
     document.documentElement.style.overflow = "hidden";
@@ -114,6 +121,9 @@ export function PopupApp() {
         // local usage cards only
       }
     })();
+    void readCoachChoices()
+      .then(setChoices)
+      .catch(() => undefined);
   }, [state.onboarded]);
 
   const today = new Date();
@@ -148,6 +158,14 @@ export function PopupApp() {
   );
   const videos = slice.filter((r) => r.kind === "video").length;
   const smallPct = Math.round((small / n) * 100);
+  const choiceSlice = choices.filter((c) =>
+    inRange.has(localDateKey(new Date(c.ts))),
+  );
+  const choiceCounts = {
+    switch_here: choiceSlice.filter((c) => c.choice === "switch_here").length,
+    open_other: choiceSlice.filter((c) => c.choice === "open_other").length,
+    send_anyway: choiceSlice.filter((c) => c.choice === "send_anyway").length,
+  };
   const tip =
     slice.length === 0
       ? (insights[0]?.text ?? coachCopy.oversized)
@@ -439,6 +457,18 @@ export function PopupApp() {
                     />
                   );
                 })}
+                {choiceSlice.length > 0 ? (
+                  <CoachNoteCard
+                    key="coach-choices"
+                    index={chalkTips.length + insights.length + 1}
+                    testId="insight-coach-choices"
+                    badge={String(choiceSlice.length)}
+                    wash="#e8f6df"
+                    accent="#5cb85c"
+                    icon={<MiniModel size={36} />}
+                    text={`coach picks: ${choiceCounts.switch_here} switched here, ${choiceCounts.open_other} opened elsewhere, ${choiceCounts.send_anyway} sent anyway.`}
+                  />
+                ) : null}
                 {images > 0 ? (
                   <CoachNoteCard
                     key="image-jobs"

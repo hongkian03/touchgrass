@@ -1,3 +1,4 @@
+import type { CoachChoiceRow } from "./coachChoice";
 import type { UsageRow } from "./types";
 
 export type PuddleState = {
@@ -85,6 +86,24 @@ export async function appendUsage(row: UsageRow): Promise<void> {
   const { usage } = await readState();
   const next = [...usage, row];
   await writeState({ usage: next.slice(-MAX_USAGE_ROWS) });
+}
+
+/** Coach toast decisions (which button the user picked). */
+export async function appendCoachChoice(row: CoachChoiceRow): Promise<void> {
+  const raw = await browser.storage.local.get("coachChoices");
+  const prev = Array.isArray(raw.coachChoices)
+    ? (raw.coachChoices as CoachChoiceRow[])
+    : [];
+  await browser.storage.local.set({
+    coachChoices: [...prev, row].slice(-MAX_USAGE_ROWS),
+  });
+}
+
+export async function readCoachChoices(): Promise<CoachChoiceRow[]> {
+  const raw = await browser.storage.local.get("coachChoices");
+  return Array.isArray(raw.coachChoices)
+    ? (raw.coachChoices as CoachChoiceRow[])
+    : [];
 }
 
 /** Rough byte size of persisted state (UTF-16 JSON). */
