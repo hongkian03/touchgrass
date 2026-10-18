@@ -18,6 +18,7 @@ import {
   buildReportCardSvg,
   rankForScore,
   slugifyName,
+  symmetricPositions,
 } from "../lib/reportCard";
 import type { Platform } from "../lib/types";
 
@@ -237,6 +238,15 @@ describe("achievement report card + PDF", () => {
     expect(rankForScore(30)).toBe("Fresh Sprout");
     expect(rankForScore(10)).toBe("Dry Patch");
     expect(slugifyName("Ada Lovelace")).toBe("ada-lovelace");
+  });
+
+  it("symmetrically centers tree positions around 540", () => {
+    const pos4 = symmetricPositions(4, 540, 128);
+    expect(pos4).toHaveLength(4);
+    const mean4 = pos4.reduce((a, b) => a + b, 0) / pos4.length;
+    expect(mean4).toBe(540);
+    expect(pos4[0] + pos4[3]).toBe(1080);
+    expect(pos4[1] + pos4[2]).toBe(1080);
   });
 
   it("builds SVG card with name + trees + score", () => {
