@@ -1,1 +1,6 @@
-# TODO: Eval 2: does Droid's parser get the data right? Field-level accuracy over 5 runs
+"""Compatibility entry point: python -m evals.run_eval2 --help."""
+
+from evals.parser_eval import main
+
+if __name__ == "__main__":
+    main()

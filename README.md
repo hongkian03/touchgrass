@@ -1,8 +1,8 @@
-# Prompt Print
+# touchgrass
 
 > Everyone here used AI today. Nobody knows what it cost. We built the app that tells you, and helps you cut it.
 
-Prompt Print tracks your AI usage, shows the energy, water, and CO₂ behind it, and coaches you before you send a wasteful prompt. Factory's Droid does the heavy lifting inside the running app: it writes the code that reads each user's chat history, writes each user's analysis, and repairs the browser extension when ChatGPT changes its page. We independently verify everything it produces.
+touchgrass tracks your AI usage, shows the energy, water, and CO₂ behind it, and coaches you before you send a wasteful prompt. Factory's Droid does the heavy lifting inside the running app: it writes the code that reads each user's chat history, writes each user's analysis, and repairs the browser extension when ChatGPT changes its page. We independently verify everything it produces.
 
 ## How it all fits together
 
@@ -301,6 +301,7 @@ Brightness is mean radiance in nW/(cm² sr). The "central Oregon" region from th
 **Honest limits.** Night-light growth is a **proxy** for data center growth, not a measurement of it. Data centers aren't especially bright from space; homes, roads, warehouses and changes in street lighting (such as the switch to LEDs, which VIIRS sees differently) brighten the same boxes. Both ends now use the same months (June–August), and nights that are mostly missing or cloud-filled are left out, but leftover clouds, moonlight and the GIBS colormap still move the number. 14% to 34% of pixels sit in the colormap's open top bin and count as its lower bound, so growth in the brightest cores is understated, and saturation is rendered imagery rather than the science data. Treat the percentages as a picture of change, not as a number of new data centers.
 
 ## Setup
+## Coaching backend setup
 
 Requires Python 3.12+. On Windows, use `py` if `python` opens the Microsoft Store.
 
@@ -328,3 +329,16 @@ py backend/cleanup_sandboxes.py --dry-run     # list leftover sandboxes (drop --
 py sandbox_jobs/lib/validate_prompts.py sandbox_jobs/samples/chatgpt_fake/prompts_example.jsonl
 py sandbox_jobs/lib/check_adapter.py --adapter sandbox_jobs/samples/tiny_chatgpt/adapter.json --snapshot sandbox_jobs/samples/tiny_chatgpt/snapshot.html
 ```
+The Chalk/Jev workstream now runs locally in explicit mock/shadow mode without credentials:
+
+```sh
+uv sync
+uv run python -m scripts.chalk_doctor
+uv run uvicorn backend.main:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Issue a one-use local pairing code with `uv run python -m scripts.pair_extension`. The API's interactive contract is at `http://127.0.0.1:8000/docs`.
+
+See [the runnable mock and evaluation commands](docs/chalk-runbook.md), [later Chalk account setup](docs/chalk-setup.md), and [extension/dashboard/ingest contracts](docs/coaching-integration.md). Configuration is documented in `.env.example`; use `uv run --env-file .env ...` to load a local file explicitly.
+
+The original product components above are planned teammate work. This implementation supplies the coaching backend/evaluation modules and a tested draft-lifecycle helper; it does not implement the DOM adapter, React dashboard, footprint coefficients, voice recap, or Droid/Daytona jobs. No real Chalk evaluation or measured energy saving is claimed.
