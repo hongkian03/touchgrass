@@ -77,6 +77,21 @@ describe("C5 classify happy path", () => {
   it('classify("what\'s the weather in Boston", "text") -> small_ok', () => {
     expect(classify("what's the weather in Boston", "text")).toBe("small_ok");
   });
+
+  it("classify define / translate / who-is -> small_ok", () => {
+    expect(classify("define photosynthesis", "text")).toBe("small_ok");
+    expect(classify("translate hello to spanish", "text")).toBe("small_ok");
+    expect(classify("who is ada lovelace", "text")).toBe("small_ok");
+  });
+
+  it("classify long coding ask -> needs_big", () => {
+    expect(
+      classify(
+        "refactor this typescript module with generics and tests",
+        "text",
+      ),
+    ).toBe("needs_big");
+  });
 });
 
 describe("C1 two oversized simple prompts", () => {
@@ -156,7 +171,8 @@ describe("C6 holdout evals", () => {
     rows: { prompt_text: string; kind: "text" | "image" | "video"; label: string }[];
   };
 
-  const HOLD_RE = /what is|who is|weather|define|translate|summarize/i;
+  const HOLD_RE =
+    /what is|what's|whats|who is|weather|define|translate|summarize|how many|capital of|look up|lookup/i;
 
   it("has at least 8 prompts without the small-hint regex", () => {
     const holdouts = evals.rows.filter((r) => !HOLD_RE.test(r.prompt_text));
