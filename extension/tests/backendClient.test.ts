@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { bgBackend } from "../lib/backendBridge";
 import {
   DEFAULT_BACKEND_BASE,
   fetchHealth,
@@ -75,5 +76,27 @@ describe("mapTipsToCards", () => {
     });
     expect(cards[1].text).toBe("Stop regenerating");
     expect(cards[2].text).toBe("pattern-only");
+  });
+});
+
+describe("bgBackend after extension reload", () => {
+  it("returns ok:false instead of throwing when context is invalidated", async () => {
+    vi.stubGlobal("browser", {
+      runtime: {
+        id: "test-ext",
+        sendMessage: async () => {
+          throw new Error("Extension context invalidated.");
+        },
+      },
+    });
+    try {
+      const result = await bgBackend("adapter-get", { site: "claude" });
+      expect(result).toEqual({
+        ok: false,
+        error: "extension_context_invalidated",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

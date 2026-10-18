@@ -2,6 +2,7 @@ import platformsData from "../data/platforms.json";
 import { classify } from "./classify";
 import { coachTargetDisplay, type CoachTargetDisplay } from "./coachTargetDisplay";
 import { pickEnabledAlternate, route } from "./route";
+import { isExtensionContextError } from "./storage";
 import type { Platform, RouteSuggestion } from "./types";
 
 const platforms = platformsData as Platform[];
@@ -214,11 +215,16 @@ export async function openCoachPaste(args: {
     recentMessages: args.recentMessages,
     fromProvider: args.fromProvider,
   });
-  await browser.runtime.sendMessage({
-    type: "puddle/coach-open-paste",
-    url: args.url,
-    draft: payload,
-  });
+  try {
+    await browser.runtime.sendMessage({
+      type: "puddle/coach-open-paste",
+      url: args.url,
+      draft: payload,
+    });
+  } catch (e) {
+    if (isExtensionContextError(e)) return;
+    throw e;
+  }
 }
 
 /** @deprecated Prefer planCoachAuto + apply/open. Kept for callers mid-migrate. */
