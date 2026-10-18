@@ -1,4 +1,4 @@
-"""F6: job records in SQLite (backend/jobs.sqlite, gitignored).
+"""F6: job records in SQLite (backend/jobs.sqlite locally, or configured data directory).
 
 jobs: job_id, type (ingest, repair), site (repairs only), status (queued, running, succeeded,
 failed), created_at, finished_at, summary (JSON: counts, timings, credits, never chat text), error.
@@ -10,7 +10,9 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent / "jobs.sqlite"
+from backend.paths import JOB_DB_PATH
+
+DB_PATH = JOB_DB_PATH
 DONE = ("succeeded", "failed")
 
 
@@ -21,6 +23,8 @@ def _now():
 class JobStore:
     def __init__(self, path=DB_PATH):
         # Only the event loop's thread touches the connection.
+        if str(path) != ":memory:":
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (

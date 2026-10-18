@@ -303,20 +303,22 @@ Brightness is mean radiance in nW/(cm² sr). The "central Oregon" region from th
 ## Setup
 ## Coaching backend setup
 
+For Railway hosting, see [the backend deployment guide](docs/railway.md).
+
 Requires Python 3.12+. On Windows, use `py` if `python` opens the Microsoft Store.
 
 ```
-py -m pip install daytona droid-sdk python-dotenv jsonschema beautifulsoup4 pytest pandas fastapi uvicorn python-multipart numpy pillow
+uv sync --locked
 ```
 
 Install the droid CLI (`irm https://app.factory.ai/cli/windows | iex` on Windows) and open a new terminal so `droid` is on PATH. Copy `.env.example` to `.env` and fill in the keys: `FACTORY_API_KEY` for Droid, `DAYTONA_API_KEY` for the sandbox flow.
 
 ```
-py sandbox_jobs/smoke_droid.py                # Droid answers "OK"
-py sandbox_jobs/try_runner.py                 # job runner: hello job works, write into lib/ is blocked
-py sandbox_jobs/ingest.py                     # Droid Ingestor on the one export in work/input/
-py start.py                                   # the backend; API docs at http://localhost:8000/docs
-py smoke_test.py                              # both flows end to end, no Factory credits
+uv run python sandbox_jobs/smoke_droid.py       # Droid answers "OK"
+uv run python sandbox_jobs/try_runner.py        # job runner: hello job works, write into lib/ is blocked
+uv run python sandbox_jobs/ingest.py            # Droid Ingestor on the one export in work/input/
+uv run python start.py                         # the backend; API docs at http://localhost:8000/docs
+uv run python smoke_test.py                    # both flows end to end, no Factory credits
 ```
 
 Demo fallback: `py start.py --replay` (or `DEMO_REPLAY=1`) replays the saved runs instead of calling Droid.

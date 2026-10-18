@@ -5,6 +5,8 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
 
+from backend.paths import coaching_database_url
+
 from .profiles import CoachingProfile, Policy, mock_profile
 from .rubric import RUBRIC_HASH
 from .schemas import Contract
@@ -24,7 +26,7 @@ class Settings(Contract):
     policy_path: str = ""
     general_coach_path: str = ""
     session_secret: SecretStr = SecretStr("")
-    database_url: str = "sqlite:///artifacts/coaching.db"
+    database_url: str = Field(default_factory=coaching_database_url)
     allowed_origins: list[str] = Field(default_factory=list)
     deadline_ms: int = Field(default=700, ge=1, le=30000)
     max_concurrency: int = Field(default=8, ge=1, le=1000)

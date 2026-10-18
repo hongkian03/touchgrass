@@ -1,0 +1,34 @@
+# Allow only backend runtime inputs; new root files are excluded by default.
+**
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!uv.lock
+!start.py
+!backend/
+!backend/**
+!sandbox_jobs/
+!sandbox_jobs/**
+!space/
+!space/**
+!config/
+!config/**
+
+# Secrets, private data, local state, saved runs and development files stay out.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/__pycache__
+**/*.py[cod]
+**/*.sqlite*
+**/*.db
+**/*.db-*
+**/.DS_Store
+**/test_*.py
+backend/demo_runs/
+space/cache/
+sandbox_jobs/samples/**
+# Required by the live adapter repair workflow.
+!sandbox_jobs/samples/
+!sandbox_jobs/samples/clean_snapshot.py

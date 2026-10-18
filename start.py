@@ -43,7 +43,9 @@ def main():
 
     if sandbox_mode()[0] == "daytona" and not args.replay and not args.no_sweep:
         subprocess.run([sys.executable, str(REPO / "backend" / "cleanup_sandboxes.py")], cwd=REPO, check=False)
-    uvicorn.run("backend.main:app", host=args.host, port=args.port)
+    # Jobs and their concurrency semaphore live in this process.
+    # Override WEB_CONCURRENCY so a hosting default cannot create extra workers.
+    uvicorn.run("backend.main:app", host=args.host, port=args.port, workers=1)
 
 
 if __name__ == "__main__":

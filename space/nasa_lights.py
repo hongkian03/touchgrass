@@ -20,6 +20,7 @@ warehouses, lighting changes, snow, clouds, moonlight and sensor differences all
 import argparse
 import io
 import json
+import os
 import re
 import sys
 import urllib.error
@@ -33,7 +34,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-CACHE = Path(__file__).resolve().parent / "cache"
+_data_root = os.environ.get("PROMPTPRINT_DATA_DIR")
+CACHE = Path(os.environ.get(
+    "NASA_CACHE_DIR",
+    Path(_data_root).expanduser() / "space/cache" if _data_root else Path(__file__).resolve().parent / "cache",
+)).expanduser().resolve()
 WMS = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi"
 COLORMAPS = "https://gibs.earthdata.nasa.gov/colormaps/v1.3/"
 TIMEOUT = 60

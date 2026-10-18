@@ -27,11 +27,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from backend.paths import ADAPTERS_DIR, JOB_ROOT, PARSER_CACHE, REPO, VIEW_ROOT
+
 JOBS = REPO / "sandbox_jobs"
-JOB_ROOT = REPO / "work" / "jobs"
-VIEW_ROOT = REPO / "droid_view" / "jobs"
-PARSER_CACHE = Path(os.environ.get("PARSER_CACHE", REPO / "parser_cache"))  # same default as ingest.py
 
 
 class JobExecutor(ABC):
@@ -61,6 +59,7 @@ class LocalExecutor(JobExecutor):
 
     def _env(self, job_id, extra_env=None):
         env = dict(os.environ, WORK_DIR=str(self.work_dir(job_id)), DROID_VIEW_DIR=str(VIEW_ROOT / job_id),
+                   PARSER_CACHE=str(PARSER_CACHE), ADAPTERS_DIR=str(ADAPTERS_DIR),
                    PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8", **(extra_env or {}))
         user_bin = Path(os.environ.get("USERPROFILE", "~")).expanduser() / "bin"  # where the droid installer puts it
         if (user_bin / "droid.exe").exists() and str(user_bin) not in env.get("PATH", ""):
@@ -308,7 +307,8 @@ class ReplayExecutor(LocalExecutor):
         self._replay_logs(run, job_id)
         adapter = json.loads((run / "adapter.json").read_text(encoding="utf-8"))
         # Publish above whatever is live, so the extension picks it up as a new version.
-        path = REPO / "backend" / "adapters" / f"{Path(site).name}.json"
+        ADAPTERS_DIR.mkdir(parents=True, exist_ok=True)
+        path = ADAPTERS_DIR / f"{Path(site).name}.json"
         current = json.loads(path.read_text(encoding="utf-8")).get("version", 0) if path.is_file() else 0
         adapter["version"] = max(current, broken_adapter.get("version", 0)) + 1
         path.write_text(json.dumps(adapter, indent=2) + "\n", encoding="utf-8")

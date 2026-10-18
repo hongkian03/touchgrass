@@ -34,7 +34,7 @@ from droid_runner import DROID_SAVED_DIR, WORK_DIR, ensure_work_dirs, run_droid_
 
 LIB_SRC = Path(__file__).resolve().parent / "lib"
 JOB_DIR = WORK_DIR / "mechanic"
-ADAPTERS_DIR = REPO / "backend" / "adapters"
+ADAPTERS_DIR = Path(os.environ.get("ADAPTERS_DIR", REPO / "backend" / "adapters"))
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 PYTHON = os.environ.get("DROID_PYTHON", "py" if os.name == "nt" else "python3")
 
@@ -108,7 +108,7 @@ def publish(site, adapter):
         ADAPTERS_DIR.mkdir(parents=True, exist_ok=True)
         path = ADAPTERS_DIR / f"{site}.json"
         path.write_text(json.dumps(adapter, indent=2) + "\n", encoding="utf-8")
-        return f"backend not reachable; wrote {path.relative_to(REPO)}"
+        return f"backend not reachable; wrote {path}"
 
 
 def show_diff(before, after):

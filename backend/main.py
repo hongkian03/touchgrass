@@ -36,9 +36,10 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from backend.executor import REPO, active_mode, get_executor, sandbox_mode  # noqa: E402
 from backend.jobs import DONE, JobStore  # noqa: E402
+from backend.paths import ADAPTERS_DIR, seed_adapters  # noqa: E402
 from space import nasa_lights  # noqa: E402
 
-ADAPTERS_DIR = REPO / "backend" / "adapters"
+seed_adapters()
 LOG_POLL_SECONDS = 0.5
 
 app = FastAPI(title="PromptPrint")
