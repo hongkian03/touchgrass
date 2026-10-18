@@ -231,11 +231,12 @@ export function CoachOverlay({
                       fontWeight: 700,
                     }}
                   >
-                    −{redirectMeta?.savedWh?.toFixed(1)} Wh
+                    ≈ −{redirectMeta?.savedWh?.toFixed(2)} Wh
                     {typeof redirectMeta?.savedCo2G === "number" &&
                     redirectMeta.savedCo2G > 0
-                      ? ` · −${redirectMeta.savedCo2G.toFixed(2)}g CO₂`
+                      ? ` · −${redirectMeta.savedCo2G.toFixed(3)}g CO₂`
                       : ""}
+                    {" est."}
                   </span>
                 ) : null}
                 {redirectMeta?.chalkPill ? (
@@ -462,7 +463,7 @@ export function CoachOverlay({
                       fontWeight: 700,
                     }}
                   >
-                    −{actions.chalkMeta.savedWh.toFixed(1)} Wh
+                    ≈ −{actions.chalkMeta.savedWh.toFixed(2)} Wh est.
                   </span>
                 ) : null}
               </div>

@@ -1,5 +1,4 @@
 import coachCopy from "../data/coach-copy.json";
-import footprintData from "../data/footprint.json";
 import platformsData from "../data/platforms.json";
 import {
   missingSelectorKeys,
@@ -20,6 +19,7 @@ import {
 import { draftFrom, findComposer } from "./findComposer";
 import type { GroqRouteResult } from "./groqRoute";
 import { providerFromHostname, urlForPlatformId } from "./route";
+import { FOOTPRINT_MODELS } from "./footprint";
 import { resolveActiveSite } from "./siteDetect";
 import {
   appendUsage,
@@ -29,13 +29,10 @@ import {
   readState,
   writeState,
 } from "./storage";
-import type { FootprintModel } from "./totals";
 import type { Platform, PromptKind } from "./types";
 
 const platforms = platformsData as Platform[];
-const footprintModels = (
-  footprintData as { models: Record<string, FootprintModel> }
-).models;
+const footprintModels = FOOTPRINT_MODELS;
 const REDIRECT_MS = 1600;
 const MISS_THRESHOLD = 3;
 
@@ -52,13 +49,14 @@ function estimateHopSavings(
     footprintModels[
       toPlat?.smallModel ?? toPlat?.defaultModel ?? "gemini-flash"
     ] ?? footprintModels["gemini-flash"];
+  // No invented floors: if we can't estimate it, show nothing saved
   if (!fromModel || !toModel) {
-    return { savedWh: 1.8, savedCo2G: 0.8, savedWaterMl: 28 };
+    return { savedWh: 0, savedCo2G: 0, savedWaterMl: 0 };
   }
   return {
-    savedWh: Math.max(0.2, fromModel.Wh - toModel.Wh),
-    savedCo2G: Math.max(0.05, fromModel.co2_g - toModel.co2_g),
-    savedWaterMl: Math.max(2, (fromModel.water_L - toModel.water_L) * 1000),
+    savedWh: Math.max(0, fromModel.Wh - toModel.Wh),
+    savedCo2G: Math.max(0, fromModel.co2_g - toModel.co2_g),
+    savedWaterMl: Math.max(0, (fromModel.water_L - toModel.water_L) * 1000),
   };
 }
 
@@ -246,7 +244,8 @@ export function startCoachWatch(): void {
         savedCo2G: savings.savedCo2G,
         savedWaterMl: savings.savedWaterMl,
         chalkPill: "Chalk JEV + Router",
-        smallOkPct: 94,
+        // Groq gives no probability; never show an invented one
+        smallOkPct: null,
         contextTurns: recentTurns.length,
         sameSiteModel: sameSiteSmall,
         durationMs: REDIRECT_MS,
@@ -472,7 +471,7 @@ export function startCoachWatch(): void {
         typeof (response as { small_ok?: number }).small_ok === "number" &&
         (response as { small_ok?: number }).small_ok! > 0
           ? Math.round((response as { small_ok?: number }).small_ok! * 100)
-          : 94;
+          : null;
       const confPct =
         typeof (response as { confidence?: number }).confidence === "number" &&
         (response as { confidence?: number }).confidence! > 0
@@ -614,7 +613,7 @@ export function startCoachWatch(): void {
     return box.querySelectorAll(ATTACHMENT_SELECTOR).length;
   };
 
-  /** Map the page's model picker to footprint.json keys: small label → smallModel. */
+  /** Map the page's model picker to FOOTPRINT_MODELS keys: small label → smallModel. */
   const footprintModelFor = (platform: Platform): string => {
     const label = modelLabelEl()?.textContent?.trim() ?? "";
     return SMALL_MODEL_RE.test(label)

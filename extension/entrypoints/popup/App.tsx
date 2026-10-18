@@ -9,7 +9,6 @@ import { AchievementReportModal } from "../../components/AchievementReportModal"
 import {
   Co2Cloud,
   EnergyBolt,
-  TreeGrove,
   WaterDrop,
 } from "../../components/FootprintCartoons";
 import { InlineOnboarding } from "../../components/InlineOnboarding";
@@ -20,7 +19,6 @@ import { PlatformsPane, SettingsPane } from "../../components/SettingsPane";
 import { StreakFlame } from "../../components/StreakFlame";
 import { Button } from "../../components/ui/button";
 import coachCopy from "../../data/coach-copy.json";
-import footprintData from "../../data/footprint.json";
 import insights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
 import usageSeed from "../../data/usage-seed.json";
@@ -31,19 +29,18 @@ import type { ReportCardData } from "../../lib/reportCard";
 import {
   daySavings,
   monthSavings,
-  saplingsFromCo2G,
   weekSavings,
 } from "../../lib/savings";
 import { lastNDays, localDateKey, score } from "../../lib/score";
 import { DEFAULT_STATE, readState, type PuddleState } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
-import { dayTotals, type FootprintModel } from "../../lib/totals";
+import { FOOTPRINT_MODELS, FOOTPRINT_SOURCE_NOTE } from "../../lib/footprint";
+import { dayTotals } from "../../lib/totals";
 import { monthTotals, weekTotals } from "../../lib/weekTotals";
 import type { Platform, UsageRow } from "../../lib/types";
 
 const platforms = platformsData as Platform[];
-const models = (footprintData as { models: Record<string, FootprintModel> })
-  .models;
+const models = FOOTPRINT_MODELS;
 
 type Period = "day" | "week" | "month";
 type Screen =
@@ -123,24 +120,18 @@ export function PopupApp() {
   const byPeriod = {
     day: {
       totals: { ...dayTotals(state.usage, today, models), days: 1 },
-      trees: saplingsFromCo2G(
-        daySavings(state.usage, today, platforms, models).co2_g,
-      ),
+      savedCo2G: daySavings(state.usage, today, platforms, models).co2_g,
     },
     week: {
       totals: weekTotals(state.usage, today, models),
-      trees: saplingsFromCo2G(
-        weekSavings(state.usage, today, platforms, models).co2_g,
-      ),
+      savedCo2G: weekSavings(state.usage, today, platforms, models).co2_g,
     },
     month: {
       totals: monthTotals(state.usage, today, models),
-      trees: saplingsFromCo2G(
-        monthSavings(state.usage, today, platforms, models).co2_g,
-      ),
+      savedCo2G: monthSavings(state.usage, today, platforms, models).co2_g,
     },
   };
-  const { totals, trees } = byPeriod[period];
+  const { totals, savedCo2G } = byPeriod[period];
   const windowDays = period === "day" ? 1 : period === "week" ? 7 : 30;
   const inRange = new Set(lastNDays(today, windowDays));
   const slice = state.usage.filter((r) =>
@@ -173,7 +164,7 @@ export function PopupApp() {
       userName: state.userName,
       score: state.score,
       streak: state.streak,
-      trees,
+      co2SavedG: savedCo2G,
       smallPct,
       energyWh: totals.Wh,
       waterL: totals.water_L,
@@ -190,7 +181,7 @@ export function PopupApp() {
     state.score,
     state.streak,
     state.enabledPlatforms,
-    trees,
+    savedCo2G,
     smallPct,
     totals.Wh,
     totals.water_L,
@@ -267,10 +258,10 @@ export function PopupApp() {
 
           <div className="grid grid-cols-2 gap-2" data-testid="footprint-ticks">
             <CartoonTick
-              label="power used"
-              hint="Electricity these prompts burned, in watt-hours."
+              label="power used (est.)"
+              hint={`Estimated electricity these prompts used, in watt-hours. ${FOOTPRINT_SOURCE_NOTE}`}
               value={totals.Wh}
-              decimals={1}
+              decimals={2}
               suffix=" Wh"
               testId="tick-energy"
               wash="#fff8dc"
@@ -278,21 +269,21 @@ export function PopupApp() {
               <EnergyBolt size={56} />
             </CartoonTick>
             <CartoonTick
-              label="water used"
-              hint="Water used to cool the servers, in liters."
-              value={totals.water_L}
-              decimals={2}
-              suffix=" L"
+              label="water used (est.)"
+              hint={`Estimated water for server cooling and power, in millilitres. ${FOOTPRINT_SOURCE_NOTE}`}
+              value={totals.water_L * 1000}
+              decimals={1}
+              suffix=" mL"
               testId="tick-water"
               wash="#e7f6ff"
             >
               <WaterDrop size={56} />
             </CartoonTick>
             <CartoonTick
-              label="carbon out"
-              hint="CO₂ from the power those prompts used, in grams."
+              label="carbon out (est.)"
+              hint={`Estimated CO₂e from the power those prompts used, in grams. ${FOOTPRINT_SOURCE_NOTE}`}
               value={totals.co2_g}
-              decimals={1}
+              decimals={2}
               suffix=" g"
               testId="tick-co2"
               wash="#eef1f4"
@@ -300,15 +291,15 @@ export function PopupApp() {
               <Co2Cloud size={56} />
             </CartoonTick>
             <CartoonTick
-              label="trees planted"
-              hint="CO₂ you saved by picking a smaller model (mini, Haiku, Flash) instead of the big default."
-              value={trees}
-              decimals={1}
-              suffix=""
-              testId="tick-trees"
+              label="CO₂ saved (est.)"
+              hint="Estimated CO₂e you avoided by using a smaller model (mini, Haiku, Flash) instead of this site's big default. Small models are assumed to cost 25% of the big one; no provider publishes per-model figures."
+              value={savedCo2G}
+              decimals={2}
+              suffix=" g"
+              testId="tick-co2-saved"
               wash="#e8f6df"
             >
-              <TreeGrove size={56} count={trees} />
+              <MiniModel size={56} />
             </CartoonTick>
           </div>
 
@@ -427,10 +418,10 @@ export function PopupApp() {
                         icon={<MixClapper size={36} />}
                         text={
                           videos === 0
-                            ? "No video jobs in this range. One AI video uses about as much energy as hundreds of text prompts."
+                            ? "No video jobs in this range. We estimate one AI video uses about as much energy as 1,000 text prompts."
                             : videos === 1
-                              ? "video job in this range. One clip uses about as much energy as hundreds of text prompts."
-                              : "video jobs in this range. One clip uses about as much energy as hundreds of text prompts."
+                              ? "video job in this range. We estimate one clip ≈ 1,000 text prompts of energy."
+                              : "video jobs in this range. We estimate one clip ≈ 1,000 text prompts of energy."
                         }
                       />
                     );

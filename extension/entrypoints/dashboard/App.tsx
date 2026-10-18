@@ -9,14 +9,12 @@ import {
 import {
   Co2Cloud,
   EnergyBolt,
-  TreeGrove,
   WaterDrop,
 } from "../../components/FootprintCartoons";
 import { CountUp } from "../../components/ScoreCountUp";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import evalsData from "../../data/evals.json";
-import footprintData from "../../data/footprint.json";
 import seedInsights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
 import { bgBackend } from "../../lib/backendBridge";
@@ -31,16 +29,15 @@ import { readState, writeState, type PuddleState } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
 import { parseExport } from "../../lib/upload";
 import { parseVoiceIntent } from "../../lib/voiceIntent";
-import { saplingsFromCo2G, weekSavings } from "../../lib/savings";
+import { weekSavings } from "../../lib/savings";
 import { weekTotals } from "../../lib/weekTotals";
-import type { FootprintModel } from "../../lib/totals";
+import { FOOTPRINT_MODELS, FOOTPRINT_SOURCE_NOTE } from "../../lib/footprint";
 import type { Platform, UsageRow } from "../../lib/types";
 
 type InsightCard = { id: string; text: string };
 
 const platforms = platformsData as Platform[];
-const models = (footprintData as { models: Record<string, FootprintModel> })
-  .models;
+const models = FOOTPRINT_MODELS;
 const evalRows = (
   evalsData as { rows: Array<{ prompt_text: string; kind: string; label: string }> }
 ).rows;
@@ -120,7 +117,6 @@ export function DashboardApp() {
   const saved = state
     ? weekSavings(state.usage, today, platforms, models)
     : { Wh: 0, water_L: 0, co2_g: 0 };
-  const saplings = saplingsFromCo2G(saved.co2_g);
   const streak = state
     ? computeStreak(state.usage, today, platforms)
     : 0;
@@ -317,36 +313,36 @@ export function DashboardApp() {
           className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
           <Stat
-            label="power used"
-            hint="Electricity these prompts burned, in watt-hours."
+            label="power used (est.)"
+            hint={`Estimated electricity these prompts used, in watt-hours. ${FOOTPRINT_SOURCE_NOTE}`}
             value={week.Wh}
-            decimals={1}
+            decimals={2}
             suffix=" Wh"
             art={<EnergyBolt size={72} />}
           />
           <Stat
-            label="water used"
-            hint="Water used to cool the servers, in liters."
-            value={week.water_L}
-            decimals={2}
-            suffix=" L"
+            label="water used (est.)"
+            hint={`Estimated water for server cooling and power, in millilitres. ${FOOTPRINT_SOURCE_NOTE}`}
+            value={week.water_L * 1000}
+            decimals={1}
+            suffix=" mL"
             art={<WaterDrop size={72} />}
           />
           <Stat
-            label="carbon out"
-            hint="CO₂ from the power those prompts used, in grams."
+            label="carbon out (est.)"
+            hint={`Estimated CO₂e from the power those prompts used, in grams. ${FOOTPRINT_SOURCE_NOTE}`}
             value={week.co2_g}
-            decimals={1}
+            decimals={2}
             suffix=" g"
             art={<Co2Cloud size={72} />}
           />
           <Stat
-            label="trees planted"
-            hint="Trees equal to the CO₂ you skipped vs the big default model."
-            value={saplings}
-            decimals={1}
-            suffix=""
-            art={<TreeGrove size={72} count={saplings} />}
+            label="CO₂ saved (est.)"
+            hint="Estimated CO₂e avoided by using smaller models instead of each site's big default (small models assumed to cost 25%)."
+            value={saved.co2_g}
+            decimals={2}
+            suffix=" g"
+            art={<Co2Cloud size={72} />}
           />
         </section>
 
@@ -496,32 +492,32 @@ export function DashboardApp() {
           <h2 className="m-0 text-lg font-semibold">Weekly recap</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <RecapCard
-              title="Energy"
+              title="Energy (est.)"
               value={week.Wh}
-              decimals={1}
+              decimals={2}
               suffix=" Wh"
               art={<EnergyBolt size={56} />}
             />
             <RecapCard
-              title="Water"
-              value={week.water_L}
-              decimals={2}
-              suffix=" L"
+              title="Water (est.)"
+              value={week.water_L * 1000}
+              decimals={1}
+              suffix=" mL"
               art={<WaterDrop size={56} />}
             />
             <RecapCard
-              title="CO₂"
+              title="CO₂ (est.)"
               value={week.co2_g}
-              decimals={1}
+              decimals={2}
               suffix=" g"
               art={<Co2Cloud size={56} />}
             />
             <RecapCard
-              title="Trees"
-              value={saplings}
-              decimals={1}
-              suffix=""
-              art={<TreeGrove size={56} count={saplings} />}
+              title="CO₂ saved (est.)"
+              value={saved.co2_g}
+              decimals={2}
+              suffix=" g"
+              art={<Co2Cloud size={56} />}
             />
           </div>
         </section>

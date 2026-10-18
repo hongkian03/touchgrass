@@ -2,9 +2,6 @@ import { localDateKey, monthWindow, weekWindow } from "./score";
 import type { DayTotals, FootprintModel } from "./totals";
 import type { Platform, UsageRow } from "./types";
 
-/** Labeled demo: grams CO₂ avoided ≈ one young sapling. Not an EPA year-tree. */
-export const G_CO2_PER_SAPLING = 0.5;
-
 function zero(): DayTotals {
   return { Wh: 0, water_L: 0, co2_g: 0 };
 }
@@ -84,9 +81,4 @@ export function monthSavings(
     platforms,
     models,
   );
-}
-
-export function saplingsFromCo2G(co2_g: number): number {
-  if (co2_g <= 0) return 0;
-  return Math.round((co2_g / G_CO2_PER_SAPLING) * 10) / 10;
 }

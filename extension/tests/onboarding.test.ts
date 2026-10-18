@@ -313,12 +313,12 @@ describe("achievement report card + PDF", () => {
     expect(pos4[1] + pos4[2]).toBe(1080);
   });
 
-  it("builds SVG card with name + trees + score", () => {
+  it("builds SVG card with name + CO2 saved + score", () => {
     const svg = buildReportCardSvg({
       userName: "Ada",
       score: 88,
       streak: 4,
-      trees: 2.5,
+      co2SavedG: 0.25,
       smallPct: 40,
       energyWh: 1.2,
       waterL: 0.05,
@@ -331,6 +331,9 @@ describe("achievement report card + PDF", () => {
     expect(svg).toMatch(/88/);
     expect(svg).toMatch(/Touchgrass Passport/);
     expect(svg).toMatch(/sticker-gotit\.png/);
+    expect(svg).toMatch(/CO₂ saved \(est\.\)/);
+    expect(svg).toMatch(/0\.25 g/);
+    expect(svg).not.toMatch(/trees planted/);
   });
 
   it("embeds JPEG into a valid PDF byte stream", () => {

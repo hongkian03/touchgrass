@@ -13,7 +13,8 @@ export type ReportCardData = {
   userName: string;
   score: number;
   streak: number;
-  trees: number;
+  /** Estimated grams CO2e avoided by using smaller models. */
+  co2SavedG: number;
   smallPct: number;
   energyWh: number;
   waterL: number;
@@ -170,7 +171,8 @@ export function buildReportCardSvg(data: ReportCardData): string {
   const plats =
     data.platforms.slice(0, 6).map(escapeXml).join("  ·  ") ||
     "Local AI footprint tracker";
-  const treeCount = Math.min(5, Math.max(1, Math.round(data.trees) || 1));
+  // Decorative lawn: more trees for a better rank (not a CO2 quantity)
+  const treeCount = Math.min(5, Math.max(1, Math.round(data.score / 20)));
   const treeXs = symmetricPositions(treeCount, 540, 128);
   const scoreInt = Math.round(Math.max(0, Math.min(100, data.score)));
   const stickerHref =
@@ -185,32 +187,32 @@ export function buildReportCardSvg(data: ReportCardData): string {
       x: 96,
       cx: 198,
       wash: "#fff8dc",
-      value: `${data.energyWh.toFixed(1)} Wh`,
-      label: "power used",
+      value: `${data.energyWh.toFixed(2)} Wh`,
+      label: "power used (est.)",
       art: boltSvg(198, 972, 1.15),
     },
     {
       x: 324,
       cx: 426,
       wash: "#e7f6ff",
-      value: `${data.waterL.toFixed(2)} L`,
-      label: "water used",
+      value: `${(data.waterL * 1000).toFixed(1)} mL`,
+      label: "water used (est.)",
       art: dropSvg(426, 972, 1.15),
     },
     {
       x: 552,
       cx: 654,
       wash: "#eef1f4",
-      value: `${data.co2g.toFixed(1)} g`,
-      label: "carbon out",
+      value: `${data.co2g.toFixed(2)} g`,
+      label: "carbon out (est.)",
       art: cloudSvg(654, 972, 1.15),
     },
     {
       x: 780,
       cx: 882,
       wash: "#e8f6df",
-      value: `${data.trees.toFixed(1)}`,
-      label: "trees planted",
+      value: `${data.co2SavedG.toFixed(2)} g`,
+      label: "CO₂ saved (est.)",
       art: treeSvg(882, 994, 1.15),
     },
   ];
@@ -273,7 +275,7 @@ export function buildReportCardSvg(data: ReportCardData): string {
     ${treeXs
       .map((x, i) => treeSvg(x, 774, 1.7 + (i % 2) * 0.15))
       .join("\n")}
-    <text x="540" y="828" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Planted ${data.trees.toFixed(1)} virtual saplings  ·  ${data.smallPct}% smart-routed to small models</text>
+    <text x="540" y="828" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Saved ≈${data.co2SavedG.toFixed(2)} g CO₂e with smaller models  ·  ${data.smallPct}% simple asks</text>
   </g>
 
   <!-- 4 Symmetrically Aligned Footprint Stat Cards -->
@@ -294,6 +296,7 @@ export function buildReportCardSvg(data: ReportCardData): string {
   <text x="540" y="1188" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#1b4965">${plats}</text>
 
   <text x="540" y="1264" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="24" fill="#5fa8d3">touchgrass · local-first AI coach</text>
+  <text x="540" y="1306" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="16" fill="#71717a">Estimates from Google (Aug 2025) and OpenAI (Jun 2025) per-prompt averages; not live metering.</text>
 </svg>`;
 }
 
