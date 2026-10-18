@@ -6,8 +6,12 @@ import {
   type ReactNode,
 } from "react";
 import { BrandIcon } from "./BrandIcon";
-import { TreeGrove } from "./FootprintCartoons";
-import { AccountCartoon, GearIcon, LocalShieldCartoon } from "./MorphNav";
+import {
+  AccountCartoon,
+  LocalShieldCartoon,
+  PlatformsCartoon,
+} from "./MorphNav";
+import { Pip } from "./Pip";
 import { buildPlatformGridItems, type GridItem } from "./PlatformGrid";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -151,11 +155,79 @@ export function SettingsPane({
         )}
       </section>
 
-      {/* 2. LocalStorage privacy & usage card */}
+      {/* 2. AI Platforms card */}
+      <button
+        type="button"
+        data-testid="settings-platforms-row"
+        onClick={onOpenPlatforms}
+        className="ui-note-enter ui-btn-press flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2 text-left transition-colors hover:bg-[#fafafa]"
+        style={{ ["--i" as string]: 1 } as CSSProperties}
+      >
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: "#fff8dc" }}
+        >
+          <PlatformsCartoon size={36} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-1.5">
+            <span
+              className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
+              style={{ background: "#fff8dc", color: "#8a5a00" }}
+            >
+              {state.enabledPlatforms.length} active
+            </span>
+            <div className="flex -space-x-1">
+              {chosen.slice(0, 4).map((p) => (
+                <PlatformAvatar key={p.id} item={p} size={18} />
+              ))}
+            </div>
+          </div>
+          <div className="text-xs font-medium text-foreground">
+            AI platforms · tap to add or remove
+          </div>
+        </div>
+        <Chevron />
+      </button>
+
+      {/* 3. Generate Report card */}
+      <button
+        type="button"
+        data-testid="generate-report-btn"
+        onClick={onGenerateReport}
+        className="ui-note-enter ui-btn-press flex w-full items-center gap-2.5 rounded-xl border border-border px-2.5 py-2.5 text-left transition-transform"
+        style={
+          {
+            background: "#e8f6df",
+            ["--i" as string]: 2,
+          } as CSSProperties
+        }
+      >
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-visible rounded-xl bg-white/85">
+          <Pip size={48} variant="sticker" pose="gotit" tilt={-4} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <span
+            className="mb-0.5 inline-flex rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold"
+            style={{ color: "#3d8b40" }}
+          >
+            shareable card
+          </span>
+          <div className="text-sm font-semibold text-foreground">
+            Generate passport report
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            Muskie presents your score, trees &amp; PDF report
+          </div>
+        </div>
+        <Chevron />
+      </button>
+
+      {/* 4. LocalStorage privacy & usage card (placed under Generate Report) */}
       <section
         data-testid="settings-storage"
         className="ui-note-enter flex items-start gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2"
-        style={{ ["--i" as string]: 1 } as CSSProperties}
+        style={{ ["--i" as string]: 3 } as CSSProperties}
       >
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -186,81 +258,6 @@ export function SettingsPane({
           </p>
         </div>
       </section>
-
-      {/* 3. AI Platforms card */}
-      <button
-        type="button"
-        data-testid="settings-platforms-row"
-        onClick={onOpenPlatforms}
-        className="ui-note-enter ui-btn-press flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2 text-left transition-colors hover:bg-[#fafafa]"
-        style={{ ["--i" as string]: 2 } as CSSProperties}
-      >
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: "#fff8dc" }}
-        >
-          {chosen[0] ? (
-            <PlatformAvatar item={chosen[0]} size={26} />
-          ) : (
-            <GearIcon size={24} active />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="mb-0.5 flex items-center gap-1.5">
-            <span
-              className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
-              style={{ background: "#fff8dc", color: "#8a5a00" }}
-            >
-              {state.enabledPlatforms.length} active
-            </span>
-            <div className="flex -space-x-1">
-              {chosen.slice(0, 4).map((p) => (
-                <PlatformAvatar key={p.id} item={p} size={18} />
-              ))}
-            </div>
-          </div>
-          <div className="text-xs font-medium text-foreground">
-            AI platforms · tap to add or remove
-          </div>
-        </div>
-        <Chevron />
-      </button>
-
-      {/* 4. Generate Report card */}
-      <button
-        type="button"
-        data-testid="generate-report-btn"
-        onClick={onGenerateReport}
-        className="ui-note-enter ui-btn-press flex w-full items-center gap-2.5 rounded-xl border border-border px-2.5 py-2.5 text-left transition-transform"
-        style={
-          {
-            background: "#e8f6df",
-            ["--i" as string]: 3,
-          } as CSSProperties
-        }
-      >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/80">
-          <TreeGrove
-            size={42}
-            count={Math.max(1, Math.round(state.score / 25))}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <span
-            className="mb-0.5 inline-flex rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold"
-            style={{ color: "#3d8b40" }}
-          >
-            shareable card
-          </span>
-          <div className="text-sm font-semibold text-foreground">
-            Generate passport report
-          </div>
-          <div className="text-[11px] text-muted-foreground">
-            Achievement PDF + social image with your trees
-          </div>
-        </div>
-        <Chevron />
-      </button>
     </div>
   );
 }
@@ -428,7 +425,7 @@ export function PlatformsPane({
         <p className="m-0 text-xs text-muted-foreground">{barError}</p>
       ) : null}
 
-      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-0.5">
+      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-0.5 py-0.5">
         <SectionLabel>Chosen ({chosen.length})</SectionLabel>
         {chosen.length === 0 ? (
           <p className="m-0 rounded-xl bg-[#f4f4f5]/60 px-3 py-2 text-xs text-muted-foreground">
@@ -489,8 +486,8 @@ function TileGrid({
           className={[
             "ui-note-enter ui-btn-press flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-center text-xs transition-colors",
             action === "remove"
-              ? "bg-[#e7f6ff] ring-1 ring-[var(--yale-blue)]/25"
-              : "bg-[#f4f4f5]/80 hover:bg-[#eef1f4]",
+              ? "border border-[var(--yale-blue)]/30 bg-[#e7f6ff]"
+              : "border border-transparent bg-[#f4f4f5]/80 hover:bg-[#eef1f4]",
           ].join(" ")}
         >
           {p.kind === "custom" && p.faviconHost ? (
@@ -545,8 +542,8 @@ function PlatformAvatar({
   }
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full bg-white ring-1 ring-border"
-      style={{ width: size + 4, height: size + 4 }}
+      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border bg-white p-0.5"
+      style={{ width: size + 6, height: size + 6 }}
     >
       <BrandIcon slug={item.icon ?? ""} size={size - 2} label={item.name} />
     </span>
