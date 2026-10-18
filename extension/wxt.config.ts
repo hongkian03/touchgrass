@@ -21,8 +21,8 @@ const OPTIONAL_HOSTS = [
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
-  // Regenerates every toolbar icon size from the repo-root logo on each build.
-  autoIcons: { baseIconPath: "../logo.png" },
+  // Prepared from logo.png with square dimensions and transparent store padding.
+  autoIcons: { baseIconPath: "assets/icon.png" },
   manifest: {
     name: "Touchgrass",
     description: "Track AI usage. Coach before you waste a prompt.",

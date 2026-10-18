@@ -80,6 +80,16 @@ Support: [SUPPORT_URL]
 Help users understand and manage AI usage through usage summaries and contextual
 model-choice coaching on supported AI websites they enable.
 
+## Store icon asset
+
+Upload `extension/assets/icon.png`. It is a true 128 × 128 RGBA PNG with the
+original logo fitted inside 96 × 96 pixels and 16 pixels of transparent padding
+on every side. `npm run build` and `npm run zip` regenerate it from the root
+`logo.png` before generating the packaged icon sizes. Run `npm run icons:prepare`
+inside `extension/` to regenerate just this image.
+
+Guideline: https://developer.chrome.com/docs/webstore/images#icons
+
 ## Screenshot captions
 
 1. **Choose your AI websites** — Enable the supported platforms you want

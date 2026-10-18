@@ -1,12 +1,10 @@
 # Touchgrass Privacy Policy
 
-**Draft — complete the bracketed fields and the publishing checklist before publishing.**
+Effective date: October 18, 2026
 
-Effective date: [EFFECTIVE_DATE]
-
-Touchgrass is operated by [OPERATOR_NAME] ("we", "us", or "our"). This policy
+Touchgrass is operated by Kian Hong ("we", "us", or "our"). This policy
 explains how the Touchgrass Chrome extension and its connected backend handle
-information. Contact us at [PRIVACY_EMAIL] with privacy questions or requests.
+information. Contact us at hrggyg@gmail.com with privacy questions or requests.
 
 ## What Touchgrass does
 
@@ -46,6 +44,8 @@ Our backend sends relevant content through Chalk's Model Gateway to the
 configured classification provider, including Typesafe/Jev where configured, to
 assess task suitability. When the Groq routing/fallback feature runs, it receives
 a draft excerpt and routing context such as the current and enabled platforms.
+Here, a "local" fallback means that the extension initiates the fallback flow;
+Groq inference still involves sending content to an external service.
 
 The coaching database is designed to retain decision metadata, timestamps,
 pseudonymous session/owner identifiers, input length, a keyed input digest,
@@ -108,10 +108,20 @@ user-requested analysis, model/website switching, integration repair, session
 handling, troubleshooting and support.
 
 We do not sell your personal information or use AI-site activity or conversation
-content for targeted advertising. We do not use your conversation content to
-train our own general-purpose AI models. Our use and transfer of information
+content for personalized, retargeted or interest-based advertising. We do not use
+your conversation content to train our own general-purpose AI models. Our use and transfer of information
 handled by Touchgrass will comply with the Chrome Web Store User Data Policy,
 including its Limited Use requirements.
+
+We limit use of AI-site activity and conversation content to providing or
+improving Touchgrass's described user-facing features. We limit transfers of
+that information to service providers needed for those features, security
+purposes and applicable legal requirements. We do not permit routine human
+review of conversation content. Human access is limited to the exceptions
+allowed by the Chrome Web Store User Data Policy, such as reviewing specific
+content with your explicit agreement for support, investigating abuse, meeting
+legal obligations, or using aggregated, anonymized information for internal
+operations.
 
 ## Service providers and sharing
 
@@ -124,6 +134,7 @@ Information may be processed by:
 | Groq | Process draft excerpts for routing/fallback and hostnames for AI-site classification when those features run |
 | Daytona | Process uploaded exports and page snapshots in temporary computing environments |
 | Factory and the model providers used by Droid | Process job instructions, redacted export structure, cleaned page content and repair validation inputs |
+| GitHub Pages | Hosts this privacy-policy page and receives ordinary connection information when you visit it |
 | Google favicon service | Provide custom-site icons using the requested domain |
 | An AI website you choose to open | Receive content you choose to carry to that website |
 
@@ -138,12 +149,12 @@ subject to applicable restrictions on user-data use and transfer.
 | Information | Retention |
 | --- | --- |
 | Browser-local usage and coaching-choice history | Bounded by record counts; retained until overwritten or removed. Other local settings/caches may remain until removed |
-| Backend coaching decisions and associated events | [COACHING_RETENTION_DAYS] days, with aged records removed during application cleanup rather than at a guaranteed exact instant |
-| Backend sessions | Expire according to the configured session period; expired records are removed during cleanup |
+| Backend coaching decisions and associated events | Seven days. Aged records are removed during application startup and certain requests, rather than at a guaranteed exact instant |
+| Backend sessions | Expire after the same configured retention period used for coaching decisions; expired records are removed during cleanup |
 | Raw files in temporary Daytona sandboxes | The application attempts to delete sandboxes after jobs, including error paths; configured sandbox lifecycle limits provide additional controls |
 | Job records, analysis outputs, logs, generated files, cleaned repair inputs and redacted workspaces | Currently have no scheduled automatic expiry and may remain until removed by the operator |
-| Infrastructure logs | [INFRASTRUCTURE_LOG_RETENTION] |
-| Backups, if enabled | [BACKUP_RETENTION_AND_DELETION_SCHEDULE] |
+| Infrastructure logs | Managed by Railway under its plan-dependent log-retention settings. We have not configured a separate log archive. See [Railway log retention](https://docs.railway.com/observability/logs#log-retention); an expired log viewing window should not be interpreted as guaranteed immediate erasure from provider systems |
+| Backups, if enabled | We have not enabled application-volume backups. Service providers may retain infrastructure copies under their own terms and processes; deleting an application record does not guarantee immediate removal from those systems |
 
 Deletion of active application records does not establish immediate erasure from
 provider systems, backups, your browser history, your clipboard, or the AI
@@ -161,11 +172,16 @@ storage key or server-side record. Removing the extension removes its active
 local extension storage from that Chrome profile; it does not delete server
 records, independently saved reports, browser history or device backups.
 
-Contact [PRIVACY_EMAIL] to request access, correction or deletion of information
+Contact hrggyg@gmail.com to request access, correction or deletion of information
 we hold. We may need nonsecret identifying details to locate records and verify
 a request. Do not email passwords, provider API keys, extension session tokens or
 unnecessary conversation content. Depending on your location, applicable law may
 provide additional rights relating to your personal information.
+
+Browser-local history is stored in your Chrome profile rather than in a complete
+server-side copy we can retrieve for you. If you request deletion of an uploaded
+analysis or repair job, include its job identifier if available. If we cannot
+identify a record safely, we may need additional information before acting.
 
 ## Security and processing locations
 
@@ -180,8 +196,8 @@ through our hosting and service providers.
 We may update this policy as Touchgrass changes. We will update the effective
 date and provide additional notice or request consent when required for material
 changes in data handling. The current policy will be available at
-[PRIVACY_POLICY_URL].
+https://nicovillab.github.io/HackHarvard/.
 
-Operator: [OPERATOR_NAME]
+Operator: Kian Hong
 
-Privacy contact: [PRIVACY_EMAIL]
+Privacy contact: hrggyg@gmail.com

@@ -5,7 +5,7 @@ publish an item, change the extension, or create a public privacy-policy URL.
 
 | File | Use |
 | --- | --- |
-| [privacy-policy.md](privacy-policy.md) | Public privacy-policy page after completing the missing details |
+| [privacy-policy.md](privacy-policy.md) | Completed policy source, prepared for GitHub Pages |
 | [store-listing.md](store-listing.md) | Store descriptions, single purpose, screenshot captions and listing fields |
 | [privacy-disclosures.md](privacy-disclosures.md) | Permission justifications and data-use form guidance |
 | [reviewer-instructions.md](reviewer-instructions.md) | Private instructions for Chrome reviewers |
@@ -14,22 +14,22 @@ publish an item, change the extension, or create a public privacy-policy URL.
 
 ## Complete before publication
 
-Replace `[OPERATOR_NAME]`, `[PRIVACY_EMAIL]`, `[SUPPORT_EMAIL]`, `[EFFECTIVE_DATE]`,
-`[PRIVACY_POLICY_URL]`, `[SUPPORT_URL]`, and any other bracketed fields. Choose an
-operator/contact your team can actually maintain; these cannot be inferred from
-the GitHub repository owner's name. Remove the draft notices from public pages
-only after the outstanding items below are resolved.
+The privacy policy names Kian Hong as operator and hrggyg@gmail.com as the
+privacy contact, using the local Git identity with the operator's authorization.
+Its effective date is October 18, 2026. The operator confirmed unchanged retention
+settings: seven days for coaching metadata, no enabled application-volume
+backups, and default Railway log handling. Other submission documents still
+contain placeholders; complete those separately before using them.
 
-Verify the deployed coaching retention setting before replacing
-`[COACHING_RETENTION_DAYS]`. The code defaults to seven days, but the Railway
-environment can override it. Cleanup runs on application startup and certain
+Keep the policy synchronized if `METADATA_RETENTION_DAYS` changes in Railway.
+Cleanup runs on application startup and certain
 requests; there is no exact-time deletion guarantee. Job directories, redacted
 workspaces, repaired-page inputs, analysis results and job records currently have
 no scheduled expiry. Do not claim that all information is deleted after seven
 days or immediately after a job.
 
-Confirm hosting/provider retention, backup retention and account settings before
-filling the remaining retention fields. Do not claim that providers never retain
+Review hosting/provider retention and backup settings whenever they change.
+Do not claim that providers never retain
 or train on data unless the relevant contracts and account settings support it.
 Confirm the draft commitments about no sale, advertising, or unrelated model
 training reflect the operator's actual practices.
@@ -59,10 +59,30 @@ training reflect the operator's actual practices.
 
 ## Publish the policy page
 
-Host the completed policy on a public HTTPS page that opens without login, for
-example on your project website. A local Markdown file is not a public URL.
-Use that URL in the Chrome Web Store privacy field and in the extension's consent
-UI. Keep the policy, store disclosures and application behavior consistent.
+The prepared workflow is
+[Publish privacy policy](../../.github/workflows/privacy-pages.yml). It builds
+only the policy, rather than publishing the repository's entire documentation
+folder. It runs manually and has not been run or published by this change.
+
+1. Commit and push the policy, this guide and workflow to `main` after review.
+2. Open the repository on GitHub → **Settings → Pages**.
+3. Under **Build and deployment → Source**, select **GitHub Actions**.
+4. Open **Actions → Publish privacy policy → Run workflow** and select `main`.
+5. Wait for success and open the deployment URL shown by the workflow. With the
+   current repository name and no custom domain, the expected URL is
+   **https://nicovillab.github.io/HackHarvard/**.
+6. Confirm it opens without signing in, then put that URL in the Chrome Web Store
+   privacy-policy field and the extension's consent UI.
+
+Repository admin/maintainer access and a GitHub plan supporting Pages for the
+repository's visibility are required. If an existing Pages site or custom domain
+is configured, reconcile it before deploying: this workflow replaces the site's
+published content with the privacy-policy site. GitHub Pages also receives
+ordinary connection information when users visit the policy.
+
+Future policy edits require another manual workflow run. Keep the policy, store
+disclosures and application behavior consistent. A completed policy does not
+implement the release work listed above.
 
 The proposed privacy form selections require a final data-flow review; do not
 automatically select every checkbox or certify practices that are not implemented.
