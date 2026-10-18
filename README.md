@@ -45,7 +45,7 @@ One backend ([`backend/main.py`](backend/main.py)) turns two kinds of product ev
 | **Repair** (one per capture failure) | `clean_snapshot.py` and the raw page snapshot (800 KB in our test, from memory) | The cleaned page (41 KB) | The raw snapshot | 2–9 s from create to delete across runs, mostly sandbox creation (0.9–6.1 s); cleaning 0.2–0.4 s |
 
 - **Code:** [`run_hybrid_jobs`](backend/sandbox.py#L276) and [`clean_snapshot_in_sandbox`](backend/sandbox.py#L402) in `backend/sandbox.py`, called by [`DaytonaExecutor`](backend/executor.py#L141). [`run_real.py`](sandbox_jobs/run_real.py) is what runs inside the upload sandbox.
-- **Proof, not promises:** [`GET /jobs/{id}/audit`](backend/main.py#L134) lists every file that went into or out of a job's sandbox, by name and size. With `PRIVACY_MODE=daytona`, [`test_privacy.py`](sandbox_jobs/test_privacy.py) fails if any planted marker word from the sample is anywhere on the backend outside the returned insights.
+- **Proof, not promises:** [`GET /jobs/{id}/audit`](backend/main.py#L137) lists every file that went into or out of a job's sandbox, by name and size. With `PRIVACY_MODE=daytona`, [`test_privacy.py`](sandbox_jobs/test_privacy.py) fails if any planted marker word from the sample is anywhere on the backend outside the returned insights.
 - **No leftovers:** each sandbox is deleted in a `finally`. As a backstop it's ephemeral, auto-stops and has a time limit, and it's labeled so [`cleanup_sandboxes.py`](backend/cleanup_sandboxes.py) (run by `start.py`) can delete leftovers. Tested by killing the backend mid-job: the cleanup found and deleted the sandbox.
 - **No keys inside:** the sandboxes get no API keys at all; Droid's key stays on the backend.
 - **Why Droid itself isn't in the sandbox:** our Daytona tier blocks outbound traffic to Factory's domains (and refuses custom snapshots). So Droid works on the backend with redacted or fake data, and the sandbox runs what it wrote on the real data. Details in [Where Daytona works](#where-daytona-works).
@@ -92,7 +92,7 @@ py smoke_test.py --live     # the same with real Droid calls (about 100,000 cred
 | `extension/` | Chrome extension: per-site adapters; the TypeScript code is a placeholder on this branch |
 | `web/` | Dashboard (placeholder on this branch) |
 | `evals/` | Chalk evals: coaching safety and parser accuracy |
-| `space/` | Precomputed data center time-lapses and GRACE charts |
+| `space/` | "Seen from space": night-lights growth over three data center regions from NASA GIBS (`nasa_lights.py`, `test_space.py`); `space/cache/` is gitignored |
 
 ## Where Droid works
 
@@ -161,6 +161,7 @@ Droid can't reach Factory from inside a Daytona sandbox, so in Daytona mode Droi
 | `GET /jobs/{job_id}/logs` | Server-Sent Events: each new line of the job's Droid log as it's written, then an `end` event with the final status. Lines arrived live, spread over the run, not in one burst |
 | `GET /insights/latest` | The latest successful analysis's `insights.json` |
 | `POST /adapter-failure` | `{site, failed_keys, adapter_version, snapshot_html}`, plus optional `adapter`, `expected_prompt` and `has_responses`. Starts a repair. A report for an adapter older than the published one is ignored, and a report while a repair for that site is queued or running returns that job's id instead of starting another (tested with two simultaneous reports) |
+| `GET /space/insight` | Night-lights brightness and growth for three data center regions, with GIBS image URLs, plus an estimated `your_share` (or `null` with no insights). From `space/cache/`; see [Seen from space](#seen-from-space) |
 
 - **Jobs sit behind an executor interface** ([`backend/executor.py`](backend/executor.py)): `JobExecutor` with `run_ingest_and_analyze` and `run_repair`. `LocalExecutor` runs the `sandbox_jobs` scripts in a fresh `work/jobs/<job_id>/` per job. The hybrid `DaytonaExecutor` is used when `DAYTONA_API_KEY` is set and `LocalExecutor` when it isn't; `EXECUTOR=local` or `EXECUTOR=daytona` overrides, and `DEMO_REPLAY=1` picks `ReplayExecutor` (`active_mode` in `executor.py`; see [Where Daytona works](#where-daytona-works)).
 - **Job records** are kept in SQLite ([`backend/jobs.py`](backend/jobs.py), `backend/jobs.sqlite`, gitignored).
@@ -277,12 +278,35 @@ The same split as uploads. The page snapshot the extension sends with `POST /ada
 
 Before the hybrid, [`run_user_jobs`](backend/sandbox.py) ran hand-written stand-in jobs entirely inside the sandbox, to build the plumbing (upload, validation, log streaming, cleanup) without Droid. It's still there, tested with [`backend/try_sandbox_flow.py`](backend/try_sandbox_flow.py). Measured on the fake sample: sandbox creation about 0.8–0.9 s, and the whole run, from create to delete, 2.6–4.1 s.
 
+## Seen from space
+
+A backend-only feature: `GET /space/insight` shows how much brighter three data center regions got at night between June–August of the first full year NASA has (2012) and June–August of the most recent full year (2026), and puts the user's own usage next to it as an estimate. Code: [`space/nasa_lights.py`](space/nasa_lights.py). Test: [`space/test_space.py`](space/test_space.py).
+
+**Data and source.** [NASA GIBS](https://gibs.earthdata.nasa.gov) (Global Imagery Browse Services), which is free and needs no key. We read its WMS GetCapabilities (`https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi`) and take the first layer from a preference list that is actually listed there. Today that's **`VIIRS_SNPP_GapFilled_BRDF_Corrected_DayNightBand_Radiance`**: VIIRS on Suomi NPP, Day/Night Band, the gap-filled, BRDF- and moonlight-corrected daily radiance (NASA's Black Marble VNP46A2 product). Its valid dates come from the layer's time dimension: **2012-01-19 to 2026-10-15**. `VIIRS_Black_Marble`, the cleaner annual composite, is also listed, but GIBS only has it for 2012 and 2016, before the recent build-out, so it ranks lower. Pixels are mapped back to radiance with the layer's GIBS colormap ([`VIIRS_DayNightBand_At_Sensor_Radiance.xml`](https://gibs.earthdata.nasa.gov/colormaps/v1.3/VIIRS_DayNightBand_At_Sensor_Radiance.xml), in nW/(cm² sr)).
+
+**What we compute.** For each region we average the clearest June–August nights in 2012 and in 2026 (the first and most recent full years in the layer). A night is dropped if any box has under 90% valid pixels (mostly missing or cloud-filled). Each remaining night is mapped from grey PNG pixels to the midpoint of its colormap bin and averaged; those nightly means are then averaged, equal weight per night. `nights` is how many nights went into that end. Growth = (latest − earliest) / earliest. Boxes are about 220 m per pixel.
+
+| Region | Box(es), west/south/east/north | 2012 Jun–Aug | 2026 Jun–Aug | Nights | Growth | Saturated pixels |
+| --- | --- | --- | --- | --- | --- | --- |
+| Northern Virginia (Loudoun County, "Data Center Alley") | Ashburn −77.60/38.93/−77.40/39.08 | 14.4 | 20.0 | 91 → 79 | **+38.8%** | 14% → 25% |
+| Phoenix metro | −112.40/33.20/−111.60/33.65 | 19.5 | 22.2 | 90 → 79 | **+13.8%** | 27% → 34% |
+| Oregon (The Dalles and Hillsboro) | The Dalles −121.25/45.57/−121.10/45.65 and Hillsboro −123.02/45.49/−122.87/45.58, pooled | 12.1 | 12.8 | 90 → 79 | **+5.2%** | 13% → 14% |
+
+Brightness is mean radiance in nW/(cm² sr). The "central Oregon" region from the brief is really two separate northern Oregon sites, so it uses two small boxes, averaged over all their pixels.
+
+**`your_share`** takes the totals from the latest insights (the same file `/insights/latest` serves, computed with [`backend/footprint.py`](backend/footprint.py)) and states the user's energy, water and us-east CO2 next to the seconds a 100 MW campus takes to draw the same energy. It's marked `"estimate": true`, says when `footprint.py` is still placeholder ranges (it is today), and labels the 100 MW as an illustrative assumption. With no insights yet, `your_share` is `null`.
+
+**Caching.** Everything NASA returns (capabilities, colormap, the June–August PNGs, `results.json`) is saved in `space/cache/` (gitignored), so NASA is called at most once and the endpoint works offline afterwards. This rebuild cached 708 PNGs and took about 65 s. Rebuild with `py space/nasa_lights.py` after deleting the folder; `--offline` refuses to touch the network. `py space/test_space.py` runs with the network blocked: it checks the math on a synthetic cache, rebuilds the real cache's numbers from its images, and calls the endpoint with and without insights.
+
+**Honest limits.** Night-light growth is a **proxy** for data center growth, not a measurement of it. Data centers aren't especially bright from space; homes, roads, warehouses and changes in street lighting (such as the switch to LEDs, which VIIRS sees differently) brighten the same boxes. Both ends now use the same months (June–August), and nights that are mostly missing or cloud-filled are left out, but leftover clouds, moonlight and the GIBS colormap still move the number. 14% to 34% of pixels sit in the colormap's open top bin and count as its lower bound, so growth in the brightest cores is understated, and saturation is rendered imagery rather than the science data. Treat the percentages as a picture of change, not as a number of new data centers.
+
+## Setup
 ## Coaching backend setup
 
 Requires Python 3.12+. On Windows, use `py` if `python` opens the Microsoft Store.
 
 ```
-py -m pip install daytona droid-sdk python-dotenv jsonschema beautifulsoup4 pytest pandas fastapi uvicorn python-multipart
+py -m pip install daytona droid-sdk python-dotenv jsonschema beautifulsoup4 pytest pandas fastapi uvicorn python-multipart numpy pillow
 ```
 
 Install the droid CLI (`irm https://app.factory.ai/cli/windows | iex` on Windows) and open a new terminal so `droid` is on PATH. Copy `.env.example` to `.env` and fill in the keys: `FACTORY_API_KEY` for Droid, `DAYTONA_API_KEY` for the sandbox flow.
