@@ -1,17 +1,22 @@
 import {
   useEffect,
+  useMemo,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { AchievementReportModal } from "../../components/AchievementReportModal";
 import {
   Co2Cloud,
   EnergyBolt,
   TreeGrove,
   WaterDrop,
 } from "../../components/FootprintCartoons";
+import { InlineOnboarding } from "../../components/InlineOnboarding";
+import { MorphNav, GearIcon, type MorphTab } from "../../components/MorphNav";
 import { Pip } from "../../components/Pip";
 import { CountUp, ScoreCountUp } from "../../components/ScoreCountUp";
+import { PlatformsPane, SettingsPane } from "../../components/SettingsPane";
 import { StreakFlame } from "../../components/StreakFlame";
 import { Button } from "../../components/ui/button";
 import coachCopy from "../../data/coach-copy.json";
@@ -22,6 +27,7 @@ import usageSeed from "../../data/usage-seed.json";
 import { bgBackend } from "../../lib/backendBridge";
 import { classify } from "../../lib/classify";
 import { POPUP_HEIGHT, POPUP_WIDTH } from "../../lib/layout";
+import type { ReportCardData } from "../../lib/reportCard";
 import {
   daySavings,
   monthSavings,
@@ -40,7 +46,12 @@ const models = (footprintData as { models: Record<string, FootprintModel> })
   .models;
 
 type Period = "day" | "week" | "month";
-type Screen = "home" | "insights";
+type Screen =
+  | "home"
+  | "insights"
+  | "settings"
+  | "settings-platforms"
+  | "report";
 type InsightCard = { id: string; text: string };
 
 const PERIODS: Array<{ id: Period; label: string; testId: string }> = [
@@ -69,10 +80,8 @@ export function PopupApp() {
       try {
         const s = await readState();
         if (!s.onboarded) {
-          await browser.tabs.create({
-            url: browser.runtime.getURL("/onboarding.html"),
-          });
-          window.close();
+          setState(s);
+          setReady(true);
           return;
         }
         const today = new Date();
@@ -87,21 +96,14 @@ export function PopupApp() {
         });
         setReady(true);
       } catch {
-        const usage = usageSeed as UsageRow[];
-        const today = new Date();
-        setState({
-          ...DEFAULT_STATE,
-          onboarded: true,
-          usage,
-          score: score(usage, today, platforms),
-          streak: computeStreak(usage, today, platforms),
-        });
+        setState(DEFAULT_STATE);
         setReady(true);
       }
     })();
   }, []);
 
   useEffect(() => {
+    if (!state.onboarded) return;
     void (async () => {
       try {
         const res = await bgBackend<{
@@ -115,7 +117,7 @@ export function PopupApp() {
         // local usage cards only
       }
     })();
-  }, []);
+  }, [state.onboarded]);
 
   const today = new Date();
   const byPeriod = {
@@ -157,6 +159,42 @@ export function PopupApp() {
       ? (insights[0]?.text ?? coachCopy.oversized)
       : `${smallPct}% of your prompts were simple questions a small model could answer.`;
 
+  const reportData: ReportCardData = useMemo(() => {
+    const names = state.enabledPlatforms.map((id) => {
+      const p = platforms.find((x) => x.id === id);
+      if (p) return p.name;
+      if (id.startsWith("custom:")) return id.slice("custom:".length);
+      return id;
+    });
+    return {
+      userName: state.userName,
+      score: state.score,
+      streak: state.streak,
+      trees,
+      smallPct,
+      energyWh: totals.Wh,
+      waterL: totals.water_L,
+      co2g: totals.co2_g,
+      platforms: names,
+      dateLabel: today.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    };
+  }, [
+    state.userName,
+    state.score,
+    state.streak,
+    state.enabledPlatforms,
+    trees,
+    smallPct,
+    totals.Wh,
+    totals.water_L,
+    totals.co2_g,
+    today,
+  ]);
+
   const shell = {
     width: POPUP_WIDTH,
     height: POPUP_HEIGHT,
@@ -172,6 +210,36 @@ export function PopupApp() {
     );
   }
 
+  if (!state.onboarded) {
+    return (
+      <main
+        data-testid="popup"
+        data-screen="onboarding"
+        className="relative box-border flex flex-col items-stretch gap-2.5 overflow-hidden bg-white p-4 font-sans text-foreground"
+        style={shell}
+      >
+        <InlineOnboarding
+          onComplete={(next) => {
+            setState(next);
+            setScreen("home");
+          }}
+        />
+      </main>
+    );
+  }
+
+  const morphActive: MorphTab =
+    screen === "settings" ||
+    screen === "settings-platforms" ||
+    screen === "report"
+      ? "settings"
+      : "insights";
+
+  const showMorphHeader =
+    screen === "insights" ||
+    screen === "settings" ||
+    screen === "settings-platforms";
+
   return (
     <main
       data-testid="popup"
@@ -185,7 +253,11 @@ export function PopupApp() {
     >
       {screen === "home" ? (
         <>
-          <ScoreHero score={state.score} streak={state.streak} />
+          <ScoreHero
+            score={state.score}
+            streak={state.streak}
+            userName={state.userName}
+          />
 
           <PeriodSwitch period={period} onChange={setPeriod} />
           <PeriodMeta period={period} days={totals.days} />
@@ -245,6 +317,15 @@ export function PopupApp() {
           </p>
 
           <div className="mt-auto flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              data-testid="home-settings"
+              aria-label="Settings"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f4f4f5] text-foreground"
+              onClick={() => setScreen("settings")}
+            >
+              <GearIcon size={16} />
+            </button>
             <SplitButton
               testId="view-more"
               onClick={() => setScreen("insights")}
@@ -253,132 +334,174 @@ export function PopupApp() {
             </SplitButton>
           </div>
         </>
-      ) : (
+      ) : showMorphHeader ? (
         <>
-          <div className="flex items-center justify-between">
-            <h2 className="m-0 text-xl font-semibold tracking-tight">
-              Insights
-            </h2>
-            <SplitButton
-              testId="insights-back"
-              variant="secondary"
-              flip
-              onClick={() => setScreen("home")}
-            >
-              Back
-            </SplitButton>
-          </div>
-          <PeriodSwitch period={period} onChange={setPeriod} />
-          <PeriodMeta period={period} days={totals.days} />
-
-          <ul
-            data-testid="more-insights"
-            className="m-0 flex list-none flex-col gap-2 p-0"
-          >
-            {chalkTips.map((tipCard, noteIdx) => (
-              <CoachNoteCard
-                key={tipCard.id}
-                index={noteIdx}
-                testId={`insight-${tipCard.id}`}
-                badge="chalk"
-                wash="#e7f6ff"
-                accent="#2ba4e0"
-                icon={<MixBubble size={36} />}
-                text={tipCard.text}
-              />
-            ))}
-            {insights.map((i, noteIdx) => {
-              const index = chalkTips.length + noteIdx;
-              if (i.id === "small-enough") {
-                return (
-                  <CoachNoteCard
-                    key={i.id}
-                    index={index}
-                    testId={`insight-${i.id}`}
-                    badge={`${smallPct}%`}
-                    wash="#e8f6df"
-                    accent="#5cb85c"
-                    icon={<MiniModel size={36} />}
-                    text="of your prompts were simple questions a small model could answer."
-                  />
-                );
-              }
-              if (i.id === "regenerates") {
-                return (
-                  <CoachNoteCard
-                    key={i.id}
-                    index={index}
-                    testId={`insight-${i.id}`}
-                    badge={`${regen}×`}
-                    wash="#fff8dc"
-                    accent="#f5c400"
-                    icon={<RegenSpin size={36} />}
-                    text={
-                      regen === 0
-                        ? "No regenerates in this range."
-                        : regen === 1
-                          ? "answer regenerated in this range."
-                          : "answers regenerated in this range."
-                    }
-                  />
-                );
-              }
-              if (i.id === "video-vs-text") {
-                return (
-                  <CoachNoteCard
-                    key={i.id}
-                    index={index}
-                    testId={`insight-${i.id}`}
-                    badge={videos > 0 ? `${videos}×` : "100×"}
-                    wash="#eef1f4"
-                    accent="#8e99a4"
-                    icon={<MixClapper size={36} />}
-                    text={
-                      videos === 0
-                        ? "One AI video uses about as much energy as hundreds of text prompts."
-                        : videos === 1
-                          ? "video job in this range. One clip uses about as much energy as hundreds of text prompts."
-                          : "video jobs in this range. One clip uses about as much energy as hundreds of text prompts."
-                    }
-                  />
-                );
-              }
-              return (
-                <CoachNoteCard
-                  key={i.id}
-                  index={index}
-                  testId={`insight-${i.id}`}
-                  badge="tip"
-                  wash="#f4f4f5"
-                  accent="#1b4965"
-                  icon={<MixBubble size={36} />}
-                  text={i.text}
-                />
-              );
-            })}
-            {images > 0 ? (
-              <CoachNoteCard
-                key="image-jobs"
-                index={chalkTips.length + insights.length}
-                badge={String(images)}
-                wash="#e7f6ff"
-                accent="#2ba4e0"
-                icon={<MixFrame size={36} />}
-                text={
-                  images === 1
-                    ? "image job. Those cost more than text."
-                    : "image jobs. Those cost more than text."
+          {screen !== "settings-platforms" ? (
+            <div className="flex items-center justify-between gap-2">
+              <MorphNav
+                active={morphActive}
+                onChange={(tab) =>
+                  setScreen(tab === "insights" ? "insights" : "settings")
                 }
               />
-            ) : null}
-          </ul>
+              <SplitButton
+                testId="insights-back"
+                variant="secondary"
+                flip
+                onClick={() => setScreen("home")}
+              >
+                Back
+              </SplitButton>
+            </div>
+          ) : null}
+
+          {screen === "insights" ? (
+            <>
+              <PeriodSwitch period={period} onChange={setPeriod} />
+              <PeriodMeta period={period} days={totals.days} />
+
+              <ul
+                data-testid="more-insights"
+                className="m-0 flex list-none flex-col gap-2 p-0"
+              >
+                {chalkTips.map((tipCard, noteIdx) => (
+                  <CoachNoteCard
+                    key={tipCard.id}
+                    index={noteIdx}
+                    testId={`insight-${tipCard.id}`}
+                    badge="chalk"
+                    wash="#e7f6ff"
+                    accent="#2ba4e0"
+                    icon={<MixBubble size={36} />}
+                    text={tipCard.text}
+                  />
+                ))}
+                {insights.map((i, noteIdx) => {
+                  const index = chalkTips.length + noteIdx;
+                  if (i.id === "small-enough") {
+                    return (
+                      <CoachNoteCard
+                        key={i.id}
+                        index={index}
+                        testId={`insight-${i.id}`}
+                        badge={`${smallPct}%`}
+                        wash="#e8f6df"
+                        accent="#5cb85c"
+                        icon={<MiniModel size={36} />}
+                        text="of your prompts were simple questions a small model could answer."
+                      />
+                    );
+                  }
+                  if (i.id === "regenerates") {
+                    return (
+                      <CoachNoteCard
+                        key={i.id}
+                        index={index}
+                        testId={`insight-${i.id}`}
+                        badge={`${regen}×`}
+                        wash="#fff8dc"
+                        accent="#f5c400"
+                        icon={<RegenSpin size={36} />}
+                        text={
+                          regen === 0
+                            ? "No regenerates in this range."
+                            : regen === 1
+                              ? "answer regenerated in this range."
+                              : "answers regenerated in this range."
+                        }
+                      />
+                    );
+                  }
+                  if (i.id === "video-vs-text") {
+                    return (
+                      <CoachNoteCard
+                        key={i.id}
+                        index={index}
+                        testId={`insight-${i.id}`}
+                        badge={videos > 0 ? `${videos}×` : "100×"}
+                        wash="#eef1f4"
+                        accent="#8e99a4"
+                        icon={<MixClapper size={36} />}
+                        text={
+                          videos === 0
+                            ? "One AI video uses about as much energy as hundreds of text prompts."
+                            : videos === 1
+                              ? "video job in this range. One clip uses about as much energy as hundreds of text prompts."
+                              : "video jobs in this range. One clip uses about as much energy as hundreds of text prompts."
+                        }
+                      />
+                    );
+                  }
+                  return (
+                    <CoachNoteCard
+                      key={i.id}
+                      index={index}
+                      testId={`insight-${i.id}`}
+                      badge="tip"
+                      wash="#f4f4f5"
+                      accent="#1b4965"
+                      icon={<MixBubble size={36} />}
+                      text={i.text}
+                    />
+                  );
+                })}
+                {images > 0 ? (
+                  <CoachNoteCard
+                    key="image-jobs"
+                    index={chalkTips.length + insights.length}
+                    badge={String(images)}
+                    wash="#e7f6ff"
+                    accent="#2ba4e0"
+                    icon={<MixFrame size={36} />}
+                    text={
+                      images === 1
+                        ? "image job. Those cost more than text."
+                        : "image jobs. Those cost more than text."
+                    }
+                  />
+                ) : null}
+              </ul>
+            </>
+          ) : null}
+
+          {screen === "settings" ? (
+            <SettingsPane
+              state={state}
+              onStateChange={setState}
+              onOpenPlatforms={() => setScreen("settings-platforms")}
+              onGenerateReport={() => setScreen("report")}
+            />
+          ) : null}
+
+          {screen === "settings-platforms" ? (
+            <PlatformsPane
+              state={state}
+              onStateChange={setState}
+              onBack={() => setScreen("settings")}
+            />
+          ) : null}
         </>
-      )}
+      ) : null}
+
+      {screen === "report" ? (
+        <AchievementReportModal
+          data={reportData}
+          onClose={() => setScreen("settings")}
+        />
+      ) : null}
     </main>
   );
 }
 
-function ScoreHero({ score: val, streak }: { score: number; streak: number }) {
+function ScoreHero({
+  score: val,
+  streak,
+  userName,
+}: {
+  score: number;
+  streak: number;
+  userName: string;
+}) {
   const clamped = Math.max(0, Math.min(100, val));
   const turf =
     clamped >= 70 ? "#5cb85c" : clamped >= 45 ? "#7ec850" : "#b8a868";
@@ -390,6 +513,17 @@ function ScoreHero({ score: val, streak }: { score: number; streak: number }) {
     clamped >= 70 ? "#e8f6df" : clamped >= 45 ? "#f1f9e8" : "#f5f4ea";
 
   const blades = [18, 38, 60, 84, 108, 134, 158, 184, 210, 236, 262, 288, 306];
+  const greet = userName.trim()
+    ? clamped >= 70
+      ? `${userName.trim()}'s lush lawn`
+      : clamped >= 45
+        ? `${userName.trim()}'s fresh lawn`
+        : `${userName.trim()} · dry lawn`
+    : clamped >= 70
+      ? "lush touchgrass score"
+      : clamped >= 45
+        ? "fresh touchgrass score"
+        : "dry lawn. touch grass";
 
   return (
     <div
@@ -464,11 +598,7 @@ function ScoreHero({ score: val, streak }: { score: number; streak: number }) {
             </span>
           </div>
           <p className="m-0 mt-1 text-xs font-medium text-foreground">
-            {clamped >= 70
-              ? "lush touchgrass score"
-              : clamped >= 45
-                ? "fresh touchgrass score"
-                : "dry lawn. touch grass"}
+            {greet}
           </p>
         </div>
       </div>
@@ -590,7 +720,10 @@ function CoachNoteCard({
       <div className="min-w-0 flex-1 pt-0.5">
         <span
           className="mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground"
-          style={{ background: wash, color: accent === "#f5c400" ? "#8a5a00" : accent }}
+          style={{
+            background: wash,
+            color: accent === "#f5c400" ? "#8a5a00" : accent,
+          }}
         >
           {badge}
         </span>
@@ -614,7 +747,13 @@ function MiniModel({ size = 56 }: { size?: number }) {
         <rect x="24" y="22" width="24" height="28" rx="6" fill="#5cb85c" />
         <ellipse cx="30" cy="30" rx="4" ry="5" fill="#8fd18f" opacity="0.95" />
         <circle className="ft-eye" cx="31" cy="34" r="1.8" fill="#2d5a27" />
-        <circle className="ft-eye ft-eye--late" cx="41" cy="34" r="1.8" fill="#2d5a27" />
+        <circle
+          className="ft-eye ft-eye--late"
+          cx="41"
+          cy="34"
+          r="1.8"
+          fill="#2d5a27"
+        />
         <path
           d="M31 42 Q36 45 42 41"
           fill="none"
@@ -649,7 +788,13 @@ function RegenSpin({ size = 56 }: { size?: number }) {
         strokeLinejoin="round"
       />
       <circle className="ft-eye" cx="30" cy="34" r="1.8" fill="#8a5a00" />
-      <circle className="ft-eye ft-eye--late" cx="40" cy="34" r="1.8" fill="#8a5a00" />
+      <circle
+        className="ft-eye ft-eye--late"
+        cx="40"
+        cy="34"
+        r="1.8"
+        fill="#8a5a00"
+      />
     </svg>
   );
 }
@@ -658,10 +803,23 @@ function MixBubble({ size = 56 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
       <circle cx="36" cy="36" r="30" fill="#d6f0ff" />
-      <ellipse className="ft-cloud" cx="36" cy="32" rx="18" ry="14" fill="#2ba4e0" />
+      <ellipse
+        className="ft-cloud"
+        cx="36"
+        cy="32"
+        rx="18"
+        ry="14"
+        fill="#2ba4e0"
+      />
       <path d="M26 42 L22 54 L36 44 Z" fill="#2ba4e0" />
       <circle className="ft-eye" cx="30" cy="30" r="2" fill="#0b4f74" />
-      <circle className="ft-eye ft-eye--late" cx="42" cy="30" r="2" fill="#0b4f74" />
+      <circle
+        className="ft-eye ft-eye--late"
+        cx="42"
+        cy="30"
+        r="2"
+        fill="#0b4f74"
+      />
       <path
         d="M30 38 Q36 42 42 37"
         fill="none"
