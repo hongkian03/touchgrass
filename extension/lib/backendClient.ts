@@ -2,7 +2,7 @@
 
 import { isExtensionContextError } from "./storage";
 
-export const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8000";
+export const DEFAULT_BACKEND_BASE = "https://hackharvard-production.up.railway.app";
 
 export type BackendConfig = {
   baseUrl: string;

@@ -137,6 +137,7 @@ describe("Touchgrass branding strings", () => {
     expect(manifest.host_permissions ?? []).toEqual(
       expect.arrayContaining([
         "https://api.groq.com/*",
+        "https://hackharvard-production.up.railway.app/*",
         "http://127.0.0.1:8000/*",
         "http://localhost:8000/*",
       ]),

@@ -150,6 +150,33 @@ fixtures; it is not a substitute for testing live jobs on Railway.
 
 ## Operations and remaining release work
 
+### Connect the extension to this deployment
+
+The extension now defaults to `https://hackharvard-production.up.railway.app` and
+its manifest permits requests to that host. Rebuild with `cd extension && npm run build`,
+then reload the unpacked extension from `chrome://extensions` and refresh the AI
+site tabs so they use the new content scripts.
+
+An explicitly stored `backendBaseUrl` still overrides the default. To switch an
+existing installation from localhost to the hosted default, open
+`chrome://extensions` → Touchgrass → Inspect views → service worker and run:
+
+```js
+await chrome.storage.local.remove(["backendBaseUrl", "coachingSessionToken"]);
+```
+
+Then reload the extension and refresh the AI-site tab. This clears only the
+backend override and old server's session; it does not clear onboarding consent
+or usage history. A new session is obtained automatically when backend access is
+enabled. Local development can explicitly set `backendBaseUrl` to a loopback URL;
+loopback permissions remain in the manifest.
+
+`GET /health` reports the job executor mode. A successful Daytona health response
+does not prove the Chalk classifier or a live Droid job has completed; verify
+those separately through the extension's coach audit and the job logs.
+
+### Runtime operations
+
 The Docker command skips the launcher's automatic sandbox sweep so health checks
 don't depend on a provider API. Run `python backend/cleanup_sandboxes.py --dry-run`
 in the deployed environment to inspect leftovers, then run without `--dry-run`
