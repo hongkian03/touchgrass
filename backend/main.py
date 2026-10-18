@@ -209,6 +209,20 @@ async def insights_latest():
     return {"job_id": job_id, "insights": json.loads(path.read_text(encoding="utf-8"))}
 
 
+@app.get("/space/insight")
+async def space_insight():
+    try:  # from space/cache/; NASA is called only for files missing there
+        results = await asyncio.to_thread(nasa_lights.load_or_build)
+    except Exception as e:
+        raise HTTPException(503, f"night-lights data unavailable: {type(e).__name__}: {e}")
+    job_id = store.latest_succeeded("ingest")
+    path = executor.insights_path(job_id) if job_id else None
+    share = None
+    if path is not None and path.is_file():
+        share = nasa_lights.your_share(json.loads(path.read_text(encoding="utf-8")), job_id)
+    return {**results, "your_share": share}
+
+
 REQUIRED_SELECTOR_KEYS = ("prompt_box", "send_button", "model_name", "response")
 
 
