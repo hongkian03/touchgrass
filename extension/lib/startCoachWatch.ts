@@ -226,13 +226,11 @@ export function startCoachWatch(): void {
     const savings = estimateHopSavings(provider, result.platformId);
     const recentTurns = scrapeRecentMessages(document, 4, 2400);
     const currentPlat = platforms.find((p) => p.id === provider);
-    const sameSiteSmall = currentPlat?.smallModel ?? null;
     console.log(
       `[Touchgrass] redirect → ${result.platformId} (${result.reason})`,
     );
 
     let cancelled = false;
-    let switchedSameSite = false;
     let resolveWait: (() => void) | null = null;
     let timerId: number | undefined;
 
@@ -246,10 +244,7 @@ export function startCoachWatch(): void {
         savedWh: savings.savedWh,
         savedCo2G: savings.savedCo2G,
         savedWaterMl: savings.savedWaterMl,
-        chalkPill: "Chalk JEV + Router",
-        smallOkPct: 94,
         contextTurns: recentTurns.length,
-        sameSiteModel: sameSiteSmall,
         durationMs: REDIRECT_MS,
         onCancel: () => {
           cancelled = true;
@@ -260,17 +255,6 @@ export function startCoachWatch(): void {
           if (timerId) window.clearTimeout(timerId);
           resolveWait?.();
         },
-        onSwitchSameSite: sameSiteSmall
-          ? () => {
-              switchedSameSite = true;
-              if (timerId) window.clearTimeout(timerId);
-              const modelEl = modelLabelEl();
-              if (modelEl) {
-                applyCoachSwitch(modelEl, sameSiteSmall, document);
-              }
-              resolveWait?.();
-            }
-          : undefined,
       },
     });
 
@@ -279,7 +263,7 @@ export function startCoachWatch(): void {
       timerId = window.setTimeout(() => resolve(), REDIRECT_MS);
     });
 
-    if (cancelled || switchedSameSite) {
+    if (cancelled) {
       redirectToastActive = false;
       unmountCoach();
       return false;

@@ -149,11 +149,12 @@ export function CoachOverlay({
 
   const hasSavings =
     typeof redirectMeta?.savedWh === "number" && redirectMeta.savedWh > 0;
-  const hasChalkMeta =
-    Boolean(actions?.chalkMeta) &&
-    (typeof actions?.chalkMeta?.confidencePct === "number" ||
-      typeof actions?.chalkMeta?.elapsedMs === "number" ||
-      typeof actions?.chalkMeta?.savedWh === "number");
+  const hasContext =
+    typeof redirectMeta?.contextTurns === "number" &&
+    redirectMeta.contextTurns > 0;
+  const hasHoldSavings =
+    typeof actions?.chalkMeta?.savedWh === "number" &&
+    actions.chalkMeta.savedWh > 0;
 
   return (
     <div data-testid="coach-overlay" style={shell}>
@@ -207,7 +208,7 @@ export function CoachOverlay({
               </div>
             </div>
 
-            {hasSavings || redirectMeta?.chalkPill ? (
+            {hasSavings || hasContext ? (
               <div
                 data-testid="coach-redirect-savings"
                 style={{
@@ -238,25 +239,7 @@ export function CoachOverlay({
                       : ""}
                   </span>
                 ) : null}
-                {redirectMeta?.chalkPill ? (
-                  <span
-                    data-testid="coach-chalk-pill"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: "2px 6px",
-                      borderRadius: 999,
-                      background: "#e7f6ff",
-                      color: "#0b4f74",
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {redirectMeta.chalkPill}
-                  </span>
-                ) : null}
-                {typeof redirectMeta?.contextTurns === "number" &&
-                redirectMeta.contextTurns > 0 ? (
+                {hasContext ? (
                   <span
                     data-testid="coach-context-pill"
                     style={{
@@ -270,76 +253,11 @@ export function CoachOverlay({
                       fontWeight: 600,
                     }}
                   >
-                    +{redirectMeta.contextTurns} turn
-                    {redirectMeta.contextTurns === 1 ? "" : "s"} carried
+                    +{redirectMeta?.contextTurns} turn
+                    {redirectMeta?.contextTurns === 1 ? "" : "s"} carried
                   </span>
                 ) : null}
               </div>
-            ) : null}
-
-            {typeof redirectMeta?.smallOkPct === "number" &&
-            redirectMeta.smallOkPct > 0 ? (
-              <div
-                data-testid="coach-jev-bar"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                  background: "#f8fafc",
-                  borderRadius: 8,
-                  padding: "4px 6px",
-                  border: "1px solid #eef1f4",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "#1b4965",
-                  }}
-                >
-                  <span>Chalk JEV small_ok</span>
-                  <span>{Math.round(redirectMeta.smallOkPct)}%</span>
-                </div>
-                <div
-                  style={{
-                    height: 4,
-                    borderRadius: 999,
-                    background: "#e4e4e7",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.min(100, Math.max(8, redirectMeta.smallOkPct))}%`,
-                      background: "#2ba4e0",
-                      borderRadius: 999,
-                    }}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            {redirectMeta?.onSwitchSameSite && redirectMeta.sameSiteModel ? (
-              <button
-                type="button"
-                data-testid="coach-redirect-same-site"
-                style={{
-                  ...btn,
-                  padding: "4px 8px",
-                  fontSize: 11,
-                  width: "100%",
-                  background: "#f4fbf0",
-                  borderColor: "#b7e1a1",
-                  color: "#2d5a27",
-                }}
-                onClick={redirectMeta.onSwitchSameSite}
-              >
-                ⚡ Use {redirectMeta.sameSiteModel} here instead
-              </button>
             ) : null}
 
             {redirectMeta?.onCancel || redirectMeta?.onHopNow ? (
@@ -412,7 +330,7 @@ export function CoachOverlay({
                 <span style={{ fontWeight: 600 }}>{target.name}</span>
               </div>
             ) : null}
-            {hasChalkMeta && actions?.chalkMeta ? (
+            {hasHoldSavings && actions?.chalkMeta?.savedWh ? (
               <div
                 data-testid="coach-chalk-telemetry"
                 style={{
@@ -422,49 +340,18 @@ export function CoachOverlay({
                   marginTop: 6,
                 }}
               >
-                {typeof actions.chalkMeta.confidencePct === "number" ? (
-                  <span
-                    style={{
-                      padding: "2px 6px",
-                      borderRadius: 999,
-                      background: "#e7f6ff",
-                      color: "#0b4f74",
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}
-                  >
-                    Chalk JEV {actions.chalkMeta.confidencePct}%
-                  </span>
-                ) : null}
-                {typeof actions.chalkMeta.elapsedMs === "number" ? (
-                  <span
-                    style={{
-                      padding: "2px 6px",
-                      borderRadius: 999,
-                      background: "#f4f4f5",
-                      color: "#1b4965",
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {Math.round(actions.chalkMeta.elapsedMs)}ms
-                  </span>
-                ) : null}
-                {typeof actions.chalkMeta.savedWh === "number" &&
-                actions.chalkMeta.savedWh > 0 ? (
-                  <span
-                    style={{
-                      padding: "2px 6px",
-                      borderRadius: 999,
-                      background: "#e8f6df",
-                      color: "#2d5a27",
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}
-                  >
-                    −{actions.chalkMeta.savedWh.toFixed(1)} Wh
-                  </span>
-                ) : null}
+                <span
+                  style={{
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: "#e8f6df",
+                    color: "#2d5a27",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  −{actions.chalkMeta.savedWh.toFixed(1)} Wh
+                </span>
               </div>
             ) : null}
           </>

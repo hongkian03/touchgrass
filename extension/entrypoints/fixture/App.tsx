@@ -99,24 +99,12 @@ export function FixtureApp() {
           fromPlatform: provider,
           savedWh: 1.8,
           savedCo2G: 0.79,
-          chalkPill: "Chalk JEV + Router",
-          smallOkPct: 94,
           contextTurns: 2,
-          sameSiteModel: platform?.smallModel ?? "gpt-4o-mini",
           durationMs: REDIRECT_MS,
           onCancel: () => {
             if (timer) window.clearTimeout(timer);
             unmountCoach();
             setStatus("Stayed on current tab");
-          },
-          onSwitchSameSite: () => {
-            if (timer) window.clearTimeout(timer);
-            const targetSmall = platform?.smallModel ?? "gpt-4o-mini";
-            if (modelRef.current) {
-              applyCoachSwitch(modelRef.current, targetSmall, document);
-            }
-            unmountCoach();
-            setStatus(`Switched to ${targetSmall}`);
           },
           onHopNow: () => {
             if (timer) window.clearTimeout(timer);
