@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   faviconForHost,
   hostnameFromCustomId,
@@ -69,7 +70,7 @@ export function PlatformGrid({
       className="grid w-full gap-2"
       style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
     >
-      {visible.map((p) => {
+      {visible.map((p, idx) => {
         const on = selected.includes(p.id);
         return (
           <button
@@ -78,8 +79,9 @@ export function PlatformGrid({
             data-testid={`platform-${p.id}`}
             aria-pressed={on}
             onClick={() => onToggle(p.id)}
+            style={{ ["--i" as string]: idx } as CSSProperties}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center font-sans text-foreground outline-none transition-colors",
+              "ui-note-enter ui-btn-press flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center font-sans text-foreground outline-none transition-colors",
               on
                 ? "bg-[#e7f6ff] ring-1 ring-[var(--yale-blue)]/25"
                 : "bg-[#f4f4f5]/80 hover:bg-[#eef1f4]",
