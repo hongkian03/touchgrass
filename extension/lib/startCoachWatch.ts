@@ -1,0 +1,638 @@
+import coachCopy from "../data/coach-copy.json";
+import platformsData from "../data/platforms.json";
+import {
+  missingSelectorKeys,
+  queryBySelector,
+  type SiteAdapter,
+} from "./adapter";
+import { bgBackend } from "./backendBridge";
+import { readBackendConfig } from "./backendClient";
+import { COACH_TYPE_DEBOUNCE_MS, shouldShowCoach } from "./coach";
+import { mountCoach, unmountCoach } from "./coachMount";
+import { applyCoachSwitch, openCoachPaste } from "./coachYes";
+import { coachTargetDisplay } from "./coachTargetDisplay";
+import {
+  DraftCoach,
+  type CoachClassifyResponse,
+  type CoachDraft,
+} from "./draftCoach";
+import { draftFrom, findComposer } from "./findComposer";
+import type { GroqRouteResult } from "./groqRoute";
+import { providerFromHostname, urlForPlatformId } from "./route";
+import { resolveActiveSite } from "./siteDetect";
+import { readState, writeState } from "./storage";
+import type { Platform } from "./types";
+
+const platforms = platformsData as Platform[];
+const REDIRECT_MS = 1600;
+const MISS_THRESHOLD = 3;
+
+function uuid(): string {
+  return crypto.randomUUID();
+}
+
+function isComposerTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  if (t instanceof HTMLTextAreaElement) return true;
+  if (t.isContentEditable) return true;
+  return Boolean(t.closest?.('[contenteditable="true"], textarea'));
+}
+
+function findSendButton(from: Element | null): Element | null {
+  if (!from) {
+    return document.querySelector(
+      "button[data-testid='send-button'], button[aria-label='Send'], button[aria-label='Send message'], button[type='submit']",
+    );
+  }
+  try {
+    return (
+      from.closest(
+        "button[type='submit'], button[aria-label='Send'], button[aria-label='Send message'], button[data-testid='send-button']",
+      ) ?? null
+    );
+  } catch {
+    return from.closest("button[type='submit'], button[aria-label='Send']");
+  }
+}
+
+/** Live coach: document capture listeners + Groq hop + chalk hold. */
+export function startCoachWatch(): void {
+  const flag = "__puddleCoachWatch";
+  const w = window as unknown as Record<string, boolean>;
+  if (w[flag]) return;
+  w[flag] = true;
+
+  let debounceTimer: number | undefined;
+  let acting = false;
+  let adapter: SiteAdapter | null = null;
+  let missStreak = 0;
+  let repairInFlight = false;
+  let draftRevision = 0;
+  let holdBound = false;
+  let pendingRelease: (() => void) | null = null;
+  let lastRoutedDraft = "";
+  /** One-shot: let Enter/Send through after we decided stay. */
+  let sendBypassOnce = false;
+  /** Groq/cross-site toast up — chalk must not unmount it. */
+  let redirectToastActive = false;
+  let activeSite: string | null =
+    providerFromHostname(location.hostname, platforms) ?? null;
+
+  console.log(
+    `[Touchgrass] watching ${activeSite ?? location.hostname}`,
+  );
+
+  const clearDebounce = () => {
+    if (debounceTimer) {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = undefined;
+    }
+  };
+
+  const runCrossSiteRedirect = async (
+    draftText: string,
+    provider: string,
+    enabled: string[],
+  ): Promise<boolean> => {
+    const result = (await browser.runtime.sendMessage({
+      type: "puddle/route-query",
+      draft: draftText,
+      provider,
+      enabledPlatforms: enabled,
+    })) as GroqRouteResult;
+
+    console.log(
+      `[Touchgrass] route ${JSON.stringify({
+        ok: result?.ok ?? false,
+        platformId:
+          result && "platformId" in result ? result.platformId : undefined,
+        error: result && "error" in result ? result.error : undefined,
+      })}`,
+    );
+
+    if (!result?.ok) {
+      const err =
+        result && "error" in result ? result.error : "no_response";
+      console.warn(`[Touchgrass] Groq route failed: ${err}`);
+      return false;
+    }
+    if (result.platformId === provider) {
+      console.log(
+        `[Touchgrass] stay on ${provider} (${result.reason})`,
+      );
+      lastRoutedDraft = draftText;
+      return false;
+    }
+    const url = urlForPlatformId(result.platformId, platforms);
+    if (!url) {
+      console.warn("[Touchgrass] no URL for", result.platformId);
+      return false;
+    }
+
+    lastRoutedDraft = draftText;
+    redirectToastActive = true;
+    const target = coachTargetDisplay(url, platforms);
+    console.log(
+      `[Touchgrass] redirect → ${result.platformId} (${result.reason})`,
+    );
+    mountCoach({
+      shadow: true,
+      message: coachCopy.redirecting.replace("{name}", target.name),
+      target,
+    });
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), REDIRECT_MS);
+    });
+
+    try {
+      // Use captured draft — composer may already be empty if user hit Enter
+      await openCoachPaste({
+        url,
+        draft: draftText,
+      });
+      return true;
+    } finally {
+      await writeState({ lastCoachAt: Date.now() });
+      redirectToastActive = false;
+      unmountCoach();
+    }
+  };
+
+  const ensureSite = async (): Promise<string | null> => {
+    if (activeSite) return activeSite;
+    const resolved = await resolveActiveSite(location.hostname);
+    if (!resolved) return null;
+    activeSite = resolved.site;
+    console.log(
+      `[Touchgrass] site=${activeSite} via=${resolved.via}${
+        resolved.label ? ` (${resolved.label})` : ""
+      }`,
+    );
+    return activeSite;
+  };
+
+  void ensureSite().then((site) => {
+    if (site && site !== activeSite) {
+      console.log(`[Touchgrass] watching ${site}`);
+    } else if (site) {
+      console.log(`[Touchgrass] watching ${site}`);
+    }
+  });
+
+  const loadAdapter = async () => {
+    const site = await ensureSite();
+    if (!site) return;
+    const res = await bgBackend<{ ok?: boolean; adapter?: SiteAdapter | null }>(
+      "adapter-get",
+      { site },
+    );
+    adapter = res?.adapter ?? null;
+    if (adapter) {
+      console.log(`[Touchgrass] adapter v${adapter.version} (${adapter.site})`);
+    }
+  };
+
+  void loadAdapter();
+
+  browser.runtime.onMessage.addListener((message) => {
+    if (message?.type === "touchgrass/adapter-updated" && message.adapter) {
+      adapter = message.adapter as SiteAdapter;
+      console.log(
+        `[Touchgrass] adapter updated to v${adapter.version}`,
+      );
+      missStreak = 0;
+    }
+  });
+
+  const modelLabelEl = (): HTMLElement | null => {
+    if (adapter?.selectors.model_name) {
+      const el = queryBySelector(adapter.selectors.model_name);
+      if (el) return el;
+    }
+    return document.querySelector<HTMLElement>(
+      "#model-label, [data-testid='model-switcher'], [data-testid='model-selector']",
+    );
+  };
+
+  const composerForSite = (): HTMLTextAreaElement | HTMLElement | null => {
+    const preferred = adapter?.selectors.prompt_box
+      ? [adapter.selectors.prompt_box]
+      : [];
+    return findComposer(document, preferred);
+  };
+
+  const maybeReportMiss = async () => {
+    if (!adapter || repairInFlight) return;
+    const site = await ensureSite();
+    if (!site || adapter.site !== site) return;
+    const missing = missingSelectorKeys(adapter, document, [
+      "prompt_box",
+      "send_button",
+    ]);
+    if (!missing.length) {
+      missStreak = 0;
+      return;
+    }
+    missStreak += 1;
+    if (missStreak < MISS_THRESHOLD) return;
+    repairInFlight = true;
+    missStreak = 0;
+    try {
+      const result = await bgBackend<{
+        ok?: boolean;
+        adapter?: SiteAdapter | null;
+        ignored?: boolean;
+      }>("adapter-repair", {
+        report: {
+          site: adapter.site,
+          failed_keys: missing,
+          adapter_version: adapter.version,
+          snapshot_html: document.documentElement.outerHTML.slice(0, 200_000),
+          adapter,
+          expected_prompt: (() => {
+            const c = composerForSite();
+            return c ? draftFrom(c).slice(0, 500) : null;
+          })(),
+        },
+      });
+      if (result?.adapter) {
+        adapter = result.adapter;
+        console.log(
+          `[Touchgrass] adapter updated to v${adapter.version}`,
+        );
+      }
+    } catch (e) {
+      console.warn("[Touchgrass] adapter repair failed", e);
+    } finally {
+      repairInFlight = false;
+    }
+  };
+
+  const emitEvent = async (
+    eventType: string,
+    response: CoachClassifyResponse,
+  ) => {
+    await bgBackend("coaching-event", {
+      event: {
+        event_id: uuid(),
+        decision_id: response.decision_id,
+        draft_revision: response.draft_revision,
+        event_type: eventType,
+      },
+    });
+  };
+
+  const chalkCoach = new DraftCoach({
+    holdMs: 800,
+    classifyTimeoutMs: 5000,
+    classify: async (draft, signal) => {
+      const res = await bgBackend<{
+        ok?: boolean;
+        response?: CoachClassifyResponse;
+        error?: string;
+      }>("classify", { draft });
+      if (signal.aborted) throw new Error("aborted");
+      if (!res?.ok || !res.response) throw new Error(res?.error || "classify");
+      return res.response;
+    },
+    emit: (eventType, response) => void emitEvent(eventType, response),
+    display: (response) => {
+      if (!response) {
+        if (!redirectToastActive) unmountCoach();
+        return;
+      }
+      if (redirectToastActive) return;
+
+      const label =
+        response.target &&
+        typeof response.target === "object" &&
+        "website_label" in response.target
+          ? String(
+              (response.target as { website_label?: string }).website_label ||
+                "smaller model",
+            )
+          : "smaller model";
+      const badge =
+        response.mode === "mock" ? "Synthetic mock results" : null;
+      mountCoach({
+        shadow: true,
+        message: `Try ${label} for this ask.`,
+        actions: {
+          badge,
+          switchLabel: `Switch to ${label}`,
+          onSwitch: () => {
+            void (async () => {
+              chalkCoach.safeEmit("switch_clicked", response);
+              const modelEl = modelLabelEl();
+              const targetModel =
+                response.target &&
+                typeof response.target === "object" &&
+                "model_id" in response.target
+                  ? String(
+                      (response.target as { model_id?: string }).model_id || "",
+                    )
+                  : "";
+              if (modelEl && targetModel) {
+                applyCoachSwitch(modelEl, targetModel);
+                chalkCoach.safeEmit("switch_confirmed", response);
+              }
+              chalkCoach.armBypass();
+              unmountCoach();
+              pendingRelease?.();
+              pendingRelease = null;
+            })();
+          },
+          onSendAnyway: () => {
+            chalkCoach.safeEmit("sent_anyway", response);
+            chalkCoach.armBypass();
+            chalkCoach.invalidate();
+            unmountCoach();
+            pendingRelease?.();
+            pendingRelease = null;
+          },
+        },
+      });
+    },
+  });
+
+  const buildDraft = async (
+    text: string,
+    model: string,
+  ): Promise<CoachDraft | null> => {
+    const cfg = await readBackendConfig();
+    if (!cfg.sessionToken) return null;
+    const site = await ensureSite();
+    if (!site) return null;
+    draftRevision += 1;
+    return {
+      request_id: uuid(),
+      draft_revision: draftRevision,
+      conversation_id: location.pathname || "chat",
+      site,
+      current_model_label: model,
+      prompt_text: text.slice(0, 12000),
+      recent_messages: [],
+      context_available: true,
+      context_truncated: false,
+      has_attachments: false,
+      uses_tools: false,
+      modality: "text",
+      target_available: true,
+      opted_in: true,
+    };
+  };
+
+  /** Groq hop on send. Returns true if hopped (Claude send stays blocked). */
+  const tryHopOnSend = async (text: string): Promise<boolean> => {
+    if (acting || redirectToastActive) return false;
+    if (!text || text.length < 8) return false;
+    if (text === lastRoutedDraft) return false;
+
+    const state = await readState();
+    if (!shouldShowCoach(state.lastCoachAt)) {
+      console.log("[Touchgrass] coach cooldown — wait ~1 min");
+      return false;
+    }
+
+    const enabled = state.enabledPlatforms.filter(Boolean);
+    if (enabled.length === 0) {
+      console.warn("[Touchgrass] no enabledPlatforms — re-run onboarding");
+      return false;
+    }
+
+    const provider =
+      (await ensureSite()) ||
+      providerFromHostname(location.hostname, platforms) ||
+      "chatgpt";
+
+    acting = true;
+    try {
+      return await runCrossSiteRedirect(text, provider, enabled);
+    } catch (e) {
+      console.warn("[Touchgrass] coach route error", e);
+      return false;
+    } finally {
+      acting = false;
+    }
+  };
+
+  const releaseSend = (sendBtn: Element | null) => {
+    sendBypassOnce = true;
+    if (sendBtn instanceof HTMLElement) {
+      sendBtn.click();
+      return;
+    }
+    const fallback = findSendButton(null);
+    if (fallback instanceof HTMLElement) {
+      fallback.click();
+      return;
+    }
+    // No send button — re-fire Enter into composer
+    const composer = composerForSite();
+    if (composer) {
+      composer.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          code: "Enter",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  };
+
+  const bindHold = () => {
+    if (holdBound) return;
+    holdBound = true;
+    document.addEventListener(
+      "click",
+      (ev) => {
+        void (async () => {
+          const t = ev.target as Element | null;
+          if (!t) return;
+          const sendSel = adapter?.selectors.send_button;
+          let sendBtn: Element | null = null;
+          try {
+            sendBtn = sendSel
+              ? t.closest(sendSel)
+              : findSendButton(t);
+          } catch {
+            sendBtn = t.closest(
+              "button[type='submit'], button[aria-label='Send']",
+            );
+          }
+          if (!sendBtn) return;
+
+          if (sendBypassOnce) {
+            sendBypassOnce = false;
+            return;
+          }
+          if (chalkCoach.bypassHoldOnce) {
+            chalkCoach.bypassHoldOnce = false;
+            return;
+          }
+
+          const composer = composerForSite();
+          if (!composer) return;
+          const text = draftFrom(composer).trim();
+          if (!text || text.length < 8) return;
+
+          // Always stop Claude first — draft still in box
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          clearDebounce();
+
+          const hopped = await tryHopOnSend(text);
+          if (hopped) return;
+
+          // Chalk same-site hold when backend session exists
+          const cfg = await readBackendConfig();
+          const site = await ensureSite();
+          if (cfg.sessionToken && cfg.backendEnabled && site) {
+            const model =
+              modelLabelEl()?.textContent?.trim() ||
+              platforms.find((p) => p.id === site)?.defaultModel ||
+              "default";
+            const draft = await buildDraft(text, model);
+            if (draft) {
+              pendingRelease = () => {
+                chalkCoach.armBypass();
+                sendBypassOnce = true;
+                (sendBtn as HTMLElement).click();
+              };
+              const ready = await chalkCoach.holdSend(draft);
+              if (!ready) {
+                const release = pendingRelease;
+                pendingRelease = null;
+                release?.();
+              }
+              return;
+            }
+          }
+
+          // Stay / no hop → let Claude send
+          releaseSend(sendBtn);
+        })();
+      },
+      true,
+    );
+  };
+
+  const schedule = () => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void maybeCoach();
+    }, COACH_TYPE_DEBOUNCE_MS);
+  };
+
+  const maybeCoach = async () => {
+    if (acting || redirectToastActive) return;
+    void maybeReportMiss();
+    const composer = composerForSite();
+    if (!composer) {
+      console.warn("[Touchgrass] no composer found");
+      return;
+    }
+    bindHold();
+
+    const text = draftFrom(composer).trim();
+    if (!text || text.length < 8) return;
+
+    const state = await readState();
+    if (!shouldShowCoach(state.lastCoachAt)) {
+      console.log("[Touchgrass] coach cooldown — wait ~1 min");
+      return;
+    }
+    if (text === lastRoutedDraft) return;
+
+    const enabled = state.enabledPlatforms.filter(Boolean);
+    if (enabled.length === 0) {
+      console.warn("[Touchgrass] no enabledPlatforms — re-run onboarding");
+      return;
+    }
+
+    const provider =
+      (await ensureSite()) ||
+      providerFromHostname(location.hostname, platforms) ||
+      "chatgpt";
+
+    acting = true;
+    try {
+      const redirected = await runCrossSiteRedirect(text, provider, enabled);
+
+      const cfg = await readBackendConfig();
+      if (
+        !redirected &&
+        cfg.sessionToken &&
+        cfg.backendEnabled &&
+        !redirectToastActive
+      ) {
+        const model =
+          modelLabelEl()?.textContent?.trim() ||
+          platforms.find((p) => p.id === provider)?.defaultModel ||
+          "default";
+        const chalkDraft = await buildDraft(text, model);
+        if (chalkDraft) chalkCoach.update(chalkDraft);
+      }
+    } catch (e) {
+      console.warn("[Touchgrass] coach route error", e);
+    } finally {
+      acting = false;
+    }
+  };
+
+  // Capture-phase Enter: route before Claude clears the box
+  document.addEventListener(
+    "keydown",
+    (ev) => {
+      if (ev.key !== "Enter" || ev.shiftKey || ev.isComposing) return;
+      if (!isComposerTarget(ev.target)) return;
+      if (sendBypassOnce) {
+        sendBypassOnce = false;
+        return;
+      }
+
+      const composer = composerForSite();
+      if (!composer) return;
+      const text = draftFrom(composer).trim();
+      if (!text || text.length < 8) return;
+
+      // Sync stop — Claude must not clear before we route
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      clearDebounce();
+      bindHold();
+
+      void (async () => {
+        const hopped = await tryHopOnSend(text);
+        if (hopped) return;
+        releaseSend(findSendButton(null));
+      })();
+    },
+    true,
+  );
+
+  // Capture-phase on document: survives Claude remounting the composer node
+  document.addEventListener(
+    "input",
+    (ev) => {
+      if (isComposerTarget(ev.target)) schedule();
+    },
+    true,
+  );
+  document.addEventListener(
+    "keyup",
+    (ev) => {
+      if (isComposerTarget(ev.target)) schedule();
+    },
+    true,
+  );
+
+  bindHold();
+  void maybeReportMiss();
+  const mo = new MutationObserver(() => {
+    void maybeReportMiss();
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+}
