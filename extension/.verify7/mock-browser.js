@@ -1088,7 +1088,44 @@
           window.__pastedDrafts.push(draft);
           return { ok: true };
         }
+        if (message?.type === "puddle/route-query") {
+          const draft = String(message.draft ?? "");
+          const provider = String(
+            message.provider ?? params.get("provider") ?? "chatgpt",
+          );
+          const enabledList = Array.isArray(message.enabledPlatforms)
+            ? message.enabledPlatforms.filter(Boolean)
+            : enabled;
+          // Stay on current when ?routeStay=1 (no hop)
+          if (params.get("routeStay") === "1") {
+            return {
+              ok: true,
+              platformId: provider,
+              reason: "already on best",
+            };
+          }
+          if (/weather|news|research|what's happening|whats happening/i.test(draft)) {
+            let hop = null;
+            for (const id of ["perplexity", "gemini"]) {
+              if (enabledList.includes(id) && id !== provider) {
+                hop = id;
+                break;
+              }
+            }
+            if (!hop) {
+              hop =
+                enabledList.find((id) => id !== provider && !/deepseek/i.test(id)) ??
+                provider;
+            }
+            return { ok: true, platformId: hop, reason: "weather" };
+          }
+          return { ok: true, platformId: provider, reason: "stay" };
+        }
         if (message?.type === "puddle/classify-ai-site") {
+          const provider = params.get("provider");
+          if (provider) {
+            return { isAi: true, label: provider };
+          }
           return { isAi: false };
         }
         return { isAi: false };
