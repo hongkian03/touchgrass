@@ -16,9 +16,13 @@ export type CoachMountOpts = {
     savedCo2G?: number | null;
     savedWaterMl?: number | null;
     chalkPill?: string | null;
+    smallOkPct?: number | null;
+    contextTurns?: number | null;
+    sameSiteModel?: string | null;
     durationMs?: number;
     onCancel?: () => void;
     onHopNow?: () => void;
+    onSwitchSameSite?: () => void;
   } | null;
   /** false = light DOM (fixture). true = Shadow DOM (live pages). */
   shadow?: boolean;
@@ -29,8 +33,10 @@ export type CoachMountOpts = {
     badge?: string | null;
     chalkMeta?: {
       confidencePct?: number | null;
+      smallOkPct?: number | null;
       elapsedMs?: number | null;
       policyVersion?: string | null;
+      featureGroup?: string | null;
       savedWh?: number | null;
       savedCo2G?: number | null;
     } | null;

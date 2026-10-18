@@ -15,9 +15,13 @@ type Props = {
     savedCo2G?: number | null;
     savedWaterMl?: number | null;
     chalkPill?: string | null;
+    smallOkPct?: number | null;
+    contextTurns?: number | null;
+    sameSiteModel?: string | null;
     durationMs?: number;
     onCancel?: () => void;
     onHopNow?: () => void;
+    onSwitchSameSite?: () => void;
   } | null;
   /** Hold-coach actions (Chalk suggest). */
   actions?: {
@@ -27,8 +31,10 @@ type Props = {
     badge?: string | null;
     chalkMeta?: {
       confidencePct?: number | null;
+      smallOkPct?: number | null;
       elapsedMs?: number | null;
       policyVersion?: string | null;
+      featureGroup?: string | null;
       savedWh?: number | null;
       savedCo2G?: number | null;
     } | null;
@@ -249,7 +255,91 @@ export function CoachOverlay({
                     {redirectMeta.chalkPill}
                   </span>
                 ) : null}
+                {typeof redirectMeta?.contextTurns === "number" &&
+                redirectMeta.contextTurns > 0 ? (
+                  <span
+                    data-testid="coach-context-pill"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "#fff8dc",
+                      color: "#8a5a00",
+                      fontSize: 10,
+                      fontWeight: 600,
+                    }}
+                  >
+                    +{redirectMeta.contextTurns} turn
+                    {redirectMeta.contextTurns === 1 ? "" : "s"} carried
+                  </span>
+                ) : null}
               </div>
+            ) : null}
+
+            {typeof redirectMeta?.smallOkPct === "number" &&
+            redirectMeta.smallOkPct > 0 ? (
+              <div
+                data-testid="coach-jev-bar"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                  background: "#f8fafc",
+                  borderRadius: 8,
+                  padding: "4px 6px",
+                  border: "1px solid #eef1f4",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#1b4965",
+                  }}
+                >
+                  <span>Chalk JEV small_ok</span>
+                  <span>{Math.round(redirectMeta.smallOkPct)}%</span>
+                </div>
+                <div
+                  style={{
+                    height: 4,
+                    borderRadius: 999,
+                    background: "#e4e4e7",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.min(100, Math.max(8, redirectMeta.smallOkPct))}%`,
+                      background: "#2ba4e0",
+                      borderRadius: 999,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {redirectMeta?.onSwitchSameSite && redirectMeta.sameSiteModel ? (
+              <button
+                type="button"
+                data-testid="coach-redirect-same-site"
+                style={{
+                  ...btn,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  width: "100%",
+                  background: "#f4fbf0",
+                  borderColor: "#b7e1a1",
+                  color: "#2d5a27",
+                }}
+                onClick={redirectMeta.onSwitchSameSite}
+              >
+                ⚡ Use {redirectMeta.sameSiteModel} here instead
+              </button>
             ) : null}
 
             {redirectMeta?.onCancel || redirectMeta?.onHopNow ? (
