@@ -204,7 +204,7 @@ export function SettingsPane({
         }
       >
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-visible rounded-xl bg-white/85">
-          <Pip size={48} variant="sticker" pose="gotit" tilt={-4} />
+          <Pip size={48} variant="sticker" pose="report" tilt={-4} />
         </div>
         <div className="min-w-0 flex-1">
           <span

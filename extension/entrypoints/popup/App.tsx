@@ -584,7 +584,7 @@ function ScoreHero({
         <Pip
           size={60}
           variant="sticker"
-          pose={clamped >= 70 ? "gotit" : "hello"}
+          pose={clamped >= 80 ? "chill" : clamped >= 60 ? "gotit" : "plant"}
           tilt={-5}
         />
         <div className="leading-none">

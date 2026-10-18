@@ -69,7 +69,7 @@ export function AchievementReportModal({ data, onClose }: Props) {
           <Pip
             size={36}
             variant="sticker"
-            pose={data.score >= 70 ? "gotit" : "hello"}
+            pose="report"
             tilt={-4}
           />
           <div className="min-w-0">
@@ -110,7 +110,7 @@ export function AchievementReportModal({ data, onClose }: Props) {
             <Pip
               size={64}
               variant="sticker"
-              pose={data.score >= 70 ? "gotit" : "hello"}
+              pose={data.score >= 70 ? "chill" : "plant"}
               tilt={6}
             />
           </div>
