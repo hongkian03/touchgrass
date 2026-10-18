@@ -1,5 +1,11 @@
 # Extension, dashboard and teammate integration contracts
 
+The application can now use the [general lightweight-model coach](general-coach.md)
+via `COACHING_GENERAL_CONFIG_PATH`. It makes one task-fit prediction and maps it to
+the current provider's configured lighter option. The original pair evaluation
+and its reports remain scoped to their original model pair. Generalized API
+responses include `recommendation_scope=generalized` and an evidence note.
+
 ## Extension
 
 `extension/coaching-client.mjs` is a standalone draft-lifecycle helper, tested with Node's built-in test runner. It deliberately does not replace `content.ts`, `background.ts`, or the per-site adapter. The site owner wires:

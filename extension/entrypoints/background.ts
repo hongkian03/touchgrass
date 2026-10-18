@@ -3,6 +3,7 @@ import {
   backendHealth,
   coachingClassify,
   coachingEmitEvent,
+  coachingTargets,
   fetchAdapter,
   fetchEvalsSummary,
   getCoachingInsights,
@@ -247,6 +248,10 @@ export default defineBackground(() => {
                 text: t.title,
               })),
             });
+            return;
+          }
+          if (op === "coaching-targets") {
+            sendResponse({ ok: true, ...(await coachingTargets()) });
             return;
           }
           if (op === "coaching-event") {

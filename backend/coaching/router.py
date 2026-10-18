@@ -59,6 +59,19 @@ async def events(body: CoachingEvent, request: Request, session=Depends(owner)):
         raise HTTPException(409, str(exc)) from None
 
 
+@router.get("/coaching/targets")
+async def targets(request: Request, session=Depends(owner)):
+    config = getattr(request.app.state.classifier, "config", None)
+    return {
+        "generalized": config is not None,
+        "targets": [
+            {"site": p.site, "model_id": p.target_model_id,
+             "website_label": p.target_label, "aliases": p.target_aliases}
+            for p in config.providers
+        ] if config else [],
+    }
+
+
 @router.delete("/coaching/history")
 async def clear(request: Request, session=Depends(owner)):
     request.app.state.repository.clear(session)

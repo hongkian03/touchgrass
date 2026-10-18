@@ -399,7 +399,12 @@ def _install_coaching(target: FastAPI, settings=None, classifier_client=None):
                 MockClassifier() if settings.mode == "mock" else Gateway(http, settings)
             )
             app_.state.repository = repository
-            app_.state.classifier = ClassifierService(settings, profile, policy, client)
+            if settings.general_coach_path:
+                from backend.coaching.general import GeneralCoachConfig, GeneralCoachService
+                config = GeneralCoachConfig.load(settings.general_coach_path)
+                app_.state.classifier = GeneralCoachService(settings, config, client)
+            else:
+                app_.state.classifier = ClassifierService(settings, profile, policy, client)
             app_.state.coaching_settings = settings
             try:
                 yield

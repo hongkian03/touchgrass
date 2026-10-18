@@ -6,7 +6,8 @@ import {
   type SiteAdapter,
 } from "./adapter";
 import { bgBackend } from "./backendBridge";
-import { readBackendConfig } from "./backendClient";
+import { readBackendConfig, type CoachingTarget } from "./backendClient";
+import { chalkVerdict, VerdictBoard, type ChalkVerdict } from "./coachArbiter";
 import { COACH_TYPE_DEBOUNCE_MS, shouldShowCoach } from "./coach";
 import {
   greenerAlternative,
@@ -101,7 +102,7 @@ const MODEL_PICKER_SELECTOR = [
 /** Chalk event for each toast choice (backend CoachingEvent.event_type). */
 const CHALK_EVENT: Record<CoachChoice, string> = {
   switch_here: "switch_clicked",
-  open_other: "sent_with_target",
+  open_other: "dismissed",
   send_anyway: "sent_anyway",
   not_now: "dismissed",
 };
@@ -157,6 +158,14 @@ export function startCoachWatch(): void {
   let repairInFlight = false;
   let draftRevision = 0;
   let sendBound = false;
+  let draftEpoch = 0;
+  const verdictBoard = new VerdictBoard();
+  let lastVerdict: { key: string; verdict: ChalkVerdict | "pending" } | null = null;
+  let providerTargets: CoachingTarget[] = [];
+  let targetsLoadedAt = 0;
+  let lastSend: { key: string; at: number } | null = null;
+  let afterSendEpoch: number | null = null;
+  const draftKey = (text: string, model: string) => JSON.stringify([location.pathname, activeSite, model, text]);
   /** Toast currently up, if any. */
   let offer: Offer | null = null;
   /** Last text a toast was shown for, so the same draft isn't offered twice. */
@@ -164,6 +173,16 @@ export function startCoachWatch(): void {
   /** Extension was reloaded; chrome.runtime is a dead binding. */
   let contextDead = false;
   const mo = new MutationObserver(() => {
+    const current = chalkCoach.current;
+    if (current && (current.conversation_id !== location.pathname
+        || current.current_model_label !== (modelLabelEl()?.textContent?.trim() || "unknown"))) {
+      draftEpoch += 1;
+      verdictBoard.cancel();
+      chalkCoach.navigate();
+      lastVerdict = null;
+      if (offer?.timing === "before_send") closeOffer();
+      schedule();
+    }
     swallow(maybeReportMiss());
   });
 
@@ -193,9 +212,12 @@ export function startCoachWatch(): void {
   let activeSite: string | null =
     providerFromHostname(location.hostname, platforms) ?? null;
 
-  console.log(
-    `[Touchgrass] watching ${activeSite ?? location.hostname}`,
-  );
+  console.log(`[Touchgrass] coach engine chalk-first-v2 (${activeSite ?? location.hostname})`);
+  console.log(`[Touchgrass] watching ${activeSite ?? location.hostname}`);
+  const audit = (stage: string, details: Record<string, unknown>) => {
+    // Deliberate metadata allowlist at call sites: never log drafts, context or tokens.
+    console.info(`[Touchgrass] coach audit ${stage}`, details);
+  };
 
   const clearDebounce = () => {
     if (debounceTimer) {
@@ -401,13 +423,17 @@ export function startCoachWatch(): void {
     text: string,
     timing: Offer["timing"],
     chalk: CoachClassifyResponse | null,
+    fallbackReason = "local_rule",
   ) => {
+    const epoch = draftEpoch;
     if (!contextOk() || !isExtensionStorageAlive()) return;
     const site = await ensureSite();
     const platform = platforms.find((p) => p.id === site);
     if (!site || !platform) return;
 
     const state = await readState();
+    if (timing === "before_send" && (epoch !== draftEpoch
+        || draftFrom(composerForSite() ?? document.createElement("textarea")).trim() !== text)) return;
     // Lowest-power model across the user's other selected AIs
     const alt = greenerAlternative({
       enabledPlatforms: state.enabledPlatforms,
@@ -417,7 +443,12 @@ export function startCoachWatch(): void {
       models: footprintModels,
     });
     const altName = alt ? `${alt.name} (${alt.modelLabel})` : null;
-    const saved = estimateHopSavings(site, site);
+    // The general classifier does not measure target-specific resource savings.
+    const saved = chalk?.recommendation_scope === "generalized"
+      ? { savedWh: 0, savedCo2G: 0, savedWaterMl: 0 }
+      : estimateHopSavings(site, site);
+    const targetLabel = chalk?.target?.website_label;
+    const aliases = providerTargets.find((p) => p.site === site && p.model_id === chalk?.target?.model_id)?.aliases;
 
     offer = { text, timing, chalk };
     lastOfferedText = text;
@@ -449,8 +480,9 @@ export function startCoachWatch(): void {
       timing === "before_send"
         ? "Simple ask on a big model."
         : "That was a simple ask on a big model.";
-    const message =
-      saved.savedWh > 0
+    const message = chalk?.recommendation_scope === "generalized"
+      ? `This task may work well with ${targetLabel ?? "a lightweight model"}.`
+      : saved.savedWh > 0
         ? `${lead} A smaller model uses ≈${saved.savedWh.toFixed(2)} Wh less per prompt (est.).`
         : `${lead} A smaller model would do.`;
 
@@ -459,22 +491,22 @@ export function startCoachWatch(): void {
         shadow: true,
         message,
         actions: {
-          badge: chalk?.mode === "mock" ? "Synthetic mock results" : null,
+          badge: chalk?.mode === "mock" ? "Synthetic mock results" : chalk?.recommendation_scope === "generalized" ? "General guidance · provisional" : null,
           chalkMeta,
           note,
-          switchLabel: "Switch to a smaller model here",
+          switchLabel: targetLabel ? `Switch to ${targetLabel}` : "Switch to a smaller model here",
           onSwitch: platform.smallModel !== platform.defaultModel
             ? () => {
                 swallow(
                   (async () => {
-                    const outcome = await switchModelHere(modelLabelEl());
+                    const outcome = await switchModelHere(modelLabelEl(), undefined, 350, targetLabel ? [targetLabel, ...(aliases ?? [])] : undefined);
                     recordChoice("switch_here", "button", { outcome });
                     noteThenClose(
                       render,
                       outcome === "picked"
-                        ? "Switched to a smaller model."
+                        ? `Selected ${targetLabel ?? "a smaller model"} in the menu.`
                         : outcome === "menu_open"
-                          ? "Pick a smaller model (mini, Haiku, Flash) in the menu."
+                          ? targetLabel ? `${targetLabel} wasn't found. No model was selected; choose it manually if available.` : "Pick a smaller model in the menu."
                           : "Couldn't find the model menu here. Pick a smaller model yourself.",
                     );
                   })(),
@@ -539,7 +571,10 @@ export function startCoachWatch(): void {
     };
 
     render();
-    console.log(`[Touchgrass] coach offer (${timing}${chalk ? ", chalk" : ""})`);
+    console.log(`[Touchgrass] coach offer (${timing}${chalk ? ", chalk" : ", local"})`);
+    audit("offer", { source: chalk ? "chalk" : "local", trigger: timing,
+      request_id: chalk?.request_id ?? null, decision_id: chalk?.decision_id ?? null,
+      reason: chalk?.reason_code ?? fallbackReason });
   };
 
   /** Every 5th prompt in a row on a big model (CHECK_IN_EVERY): "have you switched?" */
@@ -617,29 +652,53 @@ export function startCoachWatch(): void {
 
     render();
     console.log(`[Touchgrass] check-in after ${streak} big-model prompts`);
+    audit("offer", { source: "local", trigger: "check_in", reason: "periodic_reminder" });
+  };
+
+  const requestChalk = async (draft: CoachDraft, signal?: AbortSignal): Promise<CoachClassifyResponse> => {
+    audit("request", { source: "chalk", request_id: draft.request_id,
+      site: draft.site, model: draft.current_model_label });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const pending = bgBackend<{ ok?: boolean; response?: CoachClassifyResponse; error?: string }>("classify", { draft });
+      const res = await Promise.race([pending, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("client_timeout")), 1500);
+      })]);
+      if (signal?.aborted) throw new Error("draft_cancelled");
+      if (!res?.ok || !res.response) throw new Error(res?.error || "backend_unavailable");
+      const r = res.response;
+      if (r.request_id !== draft.request_id || r.draft_revision !== draft.draft_revision
+          || r.conversation_id !== draft.conversation_id || r.site !== draft.site
+          || r.current_model_label !== draft.current_model_label) throw new Error("response_identity_mismatch");
+      audit("response", { source: "chalk", request_id: r.request_id, decision_id: r.decision_id,
+        action: r.action, reason: r.reason_code, jev_model: (r as CoachClassifyResponse & { jev_resolved_model?: string }).jev_resolved_model ?? null });
+      return r;
+    } catch (e) {
+      audit("fallback", { source: "local", request_id: draft.request_id,
+        reason: e instanceof Error ? e.message : "backend_unavailable" });
+      throw e;
+    } finally { clearTimeout(timer); }
   };
 
   // ---- Chalk (backend) classify: feeds the same toast ----------------------
 
   const chalkCoach = new DraftCoach({
-    holdMs: 800,
+    holdMs: 1500,
+    debounceMs: 0,
+    verdict: (response) => verdictBoard.settle(chalkVerdict(response)),
     classifyTimeoutMs: 5000,
-    classify: async (draft, signal) => {
-      const res = await bgBackend<{
-        ok?: boolean;
-        response?: CoachClassifyResponse;
-        error?: string;
-      }>("classify", { draft });
-      if (signal.aborted) throw new Error("aborted");
-      if (!res?.ok || !res.response) throw new Error(res?.error || "classify");
-      return res.response;
-    },
+    classify: (draft, signal) => requestChalk(draft, signal),
     emit: (eventType, response) => swallow(emitEvent(eventType, response)),
     display: (response) => {
-      if (!response) return;
+      if (!response) {
+        if (offer?.chalk && offer.timing === "before_send") closeOffer();
+        return;
+      }
       const composer = composerForSite();
       const text = composer ? draftFrom(composer).trim() : "";
-      if (!text) return;
+      if (!text || !chalkCoach.current || text !== chalkCoach.current.prompt_text
+          || location.pathname !== chalkCoach.current.conversation_id
+          || (modelLabelEl()?.textContent?.trim() || "unknown") !== response.current_model_label) return;
       // Chalk agrees (or decides alone): show/refresh the toast with its meta
       if (offer && offer.text === text && offer.chalk) return;
       swallow(showChoice(text, "before_send", response));
@@ -650,27 +709,36 @@ export function startCoachWatch(): void {
     text: string,
     model: string,
   ): Promise<CoachDraft | null> => {
-    const cfg = await readBackendConfig();
-    if (!cfg.sessionToken) return null;
-    const site = await ensureSite();
+    // Capture synchronously before a Send clears the DOM, including fast sends.
+    const site = activeSite;
     if (!site) return null;
-    draftRevision += 1;
+    const conversation = location.pathname || "chat";
     const recentTurns = scrapeRecentMessages(document, 4, 2400);
+    const hasAttachments = countAttachments() > 0;
+    const hasPicker = Boolean(modelLabelEl());
+    const revision = ++draftRevision;
+    if (Date.now() - targetsLoadedAt > 30000) {
+      targetsLoadedAt = Date.now();
+      void bgBackend<{ ok?: boolean; targets?: CoachingTarget[] }>("coaching-targets")
+        .then((result) => { if (result?.ok && result.targets) providerTargets = result.targets; })
+        .catch(() => {});
+    }
+    const state = await readState();
     return {
       request_id: uuid(),
-      draft_revision: draftRevision,
-      conversation_id: location.pathname || "chat",
+      draft_revision: revision,
+      conversation_id: conversation,
       site,
       current_model_label: model,
       prompt_text: text.slice(0, 12000),
       recent_messages: recentTurns,
       context_available: true,
-      context_truncated: false,
-      has_attachments: false,
+      context_truncated: text.length > 12000 || recentTurns.some((m) => m.content.length >= 2400),
+      has_attachments: hasAttachments,
       uses_tools: false,
       modality: "text",
-      target_available: true,
-      opted_in: true,
+      target_available: hasPicker,
+      opted_in: state.enabledPlatforms.includes(site),
     };
   };
 
@@ -756,6 +824,9 @@ export function startCoachWatch(): void {
     const composer = composerForSite();
     if (!composer) return;
     const text = draftFrom(composer).trim();
+    const sendKey = JSON.stringify([location.pathname, text]);
+    if (lastSend?.key === sendKey && Date.now() - lastSend.at < 300) return;
+    lastSend = { key: sendKey, at: Date.now() };
     // Sync reads (text, attachments) happen before the site clears the box
     swallow(recordSend(text));
     clearDebounce();
@@ -767,29 +838,69 @@ export function startCoachWatch(): void {
       if (shown.timing === "check_in") recordChoice("not_now", "send");
       closeOffer();
     }
+    draftEpoch += 1;
+    verdictBoard.cancel();
+    const modelLabel = modelLabelEl()?.textContent?.trim() || "unknown";
+    const verdictAtSend = lastVerdict?.key === draftKey(text, modelLabel) ? lastVerdict.verdict : null;
+    const chalkVeto = verdictAtSend === "decline" || verdictAtSend === "pending" || verdictAtSend === "suggest";
     chalkCoach.onSend();
+    chalkCoach.current = null;
 
     const platform = currentPlatform();
     if (!platform || !text) return;
     const onBig = isOnBigModel(platform, footprintModelFor(platform));
     const site = platform.id;
-    const offerAfter = !shown && text !== lastOfferedText && offerable(text);
+    const epoch = draftEpoch;
+    afterSendEpoch = !shown && !chalkVeto ? epoch : null;
+    // Start capture now; all network work below stays independent of sending.
+    const sentDraft = !shown && !chalkVeto && verdictAtSend !== "fallback"
+      ? buildDraft(text, modelLabel) : null;
     swallow(
       (async () => {
-        // Persistent check-in beats the one-off simple-ask toast
         const streak = await bumpBigModelStreak(site, onBig);
-        const due = isCheckInDue(streak);
-        if (!due && !offerAfter) return;
-        await new Promise((r) => window.setTimeout(r, AFTER_SEND_DELAY_MS));
-        if (offer || !isExtensionStorageAlive()) return;
-        if (due) {
-          await showCheckIn(streak);
+        const state = await readState();
+        if (!state.enabledPlatforms.includes(site)) {
+          audit("skip", { source: "none", trigger: "send", reason: "site_not_enabled" });
           return;
         }
-        const state = await readState();
-        if (!shouldShowCoach(state.lastCoachAt)) return;
-        await showChoice(text, "after_send", null);
-      })(),
+        if (shown || chalkVeto) {
+          audit("skip", { source: shown ? shown.chalk ? "chalk" : "local" : "chalk", trigger: "send", reason: shown ? "already_shown" : `typing_${verdictAtSend}` });
+          return;
+        }
+        if (!shouldShowCoach(state.lastCoachAt)) {
+          audit("skip", { source: "none", trigger: "send", reason: "cooldown" });
+          return;
+        }
+        let fallbackReason = verdictAtSend === "fallback" ? "typing_fallback" : "backend_disabled";
+        const cfg = await readBackendConfig();
+        if (cfg.backendEnabled && verdictAtSend !== "fallback") {
+          const draft = await sentDraft;
+          if (!draft || epoch !== draftEpoch) return;
+          try {
+            const response = await requestChalk(draft);
+            if (epoch !== draftEpoch || location.pathname !== draft.conversation_id
+                || (modelLabelEl()?.textContent?.trim() || "unknown") !== draft.current_model_label) {
+              audit("skip", { source: "none", request_id: draft.request_id, reason: "draft_or_conversation_changed" });
+              return;
+            }
+            const verdict = chalkVerdict(response);
+            console.log(`[Touchgrass] chalk verdict: ${verdict} (after_send)`);
+            lastVerdict = { key: draftKey(text, modelLabel), verdict };
+            if (verdict === "decline") return;
+            if (verdict === "suggest") {
+              await showChoice(text, "after_send", response);
+              chalkCoach.safeEmit("shown", response);
+              return;
+            }
+            fallbackReason = response.reason_code ?? "unusable_response";
+          } catch (e) { fallbackReason = e instanceof Error ? e.message : "backend_unavailable"; }
+        }
+        if (epoch !== draftEpoch || !isExtensionStorageAlive()) return;
+        audit("fallback", { source: "local", trigger: "send", reason: fallbackReason });
+        const due = isCheckInDue(streak);
+        if (due && onBig) { await showCheckIn(streak); return; }
+        if (text !== lastOfferedText && offerable(text)) await showChoice(text, "after_send", null, fallbackReason);
+      })().finally(() => { if (afterSendEpoch === epoch) afterSendEpoch = null; }),
     );
   };
 
@@ -817,6 +928,13 @@ export function startCoachWatch(): void {
   // ---- Typing: offer the choice before the send ----------------------------
 
   const schedule = () => {
+    // The website clearing its composer after Send is not a new user draft.
+    const composer = composerForSite();
+    if (afterSendEpoch === draftEpoch && (!composer || !draftFrom(composer).trim())) return;
+    draftEpoch += 1;
+    verdictBoard.cancel();
+    chalkCoach.invalidate();
+    if (offer?.timing === "before_send") closeOffer();
     if (debounceTimer) window.clearTimeout(debounceTimer);
     debounceTimer = window.setTimeout(() => {
       swallow(maybeCoach());
@@ -824,6 +942,7 @@ export function startCoachWatch(): void {
   };
 
   const maybeCoach = async () => {
+    const epoch = draftEpoch;
     if (!contextOk()) return;
     swallow(maybeReportMiss());
     const composer = composerForSite();
@@ -850,19 +969,36 @@ export function startCoachWatch(): void {
       return;
     }
 
-    // Chalk classifies in the background when the backend is paired
+    // Wait for one Chalk verdict. Local advice is only a fallback.
     const cfg = await readBackendConfig();
-    if (cfg.sessionToken && cfg.backendEnabled) {
-      const platform = currentPlatform();
-      const model =
-        modelLabelEl()?.textContent?.trim() ||
-        platform?.defaultModel ||
-        "default";
+    if (epoch !== draftEpoch) return;
+    if (!state.enabledPlatforms.includes(activeSite ?? "")) {
+      audit("skip", { source: "none", trigger: "typing", reason: "site_not_enabled" });
+      return;
+    }
+    let fallbackReason = "backend_disabled";
+    if (cfg.backendEnabled) {
+      const model = modelLabelEl()?.textContent?.trim() || "unknown";
       const chalkDraft = await buildDraft(text, model);
-      if (chalkDraft) chalkCoach.update(chalkDraft);
+      if (epoch !== draftEpoch) return;
+      if (chalkDraft) {
+        const key = draftKey(text, model);
+        lastVerdict = { key, verdict: "pending" };
+        const waiting = verdictBoard.begin();
+        chalkCoach.update(chalkDraft);
+        const verdict = await waiting;
+        if (epoch !== draftEpoch || draftFrom(composerForSite() ?? composer).trim() !== text
+            || draftKey(text, modelLabelEl()?.textContent?.trim() || "unknown") !== key) return;
+        lastVerdict = { key, verdict };
+        console.log(`[Touchgrass] chalk verdict: ${verdict}`);
+        if (verdict !== "fallback") return;
+        fallbackReason = "chalk_unavailable_or_unsupported";
+        chalkCoach.invalidate();
+      }
     }
 
-    if (offerable(text)) await showChoice(text, "before_send", null);
+    audit("fallback", { source: "local", trigger: "typing", reason: fallbackReason });
+    if (offerable(text)) await showChoice(text, "before_send", null, fallbackReason);
   };
 
   // Capture-phase Enter: observe the send (the site still handles it)

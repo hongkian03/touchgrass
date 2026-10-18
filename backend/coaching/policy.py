@@ -1,4 +1,12 @@
-def choose(prediction, profile, policy, mode, coaching_mode):
+def choose(
+    prediction,
+    profile,
+    policy,
+    mode,
+    coaching_mode,
+    *,
+    require_website_equivalence=True,
+):
     if prediction is None:
         return "abstain", "abstain", "invalid_output"
     if (
@@ -22,6 +30,10 @@ def choose(prediction, profile, policy, mode, coaching_mode):
         return "abstain", candidate, "policy_mode_mismatch"
     if mode == "live" and not profile.expected_jev_resolved_model:
         return "abstain", candidate, "model_version_unpinned"
-    if mode == "live" and not profile.website_equivalence_verified:
+    if (
+        mode == "live"
+        and require_website_equivalence
+        and not profile.website_equivalence_verified
+    ):
         return "abstain", candidate, "website_equivalence_unknown"
     return candidate, candidate, reason

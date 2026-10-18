@@ -62,14 +62,32 @@ export async function switchModelHere(
   modelButton: HTMLElement | null,
   root?: ParentNode,
   waitMs = 350,
+  preferredLabels?: string[],
 ): Promise<"picked" | "menu_open" | "no_menu"> {
   if (!modelButton) return "no_menu";
   modelButton.click();
   await new Promise((r) => setTimeout(r, waitMs));
-  const items = Array.from(
+  const items = () => Array.from(
     (root ?? document).querySelectorAll<HTMLElement>("[role='menuitem'], [role='option'], [role='menuitemradio']"),
   );
-  const small = items.find((el) => SMALL_MENU_RE.test(el.textContent ?? ""));
+  const eligible = (el: HTMLElement) => el.getAttribute?.("aria-disabled") !== "true"
+    && !(typeof HTMLButtonElement !== "undefined" && el instanceof HTMLButtonElement && el.disabled);
+  const normalize = (s: string) => s.toLowerCase().replace(/[–—-]/g, " ").replace(/\s+/g, " ").trim();
+  const exactTarget = (el: HTMLElement) => preferredLabels?.some((label) => {
+    const text = normalize(el.textContent ?? "");
+    const target = normalize(label);
+    return text === target || text.startsWith(target + " ");
+  });
+  let small = items().find((el) => eligible(el) && (preferredLabels
+    ? exactTarget(el) : SMALL_MENU_RE.test(el.textContent ?? "")));
+  if (!small && preferredLabels) {
+    const more = items().find((el) => /^more models\b/i.test(el.textContent?.trim() ?? ""));
+    if (more) {
+      more.click();
+      await new Promise((r) => setTimeout(r, waitMs));
+      small = items().find((el) => eligible(el) && exactTarget(el));
+    }
+  }
   if (!small) return "menu_open";
   small.click();
   return "picked";
