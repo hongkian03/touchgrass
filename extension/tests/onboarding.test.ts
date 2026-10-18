@@ -257,6 +257,41 @@ describe("onboarding Musky greeting copy", () => {
   });
 });
 
+describe("onboarding Jitter convergence choreography", () => {
+  it("wires Step 1 splash + Step 3 finale classes without dropping testids", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const inline = readFileSync(
+      resolve(__dirname, "../components/InlineOnboarding.tsx"),
+      "utf8",
+    );
+    const css = readFileSync(
+      resolve(__dirname, "../assets/puddle.css"),
+      "utf8",
+    );
+
+    expect(css).toMatch(/\.jt-stage-card/);
+    expect(css).toMatch(/\.jt-mascot-hero/);
+    expect(css).toMatch(/\.jt-orbit-badge/);
+    expect(css).toMatch(/\.jt-bubble-pop/);
+    expect(css).toMatch(/\.jt-slot-up/);
+    expect(css).toMatch(/\.jt-card-left/);
+    expect(css).toMatch(/\.jt-card-right/);
+
+    expect(inline).toMatch(/jt-stage-card/);
+    expect(inline).toMatch(/jt-mascot-hero/);
+    expect(inline).toMatch(/jt-orbit-badge/);
+    expect(inline).toMatch(/onboarding-hero-stage/);
+    expect(inline).toMatch(/onboarding-finale-stage/);
+    expect(inline).toMatch(/Watched by Musky/);
+    expect(inline).toMatch(/EcoSatellites/);
+    expect(inline).toMatch(/ChosenPlatformOrbit/);
+    // Critical: form controls stay mounted (no delayed unmount splash)
+    expect(inline).toMatch(/data-testid="onboarding-name"/);
+    expect(inline).toMatch(/testId="got-it"/);
+  });
+});
+
 describe("achievement report card + PDF", () => {
   it("ranks scores and slugifies names", () => {
     expect(rankForScore(90)).toBe("Lush Lawn Legend");

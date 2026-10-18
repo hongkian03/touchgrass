@@ -5,8 +5,15 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { BrandIcon } from "./BrandIcon";
+import {
+  Co2Cloud,
+  EnergyBolt,
+  TreeGrove,
+  WaterDrop,
+} from "./FootprintCartoons";
 import { AccountCartoon, LocalShieldCartoon } from "./MorphNav";
-import { PlatformGrid } from "./PlatformGrid";
+import { PlatformGrid, buildPlatformGridItems } from "./PlatformGrid";
 import { Pip } from "./Pip";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,6 +22,7 @@ import usageSeed from "../data/usage-seed.json";
 import {
   canContinueOnboarding,
   customPlatformId,
+  faviconForHost,
   hostsForPlatforms,
   isCustomPlatformId,
   resolvePlatformFromInput,
@@ -154,11 +162,14 @@ export function InlineOnboarding({ onComplete }: Props) {
     >
       {step === 2 ? (
         <div className="pip-peek pip-peek--popup" aria-hidden="true">
-          <Pip size={64} variant="sticker" pose="hello" tilt={-6} />
+          <Pip size={68} variant="sticker" pose="search" tilt={-6} />
         </div>
       ) : null}
 
-      <header className={`relative z-10 ${step === 2 ? "pr-16" : ""}`}>
+      <header
+        className={`relative z-10 jt-drop-in ${step === 2 ? "pr-16" : ""}`}
+        style={{ ["--jt-delay" as string]: "0ms" } as CSSProperties}
+      >
         <h1
           data-testid="puddle-title"
           className="font-brand m-0 text-2xl font-semibold tracking-tight"
@@ -167,7 +178,9 @@ export function InlineOnboarding({ onComplete }: Props) {
         </h1>
         <p className="m-0 mt-0.5 text-xs text-muted-foreground">
           {step === 1
-            ? "Meet Musky, your AI footprint buddy"
+            ? trimmedName
+              ? `Nice to meet you, ${trimmedName}!`
+              : "Meet Musky, your AI footprint buddy"
             : step === 2
               ? trimmedName
                 ? `Which AI tabs do you use, ${trimmedName}?`
@@ -178,28 +191,46 @@ export function InlineOnboarding({ onComplete }: Props) {
         </p>
       </header>
 
-      <StepPills step={step} onSelect={(s) => s < step && setStep(s)} />
+      <div
+        className="jt-drop-in"
+        style={{ ["--jt-delay" as string]: "80ms" } as CSSProperties}
+      >
+        <StepPills step={step} onSelect={(s) => s < step && setStep(s)} />
+      </div>
 
       {step === 1 ? (
         <form
           onSubmit={submitNameForm}
           className="relative z-10 flex min-h-0 flex-1 flex-col gap-3"
         >
-          {/* Jitter-animated hero card with Pip & swaying grass */}
+          {/* Jitter intro: Musky + eco satellites converge into lawn stage */}
           <div
-            className="ui-note-enter relative flex flex-col items-center justify-center overflow-hidden rounded-2xl px-4 pt-4 pb-6 text-center"
-            style={
-              {
-                background: "#e8f6df",
-                ["--i" as string]: 0,
-              } as CSSProperties
-            }
+            data-testid="onboarding-hero-stage"
+            className="jt-stage-card flex flex-col items-center gap-2 overflow-hidden rounded-2xl px-3 pt-3 pb-3.5 text-center"
+            style={{ background: "#e8f6df" }}
           >
-            <GrassWave />
-            <div className="pip-svg--idle ui-score-pop relative z-10">
-              <Pip size={104} variant="sticker" pose="hello" tilt={-5} />
+            <div className="relative flex min-h-[124px] w-full items-center justify-center">
+              <div className="jt-grass-rise absolute inset-x-0 bottom-0">
+                <GrassWave />
+              </div>
+              <EcoSatellites active={Boolean(trimmedName)} />
+              <div className="jt-mascot-hero pip-svg--idle relative z-10">
+                <Pip
+                  size={104}
+                  variant="sticker"
+                  pose={trimmedName ? "plant" : "hello"}
+                  tilt={-4}
+                />
+              </div>
             </div>
-            <div className="relative z-10 mt-2 rounded-xl bg-white/90 px-3 py-1.5 shadow-sm">
+            <div
+              key={trimmedName ? "named" : "hello"}
+              data-testid="onboarding-greeting"
+              className={[
+                "relative z-10 rounded-xl bg-white/95 px-3 py-1.5 shadow-sm",
+                trimmedName ? "jt-bubble-pop jt-bubble-react" : "jt-bubble-pop",
+              ].join(" ")}
+            >
               <p className="m-0 text-xs font-medium text-foreground">
                 {trimmedName
                   ? `Hey ${trimmedName}! Ready to save some trees?`
@@ -208,10 +239,10 @@ export function InlineOnboarding({ onComplete }: Props) {
             </div>
           </div>
 
-          {/* Account Name Input Card */}
+          {/* Account Name Input Card — docks up after hero settles */}
           <div
-            className="ui-note-enter flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5"
-            style={{ ["--i" as string]: 1 } as CSSProperties}
+            className="jt-slot-up flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5"
+            style={{ ["--jt-delay" as string]: "480ms" } as CSSProperties}
           >
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -236,14 +267,19 @@ export function InlineOnboarding({ onComplete }: Props) {
             </label>
           </div>
 
-          <SplitCta
-            testId="name-continue"
-            disabled={!canContinueName}
-            onClick={() => setStep(2)}
-            className="mt-auto self-stretch"
+          <div
+            className="jt-slot-up mt-auto self-stretch"
+            style={{ ["--jt-delay" as string]: "600ms" } as CSSProperties}
           >
-            Continue
-          </SplitCta>
+            <SplitCta
+              testId="name-continue"
+              disabled={!canContinueName}
+              onClick={() => setStep(2)}
+              className="w-full"
+            >
+              Continue
+            </SplitCta>
+          </div>
         </form>
       ) : step === 2 ? (
         <>
@@ -275,7 +311,7 @@ export function InlineOnboarding({ onComplete }: Props) {
             </p>
           ) : null}
 
-          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto px-0.5 py-0.5">
             <PlatformGrid
               platforms={platforms}
               selected={selected}
@@ -305,7 +341,11 @@ export function InlineOnboarding({ onComplete }: Props) {
         </>
       ) : (
         <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-2">
-          <InfoCard index={0} wash="#e8f6df" icon={<LocalShieldCartoon size={36} />}>
+          <InfoCard
+            choreo="left"
+            wash="#e8f6df"
+            icon={<LocalShieldCartoon size={36} />}
+          >
             <p className="m-0 text-xs font-semibold leading-snug">
               Prompts stay on this computer.
             </p>
@@ -314,7 +354,7 @@ export function InlineOnboarding({ onComplete }: Props) {
             </p>
           </InfoCard>
           <InfoCard
-            index={1}
+            choreo="right"
             wash="#e7f6ff"
             testId="onboarding-auto-coach"
             icon={<AccountCartoon size={36} />}
@@ -327,14 +367,34 @@ export function InlineOnboarding({ onComplete }: Props) {
               pastes your prompt.
             </p>
           </InfoCard>
+
+          {/* Finale stage: chosen AI badges converge around thumbs-up Musky on sky-lagoon orbit stage */}
           <div
-            className="ui-note-enter flex flex-1 items-center justify-center py-1"
-            style={{ ["--i" as string]: 2 } as CSSProperties}
+            data-testid="onboarding-finale-stage"
+            className="jt-stage-card flex min-h-[144px] flex-1 flex-col items-center justify-between overflow-hidden rounded-2xl border border-[#cae9ff] px-3 pt-2 pb-2.5"
+            style={{
+              background:
+                "linear-gradient(155deg, #e7f6ff 0%, #cae9ff 52%, #bee9e8 100%)",
+            }}
           >
-            <div className="pip-svg--idle ui-score-pop">
-              <Pip size={108} variant="sticker" pose="gotit" tilt={4} />
+            <div className="relative flex min-h-[104px] w-full flex-1 items-center justify-center">
+              <OrbitRing />
+              <div className="jt-grass-rise absolute inset-x-0 bottom-0">
+                <LagoonWave />
+              </div>
+              <FinaleSparks />
+              <ChosenPlatformOrbit selected={selected} />
+              <div className="jt-mascot-hero pip-svg--idle relative z-10">
+                <Pip size={96} variant="sticker" pose="chill" tilt={3} />
+              </div>
             </div>
+            <p className="jt-bubble-pop relative z-10 m-0 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-semibold text-[#1b4965] shadow-sm">
+              {trimmedName
+                ? `${trimmedName}'s tabs · Watched by Musky`
+                : "Watched by Musky"}
+            </p>
           </div>
+
           <div className="mt-auto flex items-center gap-2">
             <button
               type="button"
@@ -343,14 +403,16 @@ export function InlineOnboarding({ onComplete }: Props) {
             >
               Back
             </button>
-            <SplitCta
-              testId="got-it"
-              disabled={busy}
-              onClick={() => void finish()}
-              className="flex-1"
-            >
-              Got it
-            </SplitCta>
+            <div className="jt-cta-ready flex-1">
+              <SplitCta
+                testId="got-it"
+                disabled={busy}
+                onClick={() => void finish()}
+                className="w-full"
+              >
+                Got it
+              </SplitCta>
+            </div>
           </div>
           {error ? <p className="m-0 text-xs">{error}</p> : null}
         </div>
@@ -449,24 +511,90 @@ function GrassWave() {
   );
 }
 
+function OrbitRing() {
+  return (
+    <svg
+      viewBox="0 0 260 140"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    >
+      <ellipse
+        cx="130"
+        cy="70"
+        rx="88"
+        ry="42"
+        fill="none"
+        stroke="#5fa8d3"
+        strokeOpacity="0.32"
+        strokeWidth="1.5"
+        strokeDasharray="4 5"
+      />
+      <ellipse
+        cx="130"
+        cy="70"
+        rx="58"
+        ry="28"
+        fill="none"
+        stroke="#1b4965"
+        strokeOpacity="0.14"
+        strokeWidth="1.2"
+      />
+    </svg>
+  );
+}
+
+function LagoonWave() {
+  return (
+    <svg
+      viewBox="0 0 320 36"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 bottom-0 h-6 w-full"
+      preserveAspectRatio="none"
+    >
+      <path
+        d="M0 26 Q70 18 150 25 T320 23 L320 36 L0 36 Z"
+        fill="#62b6cb"
+        opacity="0.4"
+      />
+      <path
+        d="M0 30 Q95 23 190 29 T320 27 L320 36 L0 36 Z"
+        fill="#5fa8d3"
+        opacity="0.35"
+      />
+    </svg>
+  );
+}
+
 function InfoCard({
   wash,
   icon,
   children,
   testId,
-  index = 0,
+  choreo = "enter",
 }: {
   wash: string;
   icon: ReactNode;
   children: ReactNode;
   testId?: string;
-  index?: number;
+  choreo?: "enter" | "left" | "right";
 }) {
+  const choreoClass =
+    choreo === "left"
+      ? "jt-card-left"
+      : choreo === "right"
+        ? "jt-card-right"
+        : "ui-note-enter";
   return (
     <div
       data-testid={testId}
-      className="ui-note-enter flex items-start gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2"
-      style={{ ["--i" as string]: index } as CSSProperties}
+      className={`${choreoClass} flex items-start gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2`}
+      style={
+        {
+          ["--jt-delay" as string]:
+            choreo === "left" ? "200ms" : choreo === "right" ? "320ms" : "0ms",
+          ["--i" as string]: 0,
+        } as CSSProperties
+      }
     >
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -476,6 +604,216 @@ function InfoCard({
       </div>
       <div className="min-w-0 flex-1 pt-0.5">{children}</div>
     </div>
+  );
+}
+
+const ECO_SATELLITES: Array<{
+  id: string;
+  fromX: string;
+  fromY: string;
+  fromR: string;
+  toX: string;
+  toY: string;
+  delay: string;
+  wash: string;
+  node: ReactNode;
+}> = [
+  {
+    id: "bolt",
+    fromX: "-86px",
+    fromY: "-48px",
+    fromR: "-28deg",
+    toX: "-96px",
+    toY: "-22px",
+    delay: "120ms",
+    wash: "#fff8dc",
+    node: <EnergyBolt size={28} />,
+  },
+  {
+    id: "drop",
+    fromX: "86px",
+    fromY: "-52px",
+    fromR: "24deg",
+    toX: "96px",
+    toY: "-22px",
+    delay: "180ms",
+    wash: "#e7f6ff",
+    node: <WaterDrop size={28} />,
+  },
+  {
+    id: "cloud",
+    fromX: "-98px",
+    fromY: "42px",
+    fromR: "-18deg",
+    toX: "-88px",
+    toY: "20px",
+    delay: "240ms",
+    wash: "#eef1f4",
+    node: <Co2Cloud size={28} />,
+  },
+  {
+    id: "tree",
+    fromX: "98px",
+    fromY: "44px",
+    fromR: "22deg",
+    toX: "88px",
+    toY: "20px",
+    delay: "300ms",
+    wash: "#f4fbf0",
+    node: <TreeGrove size={28} count={1} />,
+  },
+];
+
+function EcoSatellites({ active }: { active: boolean }) {
+  return (
+    <>
+      {ECO_SATELLITES.map((s) => (
+        <span
+          key={s.id}
+          data-testid={`eco-orbit-${s.id}`}
+          className={[
+            "jt-orbit-badge flex h-9 w-9 items-center justify-center rounded-xl border border-white/80 shadow-sm",
+            active ? "jt-orbit-bob" : "",
+          ].join(" ")}
+          style={
+            {
+              background: s.wash,
+              ["--from-x" as string]: s.fromX,
+              ["--from-y" as string]: s.fromY,
+              ["--from-r" as string]: s.fromR,
+              ["--to-x" as string]: s.toX,
+              ["--to-y" as string]: s.toY,
+              ["--jt-delay" as string]: s.delay,
+            } as CSSProperties
+          }
+        >
+          {s.node}
+        </span>
+      ))}
+    </>
+  );
+}
+
+const ORBIT_SLOTS: Array<{
+  fromX: string;
+  fromY: string;
+  fromR: string;
+  toX: string;
+  toY: string;
+}> = [
+  {
+    fromX: "-115px",
+    fromY: "-40px",
+    fromR: "-30deg",
+    toX: "-88px",
+    toY: "-20px",
+  },
+  {
+    fromX: "115px",
+    fromY: "-44px",
+    fromR: "28deg",
+    toX: "88px",
+    toY: "-20px",
+  },
+  {
+    fromX: "-120px",
+    fromY: "40px",
+    fromR: "-20deg",
+    toX: "-92px",
+    toY: "18px",
+  },
+  {
+    fromX: "120px",
+    fromY: "42px",
+    fromR: "18deg",
+    toX: "92px",
+    toY: "18px",
+  },
+  {
+    fromX: "0px",
+    fromY: "-70px",
+    fromR: "8deg",
+    toX: "-52px",
+    toY: "-34px",
+  },
+];
+
+function ChosenPlatformOrbit({ selected }: { selected: string[] }) {
+  const customIds = selected.filter(isCustomPlatformId);
+  const items = buildPlatformGridItems(platforms, customIds).filter((p) =>
+    selected.includes(p.id),
+  );
+  const shown = items.slice(0, 5);
+  if (shown.length === 0) return null;
+
+  return (
+    <>
+      {shown.map((p, idx) => {
+        const slot = ORBIT_SLOTS[idx] ?? ORBIT_SLOTS[0]!;
+        return (
+          <span
+            key={p.id}
+            data-testid={`finale-orbit-${p.id}`}
+            className="jt-orbit-badge flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white shadow-sm"
+            style={
+              {
+                ["--from-x" as string]: slot.fromX,
+                ["--from-y" as string]: slot.fromY,
+                ["--from-r" as string]: slot.fromR,
+                ["--to-x" as string]: slot.toX,
+                ["--to-y" as string]: slot.toY,
+                ["--jt-delay" as string]: `${120 + idx * 70}ms`,
+              } as CSSProperties
+            }
+          >
+            {p.kind === "custom" && p.faviconHost ? (
+              <img
+                src={faviconForHost(p.faviconHost)}
+                alt=""
+                width={20}
+                height={20}
+                className="rounded-full"
+                style={{ width: 20, height: 20, objectFit: "contain" }}
+              />
+            ) : (
+              <BrandIcon slug={p.icon ?? ""} size={20} label={p.name} />
+            )}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function FinaleSparks() {
+  const sparks = [
+    { x: "18%", y: "22%", delay: "700ms", color: "#f5c400", r: 3 },
+    { x: "78%", y: "18%", delay: "820ms", color: "#5cb85c", r: 2.5 },
+    { x: "22%", y: "68%", delay: "900ms", color: "#8fd18f", r: 2.2 },
+    { x: "82%", y: "62%", delay: "760ms", color: "#f5c400", r: 2.8 },
+  ];
+  return (
+    <>
+      {sparks.map((s, i) => (
+        <svg
+          key={i}
+          className="jt-sparkle"
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          aria-hidden="true"
+          style={
+            {
+              left: s.x,
+              top: s.y,
+              ["--jt-delay" as string]: s.delay,
+            } as CSSProperties
+          }
+        >
+          <circle cx="7" cy="7" r={s.r} fill={s.color} />
+        </svg>
+      ))}
+    </>
   );
 }
 
