@@ -89,12 +89,8 @@ export default defineBackground(() => {
     // alarms permission optional in some builds
   }
 
-  browser.runtime.onInstalled.addListener((details) => {
-    if (details.reason === "install") {
-      browser.tabs.create({
-        url: browser.runtime.getURL("/onboarding.html"),
-      });
-    }
+  browser.runtime.onInstalled.addListener(() => {
+    // Onboarding runs inline in the popup (360×520). No separate tab.
     void rebindFromState();
     void syncAdapters();
     void ensureCoachingSession();
