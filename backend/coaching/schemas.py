@@ -99,6 +99,12 @@ class ClassifyResponse(Contract):
     policy_status: str
     elapsed_ms: float
     ttl_ms: int = 30000
+    small_ok: Probability = 0.0
+    needs_big: Probability = 0.0
+    uncertain: Probability = 0.0
+    confidence: Probability = 0.0
+    jev_resolved_model: str | None = None
+    chalk_feature_group: str = "coaching.session_v2"
 
 
 class Decision(Contract):

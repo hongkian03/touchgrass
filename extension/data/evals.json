@@ -1,0 +1,38 @@
+{
+  "accuracy": null,
+  "_note": "accuracy is recomputed in tests; do not trust this field",
+  "rows": [
+    { "id": "e01", "prompt_text": "what is the capital of France", "kind": "text", "label": "small_ok" },
+    { "id": "e02", "prompt_text": "who is Ada Lovelace", "kind": "text", "label": "small_ok" },
+    { "id": "e03", "prompt_text": "weather in Seattle today", "kind": "text", "label": "small_ok" },
+    { "id": "e04", "prompt_text": "define polymorphism", "kind": "text", "label": "small_ok" },
+    { "id": "e05", "prompt_text": "translate good morning to Spanish", "kind": "text", "label": "small_ok" },
+    { "id": "e06", "prompt_text": "summarize the water cycle", "kind": "text", "label": "small_ok" },
+    { "id": "e07", "prompt_text": "what's the weather in Boston", "kind": "text", "label": "small_ok" },
+    { "id": "e08", "prompt_text": "what is HTTP status 404", "kind": "text", "label": "small_ok" },
+    { "id": "e09", "prompt_text": "a watercolor otter under rain", "kind": "image", "label": "needs_big" },
+    { "id": "e10", "prompt_text": "cinematic harbor at dusk drone", "kind": "video", "label": "needs_big" },
+
+    { "id": "h01", "prompt_text": "Refactor suspense boundaries for a concurrent React list", "kind": "text", "label": "needs_big" },
+    { "id": "h02", "prompt_text": "Design Raft log compaction across three availability zones", "kind": "text", "label": "needs_big" },
+    { "id": "h03", "prompt_text": "Derive the closed form for this recurrence T(n)=2T(n/2)+n", "kind": "text", "label": "needs_big" },
+    { "id": "h04", "prompt_text": "Implement flash-attention style tiling in CUDA for long context", "kind": "text", "label": "needs_big" },
+    { "id": "h05", "prompt_text": "Critique this authz middleware for confused-deputy bugs", "kind": "text", "label": "needs_big" },
+    { "id": "h06", "prompt_text": "Plan a zero-downtime Postgres major version upgrade path", "kind": "text", "label": "needs_big" },
+    { "id": "h07", "prompt_text": "Compare B-tree vs LSM tradeoffs for write-heavy telemetry", "kind": "text", "label": "needs_big" },
+    { "id": "h08", "prompt_text": "Sketch a type-safe RPC schema evolution strategy for mobile clients", "kind": "text", "label": "needs_big" },
+    { "id": "h09", "prompt_text": "Debug a heisenbug in a lock-free queue under ARM memory model", "kind": "text", "label": "needs_big" },
+    { "id": "h10", "prompt_text": "Propose SLO burn-alert thresholds for a multi-tenant API", "kind": "text", "label": "needs_big" },
+
+    { "id": "e11", "prompt_text": "who is the author of Frankenstein", "kind": "text", "label": "small_ok" },
+    { "id": "e12", "prompt_text": "define idempotent", "kind": "text", "label": "small_ok" },
+    { "id": "e13", "prompt_text": "Rewrite this 2k-line payment orchestrator with saga compensation and outbox", "kind": "text", "label": "needs_big" },
+    { "id": "e14", "prompt_text": "Build a formal verification sketch for this cryptographic handshake", "kind": "text", "label": "needs_big" },
+    { "id": "e15", "prompt_text": "what is a monad in one sentence", "kind": "text", "label": "small_ok" },
+    { "id": "e16", "prompt_text": "Architect an offline-first CRDT sync layer for collaborative docs", "kind": "text", "label": "needs_big" },
+    { "id": "e17", "prompt_text": "translate gracias to English", "kind": "text", "label": "small_ok" },
+    { "id": "e18", "prompt_text": "Tune JVM GC for a 64GB heap latency-sensitive trading service", "kind": "text", "label": "needs_big" },
+    { "id": "e19", "prompt_text": "summarize TLS handshake steps", "kind": "text", "label": "small_ok" },
+    { "id": "e20", "prompt_text": "Model Byzantine failure modes for a five-node quorum", "kind": "text", "label": "needs_big" }
+  ]
+}

@@ -1,0 +1,83 @@
+[
+  {
+    "id": "chatgpt",
+    "name": "ChatGPT",
+    "hosts": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+    "icon": "openai-chatgpt",
+    "defaultModel": "gpt-5",
+    "smallModel": "gpt-4o-mini",
+    "kind": "text"
+  },
+  {
+    "id": "claude",
+    "name": "Claude",
+    "hosts": ["https://claude.ai/*"],
+    "icon": "claude-ai",
+    "defaultModel": "claude-opus",
+    "smallModel": "claude-haiku",
+    "kind": "text"
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "hosts": ["https://gemini.google.com/*"],
+    "icon": "gemini",
+    "defaultModel": "gemini-pro",
+    "smallModel": "gemini-flash",
+    "kind": "text"
+  },
+  {
+    "id": "perplexity",
+    "name": "Perplexity",
+    "hosts": ["https://www.perplexity.ai/*"],
+    "icon": "perplexity-ai",
+    "defaultModel": "sonar-pro",
+    "smallModel": "sonar",
+    "kind": "text"
+  },
+  {
+    "id": "grok",
+    "name": "Grok",
+    "hosts": ["https://grok.com/*", "https://x.com/*"],
+    "icon": "grok-xai",
+    "defaultModel": "grok-3",
+    "smallModel": "grok-mini",
+    "kind": "text"
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "hosts": ["https://chat.deepseek.com/*"],
+    "icon": "deepseek",
+    "defaultModel": "deepseek-chat",
+    "smallModel": "deepseek-chat",
+    "kind": "text"
+  },
+  {
+    "id": "dalle",
+    "name": "DALL·E",
+    "hosts": ["https://chatgpt.com/*"],
+    "icon": "dall-e-openai",
+    "defaultModel": "dall-e-3",
+    "smallModel": "dall-e-3",
+    "kind": "image"
+  },
+  {
+    "id": "midjourney",
+    "name": "Midjourney",
+    "hosts": ["https://www.midjourney.com/*"],
+    "icon": "midjourney",
+    "defaultModel": "midjourney-v6",
+    "smallModel": "midjourney-v6",
+    "kind": "image"
+  },
+  {
+    "id": "flux",
+    "name": "Flux",
+    "hosts": ["https://playground.com/*"],
+    "icon": "flux",
+    "defaultModel": "flux-pro",
+    "smallModel": "flux-schnell",
+    "kind": "image"
+  }
+]

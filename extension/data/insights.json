@@ -1,0 +1,14 @@
+[
+  {
+    "id": "small-enough",
+    "text": "38% of your prompts were simple questions a small model could answer."
+  },
+  {
+    "id": "regenerates",
+    "text": "You regenerated the same answer 12 times yesterday."
+  },
+  {
+    "id": "video-vs-text",
+    "text": "One AI video uses about as much energy as hundreds of text prompts."
+  }
+]
