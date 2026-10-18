@@ -9,6 +9,17 @@ export type CoachMountOpts = {
   message: string;
   composer?: Element | null;
   target?: CoachTargetDisplay | null;
+  redirectMeta?: {
+    reason?: string | null;
+    fromPlatform?: string | null;
+    savedWh?: number | null;
+    savedCo2G?: number | null;
+    savedWaterMl?: number | null;
+    chalkPill?: string | null;
+    durationMs?: number;
+    onCancel?: () => void;
+    onHopNow?: () => void;
+  } | null;
   /** false = light DOM (fixture). true = Shadow DOM (live pages). */
   shadow?: boolean;
   actions?: {
@@ -16,6 +27,13 @@ export type CoachMountOpts = {
     onSendAnyway?: () => void;
     switchLabel?: string;
     badge?: string | null;
+    chalkMeta?: {
+      confidencePct?: number | null;
+      elapsedMs?: number | null;
+      policyVersion?: string | null;
+      savedWh?: number | null;
+      savedCo2G?: number | null;
+    } | null;
   } | null;
 };
 
@@ -48,6 +66,7 @@ export function mountCoach(opts: CoachMountOpts): HTMLElement {
     createElement(CoachOverlay, {
       message: opts.message,
       target: opts.target ?? null,
+      redirectMeta: opts.redirectMeta ?? null,
       actions: opts.actions ?? null,
     }),
   );
