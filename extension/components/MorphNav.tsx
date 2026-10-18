@@ -224,3 +224,60 @@ export function LocalShieldCartoon({ size = 40 }: { size?: number }) {
     </svg>
   );
 }
+
+/** Cute pastel cartoon AI platforms icon matching AccountCartoon / LocalShieldCartoon. */
+export function PlatformsCartoon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="30" fill="#fff3c4" />
+      <g className="ft-drop">
+        {/* 4-tile mini app grid */}
+        <rect
+          x="18"
+          y="18"
+          width="15"
+          height="15"
+          rx="4.5"
+          fill="#f5c400"
+          stroke="#8a5a00"
+          strokeWidth="1.5"
+        />
+        <rect
+          x="39"
+          y="18"
+          width="15"
+          height="15"
+          rx="4.5"
+          fill="#2ba4e0"
+          stroke="#0b4f74"
+          strokeWidth="1.5"
+        />
+        <rect
+          x="18"
+          y="39"
+          width="15"
+          height="15"
+          rx="4.5"
+          fill="#5cb85c"
+          stroke="#2d5a27"
+          strokeWidth="1.5"
+        />
+        <rect
+          x="39"
+          y="39"
+          width="15"
+          height="15"
+          rx="4.5"
+          fill="#ffffff"
+          stroke="#8a5a00"
+          strokeWidth="1.5"
+        />
+        {/* Cute sparkle in the 4th tile */}
+        <path
+          d="M46.5 42.5 L48 45.5 L51 46.5 L48 47.5 L46.5 50.5 L45 47.5 L42 46.5 L45 45.5 Z"
+          fill="#f5c400"
+        />
+      </g>
+    </svg>
+  );
+}
