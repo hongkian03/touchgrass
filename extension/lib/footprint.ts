@@ -99,6 +99,26 @@ export const FOOTPRINT_MODELS: Record<string, FootprintModel> = {
   "video-gen": model(UNPUBLISHED_MIDPOINT, VIDEO_MULTIPLIER),
 };
 
+/**
+ * Widely cited estimate (Arbor Day Foundation; European Environment Agency):
+ * one mature tree absorbs about 48 lb ≈ 22 kg CO2 a year. Real trees vary a lot
+ * by species, age and climate.
+ */
+export const TREE_CO2_G_PER_YEAR = 22_000;
+const MINUTES_PER_YEAR = 365 * 24 * 60;
+
+/**
+ * "Tree-minutes": how long one mature tree takes to absorb this much CO2.
+ * A whole-tree count would read 0.0 at real per-prompt numbers.
+ */
+export function treeMinutesFromCo2G(co2_g: number): number {
+  if (co2_g <= 0) return 0;
+  return co2_g / (TREE_CO2_G_PER_YEAR / MINUTES_PER_YEAR);
+}
+
+export const TREE_SOURCE_NOTE =
+  "Tree-minutes: how long one mature tree takes to absorb the CO₂e you saved by using smaller models. Assumes ~22 kg CO₂ per tree per year (widely cited Arbor Day Foundation figure); small models assumed to cost 25% of the big one.";
+
 /** One line for UI hints and the passport. */
 export const FOOTPRINT_SOURCE_NOTE =
   "Estimates: Google Gemini median prompt (Aug 2025), OpenAI ChatGPT average (Jun 2025); other AIs use the midpoint. Small models, images and video use assumed multipliers.";

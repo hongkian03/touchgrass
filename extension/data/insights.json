@@ -1,11 +1,11 @@
 [
   {
     "id": "small-enough",
-    "text": "38% of your prompts were simple questions a small model could answer."
+    "text": "Share of your prompts that were simple questions a small model could answer."
   },
   {
     "id": "regenerates",
-    "text": "You regenerated the same answer 12 times yesterday."
+    "text": "Answers you regenerated in this range."
   },
   {
     "id": "video-vs-text",

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import platformsData from "../data/platforms.json";
+import { FOOTPRINT_MODELS } from "../lib/footprint";
 import {
+  CHECK_IN_EVERY,
   MAX_PREFILL_CHARS,
+  greenerAlternative,
+  isCheckInDue,
+  isOnBigModel,
   prefillUrl,
   shouldOfferChoice,
   switchModelHere,
@@ -91,5 +96,67 @@ describe("switchModelHere", () => {
 
   it("no model button → no_menu", async () => {
     expect(await switchModelHere(null)).toBe("no_menu");
+  });
+});
+
+describe("check-ins every 5 big-model prompts", () => {
+  it("due on 5, 10, 15 — not on 0 or in between", () => {
+    expect(CHECK_IN_EVERY).toBe(5);
+    expect([0, 1, 4, 5, 6, 10, 15].map(isCheckInDue)).toEqual([
+      false, false, false, true, false, true, true,
+    ]);
+  });
+
+  it("big model = site default with a smaller option", () => {
+    expect(isOnBigModel(chatgpt, "gpt-5")).toBe(true);
+    expect(isOnBigModel(chatgpt, "gpt-4o-mini")).toBe(false);
+    expect(isOnBigModel(dalle, "dall-e-3")).toBe(false);
+  });
+
+  it("picks the LOWEST-power model across all selected AIs", () => {
+    // Lightest models: Flash 0.06, Haiku 0.0725, GPT-4o mini 0.085, DeepSeek 0.29
+    const alt = greenerAlternative({
+      enabledPlatforms: ["chatgpt", "claude", "gemini", "deepseek"],
+      platforms,
+      currentId: "chatgpt",
+      currentModel: "gpt-5",
+      models: FOOTPRINT_MODELS,
+    });
+    expect(alt).toMatchObject({ id: "gemini", model: "gemini-flash", modelLabel: "Flash" });
+    expect(alt?.savedWh).toBeCloseTo(0.34 - 0.06);
+  });
+
+  it("DeepSeek, Claude, ChatGPT on ChatGPT → Claude Haiku (DeepSeek has no lighter model)", () => {
+    const alt = greenerAlternative({
+      enabledPlatforms: ["deepseek", "claude", "chatgpt"],
+      platforms,
+      currentId: "chatgpt",
+      currentModel: "gpt-5",
+      models: FOOTPRINT_MODELS,
+    });
+    expect(alt).toMatchObject({ id: "claude", model: "claude-haiku" });
+  });
+
+  it("DeepSeek is eligible when it's the lightest selected", () => {
+    const alt = greenerAlternative({
+      enabledPlatforms: ["chatgpt", "deepseek"],
+      platforms,
+      currentId: "chatgpt",
+      currentModel: "gpt-5",
+      models: FOOTPRINT_MODELS,
+    });
+    expect(alt?.id).toBe("deepseek");
+  });
+
+  it("nothing lighter than the model in use → null", () => {
+    expect(
+      greenerAlternative({
+        enabledPlatforms: ["gemini", "deepseek"],
+        platforms,
+        currentId: "gemini",
+        currentModel: "gemini-flash",
+        models: FOOTPRINT_MODELS,
+      }),
+    ).toBeNull();
   });
 });

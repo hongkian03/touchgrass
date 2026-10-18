@@ -2,12 +2,16 @@ import platformsData from "../data/platforms.json";
 import {
   missingSelectorKeys,
   queryBySelector,
+  snapshotHtml,
   type SiteAdapter,
 } from "./adapter";
 import { bgBackend } from "./backendBridge";
 import { readBackendConfig } from "./backendClient";
 import { COACH_TYPE_DEBOUNCE_MS, shouldShowCoach } from "./coach";
 import {
+  greenerAlternative,
+  isCheckInDue,
+  isOnBigModel,
   prefillUrl,
   shouldOfferChoice,
   switchModelHere,
@@ -15,19 +19,19 @@ import {
 } from "./coachChoice";
 import { mountCoach, unmountCoach } from "./coachMount";
 import { scrapeRecentMessages } from "./coachYes";
-import { coachTargetDisplay } from "./coachTargetDisplay";
 import {
   DraftCoach,
   type CoachClassifyResponse,
   type CoachDraft,
 } from "./draftCoach";
 import { draftFrom, findComposer } from "./findComposer";
-import { pickEnabledAlternate, providerFromHostname } from "./route";
+import { providerFromHostname } from "./route";
 import { FOOTPRINT_MODELS } from "./footprint";
 import { resolveActiveSite } from "./siteDetect";
 import {
   appendCoachChoice,
   appendUsage,
+  bumpBigModelStreak,
   isExtensionContextAlive,
   isExtensionContextError,
   isExtensionStorageAlive,
@@ -99,6 +103,7 @@ const CHALK_EVENT: Record<CoachChoice, string> = {
   switch_here: "switch_clicked",
   open_other: "sent_with_target",
   send_anyway: "sent_anyway",
+  not_now: "dismissed",
 };
 
 function uuid(): string {
@@ -131,7 +136,7 @@ function findSendButton(from: Element | null): Element | null {
 
 type Offer = {
   text: string;
-  timing: "before_send" | "after_send";
+  timing: "before_send" | "after_send" | "check_in";
   chalk: CoachClassifyResponse | null;
 };
 
@@ -292,7 +297,7 @@ export function startCoachWatch(): void {
           site: adapter.site,
           failed_keys: missing,
           adapter_version: adapter.version,
-          snapshot_html: document.documentElement.outerHTML.slice(0, 200_000),
+          snapshot_html: snapshotHtml(document.documentElement.outerHTML),
           adapter,
           expected_prompt: (() => {
             const c = composerForSite();
@@ -403,12 +408,15 @@ export function startCoachWatch(): void {
     if (!site || !platform) return;
 
     const state = await readState();
-    const alt = pickEnabledAlternate({
+    // Lowest-power model across the user's other selected AIs
+    const alt = greenerAlternative({
       enabledPlatforms: state.enabledPlatforms,
       platforms,
-      excludeProvider: site,
+      currentId: site,
+      currentModel: footprintModelFor(platform),
+      models: footprintModels,
     });
-    const altName = alt ? coachTargetDisplay(alt.url, platforms).name : null;
+    const altName = alt ? `${alt.name} (${alt.modelLabel})` : null;
     const saved = estimateHopSavings(site, site);
 
     offer = { text, timing, chalk };
@@ -486,7 +494,10 @@ export function startCoachWatch(): void {
                           target: alt.id,
                           outcome: "prefilled",
                         });
-                        noteThenClose(render, `Opened ${altName} with your prompt.`);
+                        noteThenClose(
+                          render,
+                          `Opened ${alt.name} with your prompt. Pick ${alt.modelLabel} there.`,
+                        );
                         return;
                       }
                       let copied = false;
@@ -504,7 +515,7 @@ export function startCoachWatch(): void {
                       noteThenClose(
                         render,
                         copied
-                          ? "Prompt copied, paste it there."
+                          ? `Prompt copied, paste it there and pick ${alt.modelLabel}.`
                           : "Couldn't copy. Select your prompt and copy it.",
                       );
                     })(),
@@ -529,6 +540,83 @@ export function startCoachWatch(): void {
 
     render();
     console.log(`[Touchgrass] coach offer (${timing}${chalk ? ", chalk" : ""})`);
+  };
+
+  /** Every 5th prompt in a row on a big model (CHECK_IN_EVERY): "have you switched?" */
+  const showCheckIn = async (streak: number) => {
+    if (!contextOk() || !isExtensionStorageAlive()) return;
+    const site = await ensureSite();
+    const platform = platforms.find((p) => p.id === site);
+    if (!site || !platform) return;
+
+    const state = await readState();
+    const alt = greenerAlternative({
+      enabledPlatforms: state.enabledPlatforms,
+      platforms,
+      currentId: site,
+      currentModel: footprintModelFor(platform),
+      models: footprintModels,
+    });
+    const saved = estimateHopSavings(site, site);
+
+    offer = { text: "", timing: "check_in", chalk: null };
+    await writeState({ lastCoachAt: Date.now() });
+
+    const smaller =
+      saved.savedWh > 0
+        ? ` A smaller model here uses ≈${saved.savedWh.toFixed(2)} Wh less per prompt (est.).`
+        : "";
+    const greener = alt
+      ? ` The lightest model in your AIs is ${alt.name} ${alt.modelLabel}: ≈${alt.savedWh.toFixed(2)} Wh less per prompt (est.).`
+      : "";
+    const message = `Check-in: ${streak} prompts in a row on ${platform.name}'s big model. Have you switched to a smaller model?${smaller}${greener}`;
+
+    const render = (note: string | null = null) => {
+      mountCoach({
+        shadow: true,
+        message,
+        actions: {
+          note,
+          switchLabel: "Switch to a smaller model here",
+          onSwitch: () => {
+            swallow(
+              (async () => {
+                const outcome = await switchModelHere(modelLabelEl());
+                recordChoice("switch_here", "button", { outcome });
+                if (outcome === "picked") swallow(bumpBigModelStreak(site, false));
+                noteThenClose(
+                  render,
+                  outcome === "picked"
+                    ? "Switched to a smaller model."
+                    : outcome === "menu_open"
+                      ? "Pick a smaller model (mini, Haiku, Flash) in the menu."
+                      : "Couldn't find the model menu here. Pick a smaller model yourself.",
+                );
+              })(),
+            );
+          },
+          openOtherLabel: alt ? `Switch to ${alt.name} (${alt.modelLabel})` : undefined,
+          onOpenOther: alt
+            ? () => {
+                window.open(alt.url, "_blank", "noopener");
+                recordChoice("open_other", "button", {
+                  target: alt.id,
+                  outcome: "opened",
+                });
+                noteThenClose(render, `Opened ${alt.name}. Pick ${alt.modelLabel} there.`);
+              }
+            : undefined,
+          sendAnywayLabel: "Not now",
+          onSendAnyway: () => {
+            recordChoice("not_now", "button");
+            closeOffer();
+          },
+        },
+      });
+    };
+
+    render();
+    console.log(`[Touchgrass] check-in after ${streak} big-model prompts`);
   };
 
   // ---- Chalk (backend) classify: feeds the same toast ----------------------
@@ -674,24 +762,35 @@ export function startCoachWatch(): void {
 
     const shown = offer;
     if (shown) {
-      // Sent with the toast up and no button picked → counts as send anyway
+      // Sent with the toast up and no button picked
       if (shown.timing === "before_send") recordChoice("send_anyway", "send");
+      if (shown.timing === "check_in") recordChoice("not_now", "send");
       closeOffer();
     }
     chalkCoach.onSend();
 
-    if (shown || !text || text === lastOfferedText) return;
-    if (!offerable(text)) return;
-    window.setTimeout(() => {
-      swallow(
-        (async () => {
-          if (offer || !isExtensionStorageAlive()) return;
-          const state = await readState();
-          if (!shouldShowCoach(state.lastCoachAt)) return;
-          await showChoice(text, "after_send", null);
-        })(),
-      );
-    }, AFTER_SEND_DELAY_MS);
+    const platform = currentPlatform();
+    if (!platform || !text) return;
+    const onBig = isOnBigModel(platform, footprintModelFor(platform));
+    const site = platform.id;
+    const offerAfter = !shown && text !== lastOfferedText && offerable(text);
+    swallow(
+      (async () => {
+        // Persistent check-in beats the one-off simple-ask toast
+        const streak = await bumpBigModelStreak(site, onBig);
+        const due = isCheckInDue(streak);
+        if (!due && !offerAfter) return;
+        await new Promise((r) => window.setTimeout(r, AFTER_SEND_DELAY_MS));
+        if (offer || !isExtensionStorageAlive()) return;
+        if (due) {
+          await showCheckIn(streak);
+          return;
+        }
+        const state = await readState();
+        if (!shouldShowCoach(state.lastCoachAt)) return;
+        await showChoice(text, "after_send", null);
+      })(),
+    );
   };
 
   const bindSend = () => {
@@ -736,6 +835,8 @@ export function startCoachWatch(): void {
     await ensureSite();
 
     const text = draftFrom(composer).trim();
+    // Don't replace a check-in with a typing toast
+    if (offer?.timing === "check_in") return;
     if (offer && offer.timing === "before_send" && offer.text !== text) {
       // Draft changed under the toast: drop it, re-evaluate below
       closeOffer();

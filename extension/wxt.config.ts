@@ -12,11 +12,14 @@ const OPTIONAL_HOSTS = [
 ];
 
 export default defineConfig({
-  modules: ["@wxt-dev/module-react"],
+  modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
+  // Regenerates every toolbar icon size from the repo-root logo on each build.
+  autoIcons: { baseIconPath: "../logo.png" },
   manifest: {
     name: "Touchgrass",
     description: "Track AI usage. Coach before you waste a prompt.",
-    permissions: ["storage", "tabs", "scripting", "alarms"],
+    // activeTab: inject the floating panel into the tab whose toolbar icon was clicked
+    permissions: ["storage", "tabs", "scripting", "alarms", "activeTab"],
     // Active at install: Groq + local PromptPrint API. AI sites opted in at onboarding.
     host_permissions: [
       "https://api.groq.com/*",
@@ -27,7 +30,7 @@ export default defineConfig({
     // Toast on Claude/etc. loads gemini.svg via chrome-extension:// URL
     web_accessible_resources: [
       {
-        resources: ["icons/*"],
+        resources: ["icons/*", "fonts/*"],
         matches: ["<all_urls>"],
       },
     ],
@@ -50,10 +53,14 @@ export default defineConfig({
       manifest.optional_host_permissions = OPTIONAL_HOSTS;
       manifest.web_accessible_resources = [
         {
-          resources: ["icons/*"],
+          // popup.html is framed by the floating panel on web pages
+          resources: ["icons/*", "fonts/*", "popup.html"],
           matches: ["<all_urls>"],
         },
       ];
+      // Toolbar click opens the floating panel (action.onClicked), so no default
+      // popup; background falls back to the popup on Chrome-protected pages.
+      if (manifest.action) delete manifest.action.default_popup;
       if (!manifest.content_scripts?.length) {
         const matches = [
           ...new Set(

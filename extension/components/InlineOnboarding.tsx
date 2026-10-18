@@ -15,10 +15,10 @@ import {
 import { AccountCartoon, LocalShieldCartoon } from "./MorphNav";
 import { PlatformGrid, buildPlatformGridItems } from "./PlatformGrid";
 import { Pip } from "./Pip";
+import { Wordmark } from "./Wordmark";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import platformsData from "../data/platforms.json";
-import usageSeed from "../data/usage-seed.json";
 import {
   canContinueOnboarding,
   customPlatformId,
@@ -29,9 +29,9 @@ import {
 } from "../lib/hosts";
 import type { AiSiteVerdict } from "../lib/groqClassify";
 import { score } from "../lib/score";
-import { writeState, type PuddleState } from "../lib/storage";
+import { readState, writeState, type PuddleState } from "../lib/storage";
 import { computeStreak } from "../lib/streak";
-import type { Platform, UsageRow } from "../lib/types";
+import type { Platform } from "../lib/types";
 
 const platforms = platformsData as Platform[];
 
@@ -118,14 +118,8 @@ export function InlineOnboarding({ onComplete }: Props) {
     setError(null);
     const origins = hostsForPlatforms(selected, platforms);
     try {
-      if (origins.length > 0) {
-        try {
-          await browser.permissions.request({ origins });
-        } catch {
-          // Custom sites may be outside the optional list.
-        }
-      }
-      const usage = usageSeed as UsageRow[];
+      // Keep real history (re-onboarding) and never seed demo rows into it
+      const usage = (await readState()).usage;
       const today = new Date();
       const dayScore = score(usage, today, platforms);
       const streak = computeStreak(usage, today, platforms);
@@ -138,7 +132,16 @@ export function InlineOnboarding({ onComplete }: Props) {
         streak,
         lastCoachAt: 0,
       };
+      // Save BEFORE the permission prompt: Chrome's dialog closes the popup,
+      // which killed this function and made setup run twice.
       await writeState(next);
+      if (origins.length > 0) {
+        try {
+          await browser.permissions.request({ origins });
+        } catch {
+          // Custom sites may be outside the optional list.
+        }
+      }
       try {
         await browser.runtime.sendMessage({
           type: "puddle/coach-rebind",
@@ -160,6 +163,8 @@ export function InlineOnboarding({ onComplete }: Props) {
       data-step={step}
       className="relative flex h-full min-h-0 flex-col gap-2.5 overflow-hidden"
     >
+      <Wordmark />
+
       {step === 2 ? (
         <div className="pip-peek pip-peek--popup" aria-hidden="true">
           <Pip size={68} variant="sticker" pose="search" tilt={-6} />
@@ -170,13 +175,7 @@ export function InlineOnboarding({ onComplete }: Props) {
         className={`relative z-10 jt-drop-in ${step === 2 ? "pr-16" : ""}`}
         style={{ ["--jt-delay" as string]: "0ms" } as CSSProperties}
       >
-        <h1
-          data-testid="puddle-title"
-          className="font-brand m-0 text-2xl font-semibold tracking-tight"
-        >
-          Touchgrass
-        </h1>
-        <p className="m-0 mt-0.5 text-xs text-muted-foreground">
+        <p className="m-0 text-xs text-muted-foreground">
           {step === 1
             ? trimmedName
               ? `Nice to meet you, ${trimmedName}!`
@@ -208,7 +207,7 @@ export function InlineOnboarding({ onComplete }: Props) {
             <div
               data-testid="onboarding-hero-stage"
               className="jt-stage-card relative flex min-h-[126px] items-center justify-center overflow-hidden rounded-2xl px-3 pt-2 pb-4"
-              style={{ background: "#e8f6df" }}
+              style={{ background: "var(--tg-green-soft)" }}
             >
               <div className="jt-grass-rise pointer-events-none absolute inset-x-0 bottom-0">
                 <GrassWave />
@@ -241,17 +240,17 @@ export function InlineOnboarding({ onComplete }: Props) {
 
           {/* Account Name Input Card — docks up after hero settles */}
           <div
-            className="jt-slot-up flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5"
+            className="jt-slot-up flex items-center gap-3 rounded-xl border border-border bg-white px-3 py-3"
             style={{ ["--jt-delay" as string]: "480ms" } as CSSProperties}
           >
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "#e7f6ff" }}
+              className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-lg"
+              style={{ background: "var(--tg-blue)" }}
             >
               <AccountCartoon size={36} />
             </div>
-            <label className="min-w-0 flex-1">
-              <span className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+            <label className="flex min-w-0 flex-1 flex-col justify-center">
+              <span className="mb-1.5 block text-[11px] font-semibold leading-none text-muted-foreground">
                 Your name
               </span>
               <Input
@@ -343,7 +342,7 @@ export function InlineOnboarding({ onComplete }: Props) {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-2">
           <InfoCard
             choreo="left"
-            wash="#e8f6df"
+            wash="var(--tg-green-soft)"
             icon={<LocalShieldCartoon size={36} />}
           >
             <p className="m-0 text-xs font-semibold leading-snug">
@@ -355,7 +354,7 @@ export function InlineOnboarding({ onComplete }: Props) {
           </InfoCard>
           <InfoCard
             choreo="right"
-            wash="#e7f6ff"
+            wash="var(--tg-blue)"
             testId="onboarding-auto-coach"
             icon={<AccountCartoon size={36} />}
           >
@@ -363,7 +362,7 @@ export function InlineOnboarding({ onComplete }: Props) {
               Easy asks switch to a lighter model.
             </p>
             <p className="m-0 mt-0.5 text-[11px] leading-snug text-muted-foreground">
-              If another chat site is needed, Touchgrass opens that tab and
+              If another chat site is needed, touchgrass opens that tab and
               pastes your prompt.
             </p>
           </InfoCard>
@@ -626,7 +625,7 @@ const ECO_SATELLITES: Array<{
     toX: "-96px",
     toY: "-22px",
     delay: "120ms",
-    wash: "#fff8dc",
+    wash: "var(--tg-yellow)",
     node: <EnergyBolt size={28} />,
   },
   {
@@ -637,7 +636,7 @@ const ECO_SATELLITES: Array<{
     toX: "96px",
     toY: "-22px",
     delay: "180ms",
-    wash: "#e7f6ff",
+    wash: "var(--tg-blue)",
     node: <WaterDrop size={28} />,
   },
   {
@@ -648,7 +647,7 @@ const ECO_SATELLITES: Array<{
     toX: "-88px",
     toY: "20px",
     delay: "240ms",
-    wash: "#eef1f4",
+    wash: "var(--tg-pink)",
     node: <Co2Cloud size={28} />,
   },
   {
@@ -659,7 +658,7 @@ const ECO_SATELLITES: Array<{
     toX: "88px",
     toY: "20px",
     delay: "300ms",
-    wash: "#f4fbf0",
+    wash: "var(--tg-green-soft)",
     node: <TreeGrove size={28} count={1} />,
   },
 ];

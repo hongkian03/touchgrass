@@ -9,22 +9,33 @@ import { AchievementReportModal } from "../../components/AchievementReportModal"
 import {
   Co2Cloud,
   EnergyBolt,
+  TreeGrove,
   WaterDrop,
 } from "../../components/FootprintCartoons";
+import {
+  InkDefs,
+  PAPER,
+  ROUGH,
+  ink,
+  paper,
+} from "../../components/FootprintCartoons";
 import { InlineOnboarding } from "../../components/InlineOnboarding";
+import { Wordmark } from "../../components/Wordmark";
 import { MorphNav, GearIcon, type MorphTab } from "../../components/MorphNav";
 import { Pip } from "../../components/Pip";
 import { CountUp, ScoreCountUp } from "../../components/ScoreCountUp";
 import { PlatformsPane, SettingsPane } from "../../components/SettingsPane";
 import { StreakFlame } from "../../components/StreakFlame";
 import { Button } from "../../components/ui/button";
-import coachCopy from "../../data/coach-copy.json";
 import insights from "../../data/insights.json";
 import platformsData from "../../data/platforms.json";
-import usageSeed from "../../data/usage-seed.json";
 import { bgBackend } from "../../lib/backendBridge";
 import { classify } from "../../lib/classify";
-import { POPUP_HEIGHT, POPUP_WIDTH } from "../../lib/layout";
+import {
+  ONBOARDING_POPUP_HEIGHT,
+  POPUP_HEIGHT,
+  POPUP_WIDTH,
+} from "../../lib/layout";
 import type { ReportCardData } from "../../lib/reportCard";
 import {
   daySavings,
@@ -40,10 +51,16 @@ import {
   type PuddleState,
 } from "../../lib/storage";
 import { computeStreak } from "../../lib/streak";
-import { FOOTPRINT_MODELS, FOOTPRINT_SOURCE_NOTE } from "../../lib/footprint";
+import {
+  FOOTPRINT_MODELS,
+  FOOTPRINT_SOURCE_NOTE,
+  TREE_SOURCE_NOTE,
+  treeMinutesFromCo2G,
+} from "../../lib/footprint";
+import { projectTotals } from "../../lib/projection";
 import { dayTotals } from "../../lib/totals";
 import { monthTotals, weekTotals } from "../../lib/weekTotals";
-import type { Platform, UsageRow } from "../../lib/types";
+import type { Platform } from "../../lib/types";
 
 const platforms = platformsData as Platform[];
 const models = FOOTPRINT_MODELS;
@@ -76,8 +93,21 @@ export function PopupApp() {
     document.body.style.overflow = "hidden";
     document.body.style.margin = "0";
     document.body.style.width = `${POPUP_WIDTH}px`;
-    document.body.style.height = `${POPUP_HEIGHT}px`;
   }, []);
+
+  // Setup screens are shorter; Chrome's popup and the floating panel follow
+  const shellHeight =
+    ready && !state.onboarded ? ONBOARDING_POPUP_HEIGHT : POPUP_HEIGHT;
+  useEffect(() => {
+    document.body.style.height = `${shellHeight}px`;
+    if (window.parent !== window) {
+      // Only a number; the panel checks the message came from its own frame
+      window.parent.postMessage(
+        { type: "touchgrass/size", height: shellHeight },
+        "*",
+      );
+    }
+  }, [shellHeight]);
 
   useEffect(() => {
     void (async () => {
@@ -89,8 +119,8 @@ export function PopupApp() {
           return;
         }
         const today = new Date();
-        const usage =
-          s.usage.length > 0 ? s.usage : (usageSeed as UsageRow[]);
+        // Real history only: an empty range shows zeros, never demo rows
+        const usage = s.usage;
         setState({
           ...s,
           onboarded: true,
@@ -127,21 +157,29 @@ export function PopupApp() {
   }, [state.onboarded]);
 
   const today = new Date();
+  // Week/month: scaled from the daily average until there's a full window of history
   const byPeriod = {
     day: {
-      totals: { ...dayTotals(state.usage, today, models), days: 1 },
+      totals: {
+        ...dayTotals(state.usage, today, models),
+        days: 1,
+        projected: false,
+        basisDays: 1,
+      },
       savedCo2G: daySavings(state.usage, today, platforms, models).co2_g,
     },
     week: {
-      totals: weekTotals(state.usage, today, models),
-      savedCo2G: weekSavings(state.usage, today, platforms, models).co2_g,
+      totals: projectTotals(weekTotals(state.usage, today, models), state.usage, today, 7),
+      savedCo2G: projectTotals(weekSavings(state.usage, today, platforms, models), state.usage, today, 7).co2_g,
     },
     month: {
-      totals: monthTotals(state.usage, today, models),
-      savedCo2G: monthSavings(state.usage, today, platforms, models).co2_g,
+      totals: projectTotals(monthTotals(state.usage, today, models), state.usage, today, 30),
+      savedCo2G: projectTotals(monthSavings(state.usage, today, platforms, models), state.usage, today, 30).co2_g,
     },
   };
   const { totals, savedCo2G } = byPeriod[period];
+  const estTag = totals.projected ? "(projected)" : "(est.)";
+  const treeMinutes = treeMinutesFromCo2G(savedCo2G);
   const windowDays = period === "day" ? 1 : period === "week" ? 7 : 30;
   const inRange = new Set(lastNDays(today, windowDays));
   const slice = state.usage.filter((r) =>
@@ -165,11 +203,12 @@ export function PopupApp() {
     switch_here: choiceSlice.filter((c) => c.choice === "switch_here").length,
     open_other: choiceSlice.filter((c) => c.choice === "open_other").length,
     send_anyway: choiceSlice.filter((c) => c.choice === "send_anyway").length,
+    not_now: choiceSlice.filter((c) => c.choice === "not_now").length,
   };
   const tip =
     slice.length === 0
-      ? (insights[0]?.text ?? coachCopy.oversized)
-      : `${smallPct}% of your prompts were simple questions a small model could answer.`;
+      ? "No prompts recorded in this range yet. Send one on an AI site you picked in setup."
+      : `${smallPct}% of your ${slice.length} ${slice.length === 1 ? "prompt was a simple question" : "prompts were simple questions"} a small model could answer.`;
 
   const reportData: ReportCardData = useMemo(() => {
     const names = state.enabledPlatforms.map((id) => {
@@ -183,6 +222,7 @@ export function PopupApp() {
       score: state.score,
       streak: state.streak,
       co2SavedG: savedCo2G,
+      treeMinutes,
       smallPct,
       energyWh: totals.Wh,
       waterL: totals.water_L,
@@ -200,6 +240,7 @@ export function PopupApp() {
     state.streak,
     state.enabledPlatforms,
     savedCo2G,
+    treeMinutes,
     smallPct,
     totals.Wh,
     totals.water_L,
@@ -209,7 +250,7 @@ export function PopupApp() {
 
   const shell = {
     width: POPUP_WIDTH,
-    height: POPUP_HEIGHT,
+    height: shellHeight,
   } as const;
 
   if (!ready) {
@@ -263,6 +304,7 @@ export function PopupApp() {
       ].join(" ")}
       style={shell}
     >
+      <Wordmark />
       {screen === "home" ? (
         <>
           <ScoreHero
@@ -272,52 +314,57 @@ export function PopupApp() {
           />
 
           <PeriodSwitch period={period} onChange={setPeriod} />
-          <PeriodMeta period={period} days={totals.days} />
+          <PeriodMeta
+            period={period}
+            days={totals.days}
+            prompts={slice.length}
+            projectedFrom={totals.projected ? totals.basisDays : null}
+          />
 
           <div className="grid grid-cols-2 gap-2" data-testid="footprint-ticks">
             <CartoonTick
-              label="power used (est.)"
+              label={`power used ${estTag}`}
               hint={`Estimated electricity these prompts used, in watt-hours. ${FOOTPRINT_SOURCE_NOTE}`}
               value={totals.Wh}
               decimals={2}
               suffix=" Wh"
               testId="tick-energy"
-              wash="#fff8dc"
+              wash="var(--tg-yellow)"
             >
               <EnergyBolt size={56} />
             </CartoonTick>
             <CartoonTick
-              label="water used (est.)"
+              label={`water used ${estTag}`}
               hint={`Estimated water for server cooling and power, in millilitres. ${FOOTPRINT_SOURCE_NOTE}`}
               value={totals.water_L * 1000}
               decimals={1}
               suffix=" mL"
               testId="tick-water"
-              wash="#e7f6ff"
+              wash="var(--tg-blue)"
             >
               <WaterDrop size={56} />
             </CartoonTick>
             <CartoonTick
-              label="carbon out (est.)"
+              label={`carbon out ${estTag}`}
               hint={`Estimated CO₂e from the power those prompts used, in grams. ${FOOTPRINT_SOURCE_NOTE}`}
               value={totals.co2_g}
               decimals={2}
               suffix=" g"
               testId="tick-co2"
-              wash="#eef1f4"
+              wash="var(--tg-pink)"
             >
               <Co2Cloud size={56} />
             </CartoonTick>
             <CartoonTick
-              label="CO₂ saved (est.)"
-              hint="Estimated CO₂e you avoided by using a smaller model (mini, Haiku, Flash) instead of this site's big default. Small models are assumed to cost 25% of the big one; no provider publishes per-model figures."
-              value={savedCo2G}
-              decimals={2}
-              suffix=" g"
-              testId="tick-co2-saved"
-              wash="#e8f6df"
+              label={`trees ${estTag}`}
+              hint={`${TREE_SOURCE_NOTE} You saved ≈${savedCo2G.toFixed(2)} g CO₂e.`}
+              value={treeMinutes}
+              decimals={1}
+              suffix=" tree-min"
+              testId="tick-trees"
+              wash="var(--tg-green)"
             >
-              <MiniModel size={56} />
+              <TreeGrove size={56} count={Math.min(5, Math.max(1, Math.ceil(treeMinutes / 10)))} />
             </CartoonTick>
           </div>
 
@@ -370,7 +417,12 @@ export function PopupApp() {
           {screen === "insights" ? (
             <>
               <PeriodSwitch period={period} onChange={setPeriod} />
-              <PeriodMeta period={period} days={totals.days} />
+              <PeriodMeta
+                period={period}
+                days={totals.days}
+                prompts={slice.length}
+                projectedFrom={totals.projected ? totals.basisDays : null}
+              />
 
               <ul
                 data-testid="more-insights"
@@ -382,8 +434,7 @@ export function PopupApp() {
                     index={noteIdx}
                     testId={`insight-${tipCard.id}`}
                     badge="chalk"
-                    wash="#e7f6ff"
-                    accent="#2ba4e0"
+                    wash="var(--tg-blue)"
                     icon={<MixBubble size={36} />}
                     text={tipCard.text}
                   />
@@ -397,8 +448,7 @@ export function PopupApp() {
                         index={index}
                         testId={`insight-${i.id}`}
                         badge={`${smallPct}%`}
-                        wash="#e8f6df"
-                        accent="#5cb85c"
+                        wash="var(--tg-green)"
                         icon={<MiniModel size={36} />}
                         text="of your prompts were simple questions a small model could answer."
                       />
@@ -411,8 +461,7 @@ export function PopupApp() {
                         index={index}
                         testId={`insight-${i.id}`}
                         badge={`${regen}×`}
-                        wash="#fff8dc"
-                        accent="#f5c400"
+                        wash="var(--tg-yellow)"
                         icon={<RegenSpin size={36} />}
                         text={
                           regen === 0
@@ -431,8 +480,7 @@ export function PopupApp() {
                         index={index}
                         testId={`insight-${i.id}`}
                         badge={`${videos}×`}
-                        wash="#eef1f4"
-                        accent="#8e99a4"
+                        wash="var(--tg-pink)"
                         icon={<MixClapper size={36} />}
                         text={
                           videos === 0
@@ -450,8 +498,7 @@ export function PopupApp() {
                       index={index}
                       testId={`insight-${i.id}`}
                       badge="tip"
-                      wash="#f4f4f5"
-                      accent="#1b4965"
+                      wash="var(--tg-card)"
                       icon={<MixBubble size={36} />}
                       text={i.text}
                     />
@@ -463,10 +510,9 @@ export function PopupApp() {
                     index={chalkTips.length + insights.length + 1}
                     testId="insight-coach-choices"
                     badge={String(choiceSlice.length)}
-                    wash="#e8f6df"
-                    accent="#5cb85c"
+                    wash="var(--tg-green)"
                     icon={<MiniModel size={36} />}
-                    text={`coach picks: ${choiceCounts.switch_here} switched here, ${choiceCounts.open_other} opened elsewhere, ${choiceCounts.send_anyway} sent anyway.`}
+                    text={`coach picks: ${choiceCounts.switch_here} switched here, ${choiceCounts.open_other} opened elsewhere, ${choiceCounts.send_anyway} sent anyway, ${choiceCounts.not_now} not now.`}
                   />
                 ) : null}
                 {images > 0 ? (
@@ -474,8 +520,7 @@ export function PopupApp() {
                     key="image-jobs"
                     index={chalkTips.length + insights.length}
                     badge={String(images)}
-                    wash="#e7f6ff"
-                    accent="#2ba4e0"
+                    wash="var(--tg-blue)"
                     icon={<MixFrame size={36} />}
                     text={
                       images === 1
@@ -528,13 +573,13 @@ function ScoreHero({
 }) {
   const clamped = Math.max(0, Math.min(100, val));
   const turf =
-    clamped >= 70 ? "#5cb85c" : clamped >= 45 ? "#7ec850" : "#b8a868";
+    clamped >= 45 ? "var(--tg-green)" : "var(--tg-yellow-deep)";
   const blade =
-    clamped >= 70 ? "#3d8b40" : clamped >= 45 ? "#5cb85c" : "#8d8453";
+    clamped >= 45 ? "var(--tg-green-deep)" : "var(--tg-muted)";
   const bladeLight =
-    clamped >= 70 ? "#8fd18f" : clamped >= 45 ? "#a7df7c" : "#cfc48a";
+    clamped >= 45 ? "var(--tg-green-soft)" : "var(--tg-yellow)";
   const wash =
-    clamped >= 70 ? "#e8f6df" : clamped >= 45 ? "#f1f9e8" : "#f5f4ea";
+    clamped >= 70 ? "var(--tg-yellow)" : clamped >= 45 ? "var(--tg-green-soft)" : "var(--tg-card)";
 
   const blades = [18, 38, 60, 84, 108, 134, 158, 184, 210, 236, 262, 288, 306];
   const greet = userName.trim()
@@ -551,8 +596,8 @@ function ScoreHero({
 
   return (
     <div
-      className="relative flex items-center justify-between gap-2 overflow-hidden rounded-2xl px-3 py-2"
-      style={{ background: wash }}
+      className="relative flex items-center justify-between gap-2 overflow-hidden px-3 py-2"
+      style={{ background: wash, borderRadius: "var(--tg-radius-card)" }}
     >
       <svg
         viewBox="0 0 320 40"
@@ -562,12 +607,12 @@ function ScoreHero({
       >
         <path
           d="M0 34 Q80 26 160 33 T320 31 L320 40 L0 40 Z"
-          fill={bladeLight}
+          style={{ fill: bladeLight }}
           opacity="0.65"
         />
         <path
           d="M0 36 Q95 30 190 35 T320 34 L320 40 L0 40 Z"
-          fill={turf}
+          style={{ fill: turf }}
           opacity="0.45"
         />
         {blades.map((x, idx) => {
@@ -583,7 +628,7 @@ function ScoreHero({
               <path
                 d={`M0 0 Q${lean} ${-h * 0.55} ${lean * 0.6} ${-h}`}
                 fill="none"
-                stroke={idx % 3 === 0 ? blade : turf}
+                style={{ stroke: idx % 3 === 0 ? blade : turf }}
                 strokeWidth="2.4"
                 strokeLinecap="round"
               />
@@ -615,7 +660,7 @@ function ScoreHero({
           <div className="flex items-baseline gap-1.5">
             <ScoreCountUp
               value={val}
-              className="font-sans text-[2.5rem] font-semibold leading-none text-foreground tabular-nums"
+              className="font-sans text-[2.5rem] font-medium leading-none tracking-tight text-foreground tabular-nums"
             />
             <span className="text-xs font-medium text-muted-foreground">
               / 100
@@ -687,14 +732,33 @@ function PeriodSwitch({
   );
 }
 
-function PeriodMeta({ period, days }: { period: Period; days: number }) {
+/** Rolling windows: "week" = last 7 days, "month" = last 30 days (not calendar). */
+function PeriodMeta({
+  period,
+  days,
+  prompts,
+  projectedFrom,
+}: {
+  period: Period;
+  days: number;
+  prompts: number;
+  /** Days of history the projection is scaled from; null = actual totals. */
+  projectedFrom: number | null;
+}) {
+  const range =
+    period === "day" ? "Today" : period === "week" ? "Last 7 days" : "Last 30 days";
+  const count =
+    prompts === 0
+      ? "no prompts recorded yet"
+      : `${prompts} ${prompts === 1 ? "prompt" : "prompts"}${
+          period === "day" ? "" : ` on ${days} ${days === 1 ? "day" : "days"}`
+        }`;
   return (
     <p className="m-0 text-xs text-muted-foreground" data-testid="period-meta">
-      {period === "day"
-        ? "Today"
-        : period === "week"
-          ? `${days} days this week`
-          : `${days} days this month`}
+      {range} · {count}
+      {projectedFrom
+        ? ` · projected from ${projectedFrom} ${projectedFrom === 1 ? "day" : "days"} of use`
+        : ""}
     </p>
   );
 }
@@ -716,15 +780,14 @@ function CoachNoteCard({
   testId,
   badge,
   wash,
-  accent,
   icon,
   text,
   index = 0,
 }: {
   testId?: string;
   badge: string;
+  /** Card fill: a --tg-* pastel. */
   wash: string;
-  accent: string;
   icon: ReactNode;
   text: string;
   index?: number;
@@ -732,21 +795,28 @@ function CoachNoteCard({
   return (
     <li
       data-testid={testId}
-      className="ui-note-enter flex list-none items-start gap-2.5 rounded-xl border border-border bg-white px-2.5 py-2"
-      style={{ ["--i" as string]: index } as CSSProperties}
+      className="ui-note-enter flex list-none items-start gap-2.5 px-3 py-2.5"
+      style={
+        {
+          ["--i" as string]: index,
+          background: wash,
+          borderRadius: "var(--tg-radius-card)",
+        } as CSSProperties
+      }
     >
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-        style={{ background: wash }}
+        className="flex h-10 w-10 shrink-0 items-center justify-center"
+        style={{ background: "var(--tg-cream)", borderRadius: "var(--tg-radius-pill)" }}
       >
         {icon}
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
         <span
-          className="mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums text-foreground"
+          className="mb-1 inline-flex px-2 py-0.5 text-[11px] font-semibold tabular-nums"
           style={{
-            background: wash,
-            color: accent === "#f5c400" ? "#8a5a00" : accent,
+            background: "var(--tg-ink)",
+            color: "var(--tg-on-ink)",
+            borderRadius: "var(--tg-radius-pill)",
           }}
         >
           {badge}
@@ -757,34 +827,15 @@ function CoachNoteCard({
   );
 }
 
+/* Hand-drawn insight icons (ink + paper). Animation classes kept on the same elements. */
 function MiniModel({ size = 56 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="30" fill="#d8f0c8" />
-      <rect x="17" y="27" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
-      <rect x="17" y="34" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
-      <rect x="17" y="41" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
-      <rect x="48" y="27" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
-      <rect x="48" y="34" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
-      <rect x="48" y="41" width="7" height="4.2" rx="1.2" fill="#3d8b40" />
+    <svg className="ft-subtle" width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <InkDefs />
+      <path d="M17 29 H23 M17 36 H23 M17 43 H23 M49 29 H55 M49 36 H55 M49 43 H55" {...ink} strokeWidth={2.6} />
       <g className="ft-drop">
-        <rect x="24" y="22" width="24" height="28" rx="6" fill="#5cb85c" />
-        <ellipse cx="30" cy="30" rx="4" ry="5" fill="#8fd18f" opacity="0.95" />
-        <circle className="ft-eye" cx="31" cy="34" r="1.8" fill="#2d5a27" />
-        <circle
-          className="ft-eye ft-eye--late"
-          cx="41"
-          cy="34"
-          r="1.8"
-          fill="#2d5a27"
-        />
-        <path
-          d="M31 42 Q36 45 42 41"
-          fill="none"
-          stroke="#2d5a27"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
+        <rect x="24" y="21" width="24" height="30" rx="5" {...paper} />
+        <path d="M30 31 H42 M30 37 H38" {...ink} strokeWidth={2.4} />
       </g>
     </svg>
   );
@@ -792,108 +843,44 @@ function MiniModel({ size = 56 }: { size?: number }) {
 
 function RegenSpin({ size = 56 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="30" fill="#fff3c4" />
-      <circle cx="36" cy="36" r="16" fill="#f5c400" opacity="0.35" />
-      <path
-        className="ft-orbit"
-        d="M36 18 A18 18 0 1 1 20 42"
-        fill="none"
-        stroke="#f5c400"
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M18 36 L20 44 L28 40"
-        fill="none"
-        stroke="#8a5a00"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle className="ft-eye" cx="30" cy="34" r="1.8" fill="#8a5a00" />
-      <circle
-        className="ft-eye ft-eye--late"
-        cx="40"
-        cy="34"
-        r="1.8"
-        fill="#8a5a00"
-      />
+    <svg className="ft-subtle" width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <InkDefs />
+      <circle cx="36" cy="36" r="13" fill={PAPER} filter={ROUGH} />
+      <path className="ft-orbit" d="M36 18 A18 18 0 1 1 20 42" {...ink} strokeWidth={3.4} />
+      <path d="M17 35 L20 44 L29 40" {...ink} />
     </svg>
   );
 }
 
 function MixBubble({ size = 56 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="30" fill="#d6f0ff" />
-      <ellipse
-        className="ft-cloud"
-        cx="36"
-        cy="32"
-        rx="18"
-        ry="14"
-        fill="#2ba4e0"
-      />
-      <path d="M26 42 L22 54 L36 44 Z" fill="#2ba4e0" />
-      <circle className="ft-eye" cx="30" cy="30" r="2" fill="#0b4f74" />
-      <circle
-        className="ft-eye ft-eye--late"
-        cx="42"
-        cy="30"
-        r="2"
-        fill="#0b4f74"
-      />
-      <path
-        d="M30 38 Q36 42 42 37"
-        fill="none"
-        stroke="#0b4f74"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+    <svg className="ft-subtle" width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <InkDefs />
+      <ellipse className="ft-cloud" cx="36" cy="32" rx="19" ry="14" {...paper} />
+      <path d="M27 44 L22 55 L37 45" {...ink} />
+      <path d="M28 30 C30 28 32 32 34 30 C36 28 38 32 40 30 C42 28 44 32 45 30" {...ink} strokeWidth={2.2} />
     </svg>
   );
 }
 
 function MixFrame({ size = 56 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="30" fill="#fff3c4" />
-      <rect
-        className="ft-bolt"
-        x="16"
-        y="20"
-        width="40"
-        height="30"
-        rx="5"
-        fill="#f5c400"
-      />
-      <circle cx="28" cy="32" r="5" fill="#fff8dc" />
-      <path
-        d="M20 50 L30 38 L38 44 L52 30 L56 50 Z"
-        fill="#8a5a00"
-        opacity="0.35"
-      />
+    <svg className="ft-subtle" width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <InkDefs />
+      <rect className="ft-bolt" x="15" y="19" width="42" height="32" rx="4" {...paper} />
+      <circle cx="27" cy="31" r="4" {...ink} strokeWidth={2.4} />
+      <path d="M19 48 L30 37 L37 43 L46 33 L54 46" {...ink} strokeWidth={2.6} />
     </svg>
   );
 }
 
 function MixClapper({ size = 56 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="30" fill="#eef1f4" />
-      <rect
-        className="ft-drop"
-        x="18"
-        y="30"
-        width="36"
-        height="22"
-        rx="3"
-        fill="#8e99a4"
-      />
-      <path d="M18 30 L28 18 L54 18 L44 30 Z" fill="#4a5560" opacity="0.7" />
-      <rect x="22" y="38" width="10" height="3" rx="1.5" fill="#eef1f4" />
-      <rect x="36" y="38" width="14" height="3" rx="1.5" fill="#eef1f4" />
+    <svg className="ft-subtle" width={size} height={size} viewBox="0 0 72 72" aria-hidden="true">
+      <InkDefs />
+      <rect className="ft-drop" x="17" y="30" width="38" height="23" rx="3" {...paper} />
+      <path d="M17 30 L27 17 L55 17 L45 30" {...ink} />
+      <path d="M33 17 L27 30 M43 17 L37 30" {...ink} strokeWidth={2.4} />
     </svg>
   );
 }
@@ -977,8 +964,8 @@ function CartoonTick({
   return (
     <div
       title={hint}
-      className="flex cursor-help flex-col items-center rounded-xl px-2 py-2 text-center"
-      style={{ background: wash }}
+      className="flex cursor-help flex-col items-center px-2 py-2 text-center"
+      style={{ background: wash, borderRadius: "var(--tg-radius-tile)" }}
     >
       {children}
       <CountUp
@@ -988,9 +975,9 @@ function CartoonTick({
         suffix={suffix}
         durationMs={700}
         data-testid={testId}
-        className="mt-1 block text-sm tabular-nums"
+        className="mt-1 block text-base font-semibold tabular-nums"
       />
-      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="text-[11px] font-medium text-[var(--tg-ink-soft)]">{label}</div>
     </div>
   );
 }

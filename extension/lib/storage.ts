@@ -119,3 +119,21 @@ export function formatStorageSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
+
+/**
+ * Prompts in a row on each site's big model (for check-ins).
+ * `onBig=false` resets the site's count. Returns the new count.
+ */
+export async function bumpBigModelStreak(
+  site: string,
+  onBig: boolean,
+): Promise<number> {
+  const raw = await browser.storage.local.get("bigModelStreak");
+  const map =
+    raw.bigModelStreak && typeof raw.bigModelStreak === "object"
+      ? (raw.bigModelStreak as Record<string, number>)
+      : {};
+  const next = onBig ? (map[site] ?? 0) + 1 : 0;
+  await browser.storage.local.set({ bigModelStreak: { ...map, [site]: next } });
+  return next;
+}

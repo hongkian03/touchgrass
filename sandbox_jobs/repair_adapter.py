@@ -56,6 +56,8 @@ The adapter's keys: {', '.join(keys)}.
 - send_button: the send button
 - model_name: the model picker, which must match an element with non-empty text (equal to the expected model if given)
 - response: the assistant's response messages
+- model_name and response must target those elements themselves: the checker rejects a selector that
+  matches html, body, main, role="main", or any element containing the message box
 
 Steps:
 1. Search the snapshot with small Python scripts in this folder that print what you need (tags and

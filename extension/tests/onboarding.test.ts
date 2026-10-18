@@ -313,12 +313,13 @@ describe("achievement report card + PDF", () => {
     expect(pos4[1] + pos4[2]).toBe(1080);
   });
 
-  it("builds SVG card with name + CO2 saved + score", () => {
+  it("builds SVG card with name + tree-minutes + score", () => {
     const svg = buildReportCardSvg({
       userName: "Ada",
       score: 88,
       streak: 4,
       co2SavedG: 0.25,
+      treeMinutes: 6.0,
       smallPct: 40,
       energyWh: 1.2,
       waterL: 0.05,
@@ -331,9 +332,11 @@ describe("achievement report card + PDF", () => {
     expect(svg).toMatch(/88/);
     expect(svg).toMatch(/Touchgrass Passport/);
     expect(svg).toMatch(/sticker-gotit\.png/);
-    expect(svg).toMatch(/CO₂ saved \(est\.\)/);
-    expect(svg).toMatch(/0\.25 g/);
-    expect(svg).not.toMatch(/trees planted/);
+    expect(svg).toMatch(/tree-minutes \(est\.\)/);
+    expect(svg).toMatch(/6\.0 min/);
+    expect(svg).toMatch(/0\.25 g CO₂e/);
+    // The old 0.5 g "sapling" rate is gone
+    expect(svg).not.toMatch(/virtual saplings/);
   });
 
   it("embeds JPEG into a valid PDF byte stream", () => {
@@ -349,4 +352,24 @@ describe("achievement report card + PDF", () => {
     const tail = String.fromCharCode(...pdf.slice(-6));
     expect(tail).toContain("EOF");
   });
+});
+
+describe("onboarding saves before the permission prompt", () => {
+  // Chrome's permission dialog closes the popup; saving after it made setup run twice.
+  for (const file of [
+    "../components/InlineOnboarding.tsx",
+    "../entrypoints/onboarding/App.tsx",
+  ]) {
+    it(`${file}: writeState before permissions.request, no demo seed`, async () => {
+      const { readFileSync } = await import("node:fs");
+      const { resolve } = await import("node:path");
+      const src = readFileSync(resolve(__dirname, file), "utf8");
+      const finish = src.slice(src.indexOf("const finish = async"));
+      const save = finish.indexOf("await writeState(");
+      const ask = finish.indexOf("browser.permissions.request(");
+      expect(save).toBeGreaterThan(-1);
+      expect(ask).toBeGreaterThan(save);
+      expect(src).not.toMatch(/usage-seed\.json/);
+    });
+  }
 });

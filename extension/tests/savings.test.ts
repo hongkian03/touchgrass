@@ -6,6 +6,8 @@ import {
   GOOGLE_GEMINI_MEDIAN,
   OPENAI_CHATGPT_AVG,
   SMALL_MODEL_FRACTION,
+  TREE_CO2_G_PER_YEAR,
+  treeMinutesFromCo2G,
 } from "../lib/footprint";
 import { daySavings } from "../lib/savings";
 import type { FootprintModel } from "../lib/totals";
@@ -58,6 +60,15 @@ describe("daySavings vs default model", () => {
   });
 });
 
+describe("tree-minutes", () => {
+  it("22 kg CO2/tree/yr → 1 g ≈ 23.9 tree-minutes; 0 → 0", () => {
+    expect(TREE_CO2_G_PER_YEAR).toBe(22_000);
+    // 525,600 min/yr ÷ 22,000 g/yr
+    expect(treeMinutesFromCo2G(1)).toBeCloseTo(23.89, 1);
+    expect(treeMinutesFromCo2G(0)).toBe(0);
+  });
+});
+
 describe("published per-prompt figures", () => {
   it("Gemini = Google Aug 2025 median: 0.24 Wh, 0.26 mL, 0.03 g", () => {
     expect(GOOGLE_GEMINI_MEDIAN).toEqual({ Wh: 0.24, water_mL: 0.26, co2_g: 0.03 });
@@ -94,38 +105,19 @@ describe("published per-prompt figures", () => {
 });
 
 describe("cartoon palette", () => {
-  it("cartoons use real energy/water/tree/CO2 colors", () => {
-    const ALLOWED = [
-      "#fff3c4",
-      "#f5c400",
-      "#ffe566",
-      "#8a5a00",
-      "#d6f0ff",
-      "#2ba4e0",
-      "#9ad8f5",
-      "#0b4f74",
-      "#eef1f4",
-      "#c5cdd4",
-      "#8e99a4",
-      "#4a5560",
-      "#e4f5d8",
-      "#5cb85c",
-      "#3d8b40",
-      "#8fd18f",
-      "#8b5a2b",
-      "#2d5a27",
-    ];
-    const src = readFileSync(
-      resolve(__dirname, "../components/FootprintCartoons.tsx"),
-      "utf8",
-    );
-    const hexes = [...src.matchAll(/#[0-9a-fA-F]{3,8}/g)].map((m) =>
-      m[0].toLowerCase(),
-    );
-    const allowed = new Set(ALLOWED.map((h) => h.toLowerCase()));
-    expect(hexes.length).toBeGreaterThan(0);
-    for (const hex of hexes) {
-      expect(allowed.has(hex), `illegal hex ${hex}`).toBe(true);
+  const src = () =>
+    readFileSync(resolve(__dirname, "../components/FootprintCartoons.tsx"), "utf8");
+
+  it("hand-drawn icons use only ink + paper (theme vars with fallbacks)", () => {
+    const hexes = [...src().matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0].toLowerCase());
+    expect(new Set(hexes)).toEqual(new Set(["#161616", "#faf8f2"]));
+    expect(src()).toContain("var(--tg-ink, #161616)");
+  });
+
+  it("keeps every motion class, drops the cartoon faces", () => {
+    for (const cls of ["ft-glow", "ft-orbit", "ft-spark", "ft-bolt", "ft-drop", "ft-ripple", "ft-splash", "ft-drip", "ft-cloud", "ft-puffball", "ft-tree", "ft-sway", "ft-leaf"]) {
+      expect(src(), cls).toContain(`"${cls}`);
     }
+    expect(src()).not.toMatch(/ft-eye/);
   });
 });

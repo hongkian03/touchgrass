@@ -38,7 +38,17 @@
   font-display: swap;
 }
 
+/* Brand wordmark only (lowercase "touchgrass"); from github.com/nicovillab/personal-fonts */
+@font-face {
+  font-family: "Dotscript Cursive";
+  src: url("/fonts/DotscriptCursive-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  --tg-font-wordmark: "Dotscript Cursive", ui-sans-serif, system-ui, sans-serif;
   --frozen-water: #bee9e8;
   --pacific-blue: #62b6cb;
   --yale-blue: #1b4965;
@@ -82,8 +92,14 @@ body {
   color: var(--foreground);
 }
 
-/* Brand wordmark — all typography unified on Geist */
-[data-testid="puddle-title"],
+/* Brand wordmark: the only text set in Dotscript Cursive */
+[data-testid="puddle-title"] {
+  font-family: var(--tg-font-wordmark);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--yale-blue);
+}
 .font-brand {
   font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
   color: var(--yale-blue);
@@ -405,6 +421,31 @@ body {
   100% {
     transform: translateY(-14px);
     opacity: 0;
+  }
+}
+
+/*
+ * Small side icons (insight cards, profile, apps grid) opt in with .ft-subtle:
+ * a slow 1.5px float instead of the big squash/bounce. Only overrides inside
+ * .ft-subtle; the main metric tiles keep ft-zap/ft-bounce/ft-puff/ft-grow as-is.
+ */
+.ft-subtle .ft-drop,
+.ft-subtle .ft-cloud,
+.ft-subtle .ft-bolt {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ft-subtle-float 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.ft-subtle .ft-orbit {
+  animation: ft-spin 16s linear infinite;
+}
+@keyframes ft-subtle-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
   }
 }
 

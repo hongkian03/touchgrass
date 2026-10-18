@@ -15,6 +15,8 @@ export type ReportCardData = {
   streak: number;
   /** Estimated grams CO2e avoided by using smaller models. */
   co2SavedG: number;
+  /** Minutes one mature tree takes to absorb co2SavedG (see footprint.ts). */
+  treeMinutes: number;
   smallPct: number;
   energyWh: number;
   waterL: number;
@@ -211,8 +213,8 @@ export function buildReportCardSvg(data: ReportCardData): string {
       x: 780,
       cx: 882,
       wash: "#e8f6df",
-      value: `${data.co2SavedG.toFixed(2)} g`,
-      label: "CO₂ saved (est.)",
+      value: `${data.treeMinutes.toFixed(1)} min`,
+      label: "tree-minutes (est.)",
       art: treeSvg(882, 994, 1.15),
     },
   ];
@@ -275,7 +277,7 @@ export function buildReportCardSvg(data: ReportCardData): string {
     ${treeXs
       .map((x, i) => treeSvg(x, 774, 1.7 + (i % 2) * 0.15))
       .join("\n")}
-    <text x="540" y="828" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Saved ≈${data.co2SavedG.toFixed(2)} g CO₂e with smaller models  ·  ${data.smallPct}% simple asks</text>
+    <text x="540" y="828" text-anchor="middle" font-family="Geist, system-ui, -apple-system, sans-serif" font-size="25" font-weight="700" fill="#1b4965">Saved ${data.treeMinutes.toFixed(1)} tree-minutes (≈${data.co2SavedG.toFixed(2)} g CO₂e)  ·  ${data.smallPct}% simple asks</text>
   </g>
 
   <!-- 4 Symmetrically Aligned Footprint Stat Cards -->
