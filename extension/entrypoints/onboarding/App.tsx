@@ -23,6 +23,7 @@ const platforms = platformsData as Platform[];
 
 export function OnboardingApp() {
   const [step, setStep] = useState<1 | 2>(1);
+  const [userName, setUserName] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [barError, setBarError] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export function OnboardingApp() {
       const streak = computeStreak(usage, today, platforms);
       await writeState({
         onboarded: true,
+        userName: userName.trim(),
         enabledPlatforms: selected,
         usage,
         score: dayScore,
@@ -154,8 +156,10 @@ export function OnboardingApp() {
           </h1>
           <p className="m-0 mt-1 text-sm text-muted-foreground">
             {step === 1
-              ? "Which AI tabs should I watch?"
-              : "Almost ready"}
+              ? "Name + which AI tabs should I watch?"
+              : userName.trim()
+                ? `Almost ready, ${userName.trim()}`
+                : "Almost ready"}
           </p>
         </header>
 
@@ -163,6 +167,20 @@ export function OnboardingApp() {
 
         {step === 1 ? (
           <>
+            <label className="relative z-10 block w-full">
+              <span className="mb-1 block text-[11px] font-medium text-muted-foreground">
+                What should Pip call you?
+              </span>
+              <Input
+                data-testid="onboarding-name"
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Your name"
+                className="rounded-xl border-0 bg-[#f4f4f5] shadow-none focus-visible:ring-1"
+                autoComplete="nickname"
+              />
+            </label>
             <form onSubmit={submitBar} className="relative z-10 w-full">
               <label className="block w-full">
                 <span className="sr-only">
