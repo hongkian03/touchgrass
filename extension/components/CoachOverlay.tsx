@@ -28,16 +28,24 @@ const shell: CSSProperties = {
   pointerEvents: "auto",
 };
 
+/** White card — matches onboarding / popup surface, not pale-sky blue. */
 const bubble: CSSProperties = {
   maxWidth: COACH_BUBBLE_MAX,
   width: "max-content",
-  padding: "10px 12px",
+  padding: "12px 14px",
   borderRadius: 12,
-  background: "#cae9ff",
+  background: "#ffffff",
   color: "#1b4965",
   fontSize: 13,
   lineHeight: 1.35,
-  boxShadow: "0 6px 18px rgba(27, 73, 101, 0.16)",
+  border: "1px solid #e4e4e7",
+  boxShadow: "0 4px 16px rgba(27, 73, 101, 0.08)",
+};
+
+const row: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
 };
 
 const chip: CSSProperties = {
@@ -45,9 +53,8 @@ const chip: CSSProperties = {
   alignItems: "center",
   gap: 8,
   marginTop: 8,
-  padding: "6px 8px",
-  borderRadius: 10,
-  background: "rgba(255, 255, 255, 0.7)",
+  padding: 0,
+  background: "transparent",
 };
 
 const btnRow: CSSProperties = {
@@ -58,7 +65,7 @@ const btnRow: CSSProperties = {
 };
 
 const btn: CSSProperties = {
-  border: "1px solid #5fa8d3",
+  border: "1px solid #e4e4e7",
   background: "#fff",
   color: "#1b4965",
   borderRadius: 8,
@@ -73,56 +80,36 @@ const badgeStyle: CSSProperties = {
   marginBottom: 6,
   padding: "2px 6px",
   borderRadius: 6,
-  background: "#f0c808",
+  background: "#f4f4f5",
   color: "#1b4965",
   fontSize: 10,
   fontWeight: 700,
   letterSpacing: 0.3,
 };
 
-function TargetChip({ target }: { target: CoachTargetDisplay }): ReactNode {
-  let icon: ReactNode = null;
+function TargetIcon({ target }: { target: CoachTargetDisplay }): ReactNode {
   if (target.iconSlug) {
-    const slug = target.iconSlug;
-    if (slug === "gemini" || slug === "gemini-google" || slug === "google-gemini") {
-      const src =
-        typeof browser !== "undefined" && browser.runtime?.getURL
-          ? browser.runtime.getURL("/icons/gemini.svg")
-          : "/icons/gemini.svg";
-      icon = (
-        <img
-          src={src}
-          alt=""
-          width={22}
-          height={22}
-          style={{ width: 22, height: 22, display: "block", objectFit: "contain" }}
-        />
-      );
-    } else {
-      icon = <BrandIcon slug={slug} size={22} label={target.name} />;
-    }
-  } else if (target.faviconUrl) {
-    icon = (
+    return <BrandIcon slug={target.iconSlug} size={28} label={target.name} />;
+  }
+  if (target.faviconUrl) {
+    return (
       <img
         src={target.faviconUrl}
         alt=""
-        width={22}
-        height={22}
-        style={{ width: 22, height: 22, borderRadius: 5, display: "block" }}
+        width={28}
+        height={28}
+        style={{ width: 28, height: 28, borderRadius: 6, display: "block" }}
       />
     );
   }
-
-  return (
-    <div data-testid="coach-redirect-chip" style={chip}>
-      {icon}
-      <span style={{ fontWeight: 600 }}>{target.name}</span>
-    </div>
-  );
+  return null;
 }
 
-/** Compact top-right toast. No pet. */
+/** Compact top-right toast. No pet. White surface + brand logo. */
 export function CoachOverlay({ message, target = null, actions = null }: Props) {
+  const isRedirect =
+    Boolean(target) && !actions?.onSwitch && !actions?.onSendAnyway;
+
   return (
     <div data-testid="coach-overlay" style={shell}>
       <div data-testid="coach-bubble" style={bubble}>
@@ -131,8 +118,22 @@ export function CoachOverlay({ message, target = null, actions = null }: Props) 
             {actions.badge}
           </span>
         ) : null}
-        <p style={{ margin: 0 }}>{message}</p>
-        {target ? <TargetChip target={target} /> : null}
+        {isRedirect && target ? (
+          <div data-testid="coach-redirect-chip" style={row}>
+            <TargetIcon target={target} />
+            <p style={{ margin: 0 }}>{message}</p>
+          </div>
+        ) : (
+          <>
+            <p style={{ margin: 0 }}>{message}</p>
+            {target ? (
+              <div data-testid="coach-redirect-chip" style={chip}>
+                <TargetIcon target={target} />
+                <span style={{ fontWeight: 600 }}>{target.name}</span>
+              </div>
+            ) : null}
+          </>
+        )}
         {actions?.onSwitch || actions?.onSendAnyway ? (
           <div style={btnRow}>
             {actions.onSwitch ? (
@@ -149,7 +150,12 @@ export function CoachOverlay({ message, target = null, actions = null }: Props) 
               <button
                 type="button"
                 data-testid="coach-send-anyway"
-                style={{ ...btn, background: "#1b4965", color: "#fff" }}
+                style={{
+                  ...btn,
+                  background: "#1b4965",
+                  color: "#fff",
+                  borderColor: "#1b4965",
+                }}
                 onClick={actions.onSendAnyway}
               >
                 Send anyway

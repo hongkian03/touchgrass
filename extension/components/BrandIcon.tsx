@@ -13,8 +13,17 @@ import { svg as perplexity } from "@thesvg/icons/perplexity-ai";
 
 const midjourneyRaw = midjourneyVariants.light ?? midjourneyDefault;
 
-/** Exact Gemini SVG lives at /icons/gemini.svg — loaded as <img>, zero edits. */
-const GEMINI_SRC = "/icons/gemini.svg";
+/** Exact Gemini SVG at public/icons/gemini.svg — same file onboarding uses. */
+function geminiSrc(): string {
+  try {
+    if (typeof browser !== "undefined" && browser.runtime?.getURL) {
+      return browser.runtime.getURL("/icons/gemini.svg");
+    }
+  } catch {
+    /* page context without extension */
+  }
+  return "/icons/gemini.svg";
+}
 
 const ICONS: Record<string, string | "gemini-img"> = {
   "openai-chatgpt": chatgpt,
@@ -79,7 +88,7 @@ export function BrandIcon({ slug, size = 28, label }: Props) {
   if (entry === "gemini-img") {
     return (
       <img
-        src={GEMINI_SRC}
+        src={geminiSrc()}
         alt={label ?? "Gemini"}
         width={size}
         height={size}
