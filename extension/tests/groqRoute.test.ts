@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { groqRouteQuery, parseRouteQueryResponse } from "../lib/groqRoute";
+import {
+  groqRouteQuery,
+  parseRouteQueryResponse,
+  weatherFallbackId,
+} from "../lib/groqRoute";
 
 describe("parseRouteQueryResponse", () => {
   it("accepts enabled platformId", () => {
@@ -53,6 +57,24 @@ describe("parseRouteQueryResponse", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.platformId).toBe("gemini");
   });
+
+  it("weather draft forces hop off claude when gemini enabled", () => {
+    const r = parseRouteQueryResponse(
+      '{"platformId":"claude","reason":"already best"}',
+      ["claude", "gemini"],
+      "claude",
+      "whats todays weather?",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.platformId).toBe("gemini");
+  });
+
+  it("weatherFallbackId prefers perplexity then gemini", () => {
+    expect(weatherFallbackId(["claude", "gemini"], "claude")).toBe("gemini");
+    expect(
+      weatherFallbackId(["claude", "perplexity", "gemini"], "claude"),
+    ).toBe("perplexity");
+  });
 });
 
 describe("groqRouteQuery", () => {
@@ -100,7 +122,7 @@ describe("groqRouteQuery", () => {
     if (r.ok) expect(r.platformId).toBe("perplexity");
   });
 
-  it("never invents on HTTP failure", async () => {
+  it("weather HTTP failure falls back to gemini when enabled", async () => {
     vi.stubEnv("WXT_GROQ_API_KEY", "test-key");
     vi.stubGlobal(
       "fetch",
@@ -113,6 +135,29 @@ describe("groqRouteQuery", () => {
 
     const r = await groqRouteQuery({
       draft: "weather please",
+      currentProvider: "claude",
+      enabledPlatforms: ["claude", "gemini"],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.platformId).toBe("gemini");
+      expect(r.reason).toMatch(/fallback/i);
+    }
+  });
+
+  it("non-weather HTTP failure does not invent", async () => {
+    vi.stubEnv("WXT_GROQ_API_KEY", "test-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => "boom",
+      })),
+    );
+
+    const r = await groqRouteQuery({
+      draft: "refactor this typescript module",
       currentProvider: "claude",
       enabledPlatforms: ["claude", "gemini"],
     });

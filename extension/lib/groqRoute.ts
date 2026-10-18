@@ -2,7 +2,8 @@ import platformsData from "../data/platforms.json";
 import type { Platform } from "./types";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+/** Account-available chat model (llama-3.3-70b-versatile → 404 on current Groq keys). */
+const GROQ_MODEL = "qwen/qwen3.8-27b";
 
 const platforms = platformsData as Platform[];
 
@@ -164,9 +165,26 @@ export async function groqRouteQuery(args: {
     }
 
     const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{
+        message?: { content?: string; reasoning?: string };
+      }>;
     };
-    const content = data.choices?.[0]?.message?.content?.trim() ?? "";
+    const msg = data.choices?.[0]?.message;
+    let content = msg?.content?.trim() ?? "";
+    // Some Groq models put JSON in reasoning with empty content
+    if (!content && msg?.reasoning) {
+      const m = msg.reasoning.match(/\{[\s\S]*?\}/);
+      if (m) content = m[0];
+    }
+    if (!content) {
+      if (WEATHER_HINT.test(draft)) {
+        const hop = weatherFallbackId(enabled, args.currentProvider);
+        if (hop) {
+          return { ok: true, platformId: hop, reason: "weather fallback" };
+        }
+      }
+      return { ok: false, error: "empty_completion" };
+    }
     return parseRouteQueryResponse(
       content,
       enabled,
