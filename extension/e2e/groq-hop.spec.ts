@@ -68,6 +68,26 @@ test.describe("Groq hop off Claude-shaped page", () => {
     });
   });
 
+  test("define ask → toast + Gemini tab (not weather-only)", async ({
+    page,
+  }) => {
+    await page.goto("/hop.html?provider=claude&enabled=claude,gemini");
+
+    await expect(page.getByTestId("hop")).toBeVisible();
+    await typeIntoComposer(page, "define photosynthesis");
+
+    await assertTopRightToast(page);
+
+    await expect
+      .poll(async () => (await openedTabs(page)).length, { timeout: 8_000 })
+      .toBeGreaterThanOrEqual(1);
+
+    const tabs = await openedTabs(page);
+    expect(tabs[0]?.url).toMatch(/gemini\.google\.com/);
+    expect(tabs[0]?.draft).toMatch(/photosynthesis/i);
+    expect(tabs[0]?.draft).not.toBe("whats todays weather?");
+  });
+
   test("routeStay → no new tab when Groq says current site", async ({
     page,
   }) => {

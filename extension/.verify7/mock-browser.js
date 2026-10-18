@@ -1104,7 +1104,13 @@
               reason: "already on best",
             };
           }
-          if (/weather|news|research|what's happening|whats happening/i.test(draft)) {
+          // Match extension classify() simple-hop cues — not weather-only.
+          const simpleHop =
+            draft.length < 80 &&
+            /what is|what's|whats|who is|weather|define|translate|summarize|how many|capital of|look up|lookup|news|research/i.test(
+              draft,
+            );
+          if (simpleHop) {
             let hop = null;
             for (const id of ["perplexity", "gemini"]) {
               if (enabledList.includes(id) && id !== provider) {
@@ -1117,7 +1123,7 @@
                 enabledList.find((id) => id !== provider && !/deepseek/i.test(id)) ??
                 provider;
             }
-            return { ok: true, platformId: hop, reason: "weather" };
+            return { ok: true, platformId: hop, reason: "simple ask" };
           }
           return { ok: true, platformId: provider, reason: "stay" };
         }
