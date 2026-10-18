@@ -1,0 +1,35 @@
+{
+  "profile_id": "offline-text-benchmark",
+  "version": "offline-text-v1",
+  "validity": "provisional",
+  "site": "offline-benchmark",
+  "large_model_id": "anthropic/claude-sonnet-5-5",
+  "small_model_id": "anthropic/claude-haiku-4-5-20251001",
+  "jev_model_id": "jev-latest",
+  "expected_jev_resolved_model": "jev-1.13.0",
+  "website_aliases": [],
+  "website_target_label": "",
+  "switch_supported": false,
+  "website_equivalence_verified": false,
+  "small_capabilities": "Candidate: anthropic/claude-haiku-4-5-20251001. Text-only answers without external tools. Initial hypothesis: short rewriting, extraction, basic arithmetic and straightforward explanations may be adequate. These capabilities have not yet been measured on this project's tasks. Do not treat the hypothesis as evaluated evidence; choose uncertain when the task requires unsupported capability assumptions.",
+  "small_generation": {
+    "max_tokens": 2048,
+    "token_limit_parameter": "max_tokens",
+    "temperature": null,
+    "seed": null
+  },
+  "large_generation": {
+    "max_tokens": 2048,
+    "token_limit_parameter": "max_tokens",
+    "temperature": null,
+    "seed": null
+  },
+  "judge_generation": {
+    "max_tokens": 4096,
+    "token_limit_parameter": "max_completion_tokens",
+    "temperature": null,
+    "seed": null
+  },
+  "rubric_hash": "9c245ed1ab4c9f33c6b7ad3c69906a5d2421d0510596f7dc30c400f5218ccd77",
+  "calibration_revision": null
+}

@@ -1,8 +1,10 @@
 # Run the coaching and Droid evaluations
 
-The local `.env` now points at `artifacts/live-eval-v1/profile.json` and
-`policy.json`. It uses live inference with a shadow policy: no user-facing model
-switch suggestions. Those private files and all generated results are ignored by Git.
+For the shared live benchmark, set `COACHING_PROFILE_PATH=config/coaching/profile.json`
+and `COACHING_POLICY_PATH=config/coaching/policy.json` in your local `.env`.
+These nonsecret configuration files are version-controlled together. The policy
+stays in shadow mode: no user-facing model switch suggestions. Generated datasets,
+answers, reports and checkpoints remain under the ignored `artifacts/` directory.
 Teammates must configure their own credentials; never send them your `.env`.
 
 Configured roles: Jev (`jev-latest`, pinned response `jev-1.13.0`), Haiku 4.5

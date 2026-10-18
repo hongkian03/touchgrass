@@ -1,6 +1,6 @@
 {
   "site": "chatgpt",
-  "version": 3,
+  "version": 6,
   "selectors": {
     "prompt_box": "div[contenteditable='true'][role='textbox']",
     "send_button": "button[aria-label='Send']",

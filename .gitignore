@@ -34,6 +34,7 @@ sandbox_jobs/samples/chatgpt_snapshot.html
 # NASA GIBS images and results for "Seen from space" (rebuilt by space/nasa_lights.py)
 space/cache/
 # Private evaluation checkpoints, reports, pairing database and SQLite sidecars
+# Shared nonsecret profile/policy configuration belongs in config/coaching/.
 artifacts/
 *.db-wal
 *.db-shm
