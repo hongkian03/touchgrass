@@ -126,4 +126,13 @@ describe("content + background wiring", () => {
     );
     expect(src).toMatch(/puddle\/coach-rebind/);
   });
+
+  it("inline popup onboarding also rebinds coach", () => {
+    const src = readFileSync(
+      resolve(__dirname, "../components/InlineOnboarding.tsx"),
+      "utf8",
+    );
+    expect(src).toMatch(/puddle\/coach-rebind/);
+    expect(src).toMatch(/onboarding-name/);
+  });
 });

@@ -33,6 +33,12 @@ describe("layout constants (issue #4)", () => {
     expect(src).toMatch(/period-switch/);
     expect(src).toMatch(/setPeriod/);
     expect(src).toMatch(/coaching-insights/);
+    expect(src).toMatch(/InlineOnboarding/);
+    expect(src).toMatch(/MorphNav/);
+    expect(src).toMatch(/SettingsPane/);
+    expect(src).toMatch(/AchievementReportModal/);
+    expect(src).not.toMatch(/tabs\.create/);
+    expect(src).not.toMatch(/onboarding\.html/);
     expect(src).not.toMatch(/pane-switch/);
     expect(src).not.toMatch(/pane-coaching/);
     expect(src).not.toMatch(/coaching-pane/);
