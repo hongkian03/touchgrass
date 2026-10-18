@@ -22,13 +22,14 @@ import type { GroqRouteResult } from "./groqRoute";
 import { providerFromHostname, urlForPlatformId } from "./route";
 import { resolveActiveSite } from "./siteDetect";
 import {
+  appendUsage,
   isExtensionContextError,
   isExtensionStorageAlive,
   readState,
   writeState,
 } from "./storage";
 import type { FootprintModel } from "./totals";
-import type { Platform } from "./types";
+import type { Platform, PromptKind } from "./types";
 
 const platforms = platformsData as Platform[];
 const footprintModels = (
@@ -59,6 +60,22 @@ function estimateHopSavings(
     savedWaterMl: Math.max(2, (fromModel.water_L - toModel.water_L) * 1000),
   };
 }
+
+const ATTACHMENT_SELECTOR = [
+  "img[src^='blob:']",
+  "img[src^='data:']",
+  "[data-testid*='attachment' i]",
+  "[data-testid*='file-thumbnail' i]",
+  "button[aria-label*='Remove file' i]",
+  "button[aria-label*='Remove image' i]",
+  "button[aria-label*='Remove attachment' i]",
+].join(", ");
+const SMALL_MODEL_RE = /mini|haiku|flash|lite|nano|instant|small|fast/i;
+const IMAGE_GEN_RE =
+  /\b(generate|create|make|draw|paint|render|design)\b.{0,40}\b(image|picture|photo|illustration|drawing|logo|poster|art)\b/i;
+const VIDEO_GEN_RE =
+  /\b(generate|create|make|render|animate)\b.{0,40}\b(video|clip|animation|movie)\b/i;
+const REGENERATE_RE = /regenerate|retry|try again|redo/i;
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -543,7 +560,89 @@ export function startCoachWatch(): void {
     }
   };
 
-  const releaseSend = (sendBtn: Element | null) => {
+  /** Images/files sitting in the composer, counted before the site clears them. */
+  const countAttachments = (): number => {
+    let box: Element | null = composerForSite();
+    for (let i = 0; box && i < 6; i++) {
+      if (box.tagName === "FORM" || box.tagName === "FIELDSET") break;
+      box = box.parentElement;
+    }
+    if (!box) return 0;
+    return box.querySelectorAll(ATTACHMENT_SELECTOR).length;
+  };
+
+  /** Map the page's model picker to footprint.json keys: small label → smallModel. */
+  const footprintModelFor = (platform: Platform): string => {
+    const label = modelLabelEl()?.textContent?.trim() ?? "";
+    return SMALL_MODEL_RE.test(label)
+      ? platform.smallModel
+      : platform.defaultModel;
+  };
+
+  let lastSentText = "";
+
+  /** Log a prompt the site actually sends (text, uploads, image/video asks). */
+  const recordSend = async (text: string, regenerated = false) => {
+    // Sync: read the composer before the site clears it
+    const attachments = regenerated ? 0 : countAttachments();
+    if (!text && !attachments && !regenerated) return;
+    try {
+      const site = await ensureSite();
+      const platform = platforms.find((p) => p.id === site);
+      if (!site || !platform) return;
+      let kind: PromptKind = "text";
+      let model = footprintModelFor(platform);
+      if (platform.kind === "image" || platform.kind === "video") {
+        kind = platform.kind;
+        model = platform.defaultModel;
+      } else if (VIDEO_GEN_RE.test(text)) {
+        kind = "video";
+        model = "video-gen";
+      } else if (IMAGE_GEN_RE.test(text)) {
+        kind = "image";
+        model = "dall-e-3";
+      }
+      if (!regenerated) lastSentText = text;
+      await appendUsage({
+        ts: new Date().toISOString(),
+        provider: site,
+        model,
+        kind,
+        prompt_text: text.slice(0, 2000),
+        regenerated,
+        ...(attachments ? { attachments } : {}),
+      });
+      console.log(
+        `[Touchgrass] recorded ${regenerated ? "regenerate" : kind} on ${site} (${model}${
+          attachments ? `, ${attachments} attachment(s)` : ""
+        })`,
+      );
+    } catch (e) {
+      console.warn("[Touchgrass] record usage failed", e);
+    }
+  };
+
+  // Regenerate / retry buttons: same prompt, answered again
+  document.addEventListener(
+    "click",
+    (ev) => {
+      const btn = (ev.target as Element | null)?.closest?.(
+        "button, [role='menuitem']",
+      );
+      if (!btn) return;
+      const label = [
+        btn.getAttribute("aria-label"),
+        btn.getAttribute("data-testid"),
+        (btn.textContent ?? "").slice(0, 40),
+      ].join(" ");
+      if (!REGENERATE_RE.test(label)) return;
+      void recordSend(lastSentText, true);
+    },
+    true,
+  );
+
+  const releaseSend = (sendBtn: Element | null, text: string) => {
+    void recordSend(text);
     sendBypassOnce = true;
     if (sendBtn instanceof HTMLElement) {
       sendBtn.click();
@@ -602,7 +701,11 @@ export function startCoachWatch(): void {
           const composer = composerForSite();
           if (!composer) return;
           const text = draftFrom(composer).trim();
-          if (!text || text.length < 8) return;
+          if (text.length < 8) {
+            // Short text or image-only send: let the site send, just log it
+            void recordSend(text);
+            return;
+          }
 
           // Always stop Claude first — draft still in box
           ev.preventDefault();
@@ -623,6 +726,7 @@ export function startCoachWatch(): void {
             const draft = await buildDraft(text, model);
             if (draft) {
               pendingRelease = () => {
+                void recordSend(text);
                 chalkCoach.armBypass();
                 sendBypassOnce = true;
                 (sendBtn as HTMLElement).click();
@@ -638,7 +742,7 @@ export function startCoachWatch(): void {
           }
 
           // Stay / no hop → let Claude send
-          releaseSend(sendBtn);
+          releaseSend(sendBtn, text);
         })();
       },
       true,
@@ -730,7 +834,11 @@ export function startCoachWatch(): void {
       const composer = composerForSite();
       if (!composer) return;
       const text = draftFrom(composer).trim();
-      if (!text || text.length < 8) return;
+      if (text.length < 8) {
+        // Short text or image-only send: let the site send, just log it
+        void recordSend(text);
+        return;
+      }
 
       // Sync stop — Claude must not clear before we route
       ev.preventDefault();
@@ -741,7 +849,7 @@ export function startCoachWatch(): void {
       void (async () => {
         const hopped = await tryHopOnSend(text);
         if (hopped) return;
-        releaseSend(findSendButton(null));
+        releaseSend(findSendButton(null), text);
       })();
     },
     true,

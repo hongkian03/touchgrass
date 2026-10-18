@@ -9,6 +9,8 @@ export type UsageRow = {
   prompt_text: string;
   response_text?: string;
   regenerated: boolean;
+  /** Images/files attached to the prompt (uploads, not generations). */
+  attachments?: number;
 };
 
 export type Platform = {
